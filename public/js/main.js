@@ -1,0 +1,753 @@
+const STORAGE_KEY = 'prizmclaw-web-session';
+const FONT_SIZE_KEY = 'prizmclaw-font-size';
+const COLUMN_WIDTHS_KEY = 'prizmclaw-column-widths';
+
+const state = {
+  baseUrl: '',
+  sessionId: '',
+  telegramChatId: null,
+  busy: false,
+  eventSource: null,
+  streamingMessageBody: null,
+  streamedText: '',
+  availableCommands: [],
+  commandDropdownVisible: false
+};
+
+const els = {
+  status: document.getElementById('status'),
+  baseUrlInput: document.getElementById('baseUrlInput'),
+  sessionIdInput: document.getElementById('sessionIdInput'),
+  chatMessages: document.getElementById('chatMessages'),
+  chatEmptyState: document.getElementById('chatEmptyState'),
+  chatForm: document.getElementById('chatForm'),
+  chatInput: document.getElementById('chatInput'),
+  charCounter: document.getElementById('charCounter'),
+  sendChatBtn: document.getElementById('sendChatBtn'),
+  clearChatBtn: document.getElementById('clearChatBtn'),
+  takeScreenshotBtn: document.getElementById('takeScreenshotBtn'),
+  screenshotImage: document.getElementById('screenshotImage'),
+  screenshotMeta: document.getElementById('screenshotMeta'),
+  lightbox: document.getElementById('lightbox'),
+  lightboxImg: document.getElementById('lightboxImg'),
+  execForm: document.getElementById('execForm'),
+  execInput: document.getElementById('execInput'),
+  runExecBtn: document.getElementById('runExecBtn'),
+  execEmptyState: document.getElementById('execEmptyState'),
+  execOutput: document.getElementById('execOutput'),
+  exitCodeOutput: document.getElementById('exitCodeOutput'),
+  stdoutOutput: document.getElementById('stdoutOutput'),
+  stderrOutput: document.getElementById('stderrOutput'),
+  toastContainer: document.getElementById('toast-container'),
+  scrollToBottomBtn: document.getElementById('scrollToBottomBtn'),
+  infoSessionId: document.getElementById('infoSessionId'),
+  infoConnState: document.getElementById('infoConnState'),
+  infoTelegramChatId: document.getElementById('infoTelegramChatId'),
+  fontToggleBtns: document.querySelectorAll('.font-toggle-btn'),
+  resizeHandle: document.getElementById('resizeHandle'),
+  dashboardGrid: document.getElementById('dashboardGrid')
+};
+
+function randomSessionId() {
+  const rand = Math.random().toString(36).slice(2, 10);
+  return `web-${Date.now()}-${rand}`;
+}
+
+function setStatus(text, state) {
+  els.status.textContent = text;
+  els.status.classList.remove('connected', 'error');
+  if (state) els.status.classList.add(state);
+}
+
+function updateSessionInfoPanel(connState) {
+  // Session ID
+  els.infoSessionId.textContent = state.sessionId || '—';
+
+  // Connection state row
+  const resolvedState = connState !== undefined ? connState : null;
+  if (resolvedState === 'connected') {
+    els.infoConnState.textContent = '已连接';
+    els.infoConnState.className = 'info-value connected';
+  } else if (resolvedState === 'error') {
+    els.infoConnState.textContent = '连接错误';
+    els.infoConnState.className = 'info-value error';
+  } else {
+    els.infoConnState.textContent = '就绪';
+    els.infoConnState.className = 'info-value';
+  }
+
+  // Telegram Chat ID
+  if (state.telegramChatId) {
+    els.infoTelegramChatId.textContent = String(state.telegramChatId);
+    els.infoTelegramChatId.className = 'info-value';
+  } else {
+    els.infoTelegramChatId.textContent = '未绑定';
+    els.infoTelegramChatId.className = 'info-value muted';
+  }
+}
+
+const CHAR_LIMIT = 8000;
+const CHAR_WARN_THRESHOLD = CHAR_LIMIT * 0.8;
+
+function updateCharCounter() {
+  const len = els.chatInput.value.length;
+  els.charCounter.textContent = len;
+  els.charCounter.parentElement.classList.toggle('warning', len >= CHAR_WARN_THRESHOLD);
+}
+
+function setBusy(busy, text, activeBtn = null) {
+  state.busy = busy;
+  els.sendChatBtn.disabled = busy;
+  els.takeScreenshotBtn.disabled = busy;
+  els.runExecBtn.disabled = busy;
+  if (busy && activeBtn) {
+    activeBtn.classList.add('loading');
+  } else if (!busy) {
+    els.sendChatBtn.classList.remove('loading');
+    els.takeScreenshotBtn.classList.remove('loading');
+    els.runExecBtn.classList.remove('loading');
+  }
+  setStatus(text);
+}
+
+const TOAST_DURATION_MS = 3000;
+const TOAST_FADE_MS = 300;
+
+function updateScrollToBottomBtn() {
+  const el = els.chatMessages;
+  const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+  els.scrollToBottomBtn.classList.toggle('visible', distFromBottom > 100);
+}
+
+function updateChatEmptyState() {
+  // Only hide empty state when user or assistant messages are present
+  const hasMessages =
+    els.chatMessages.querySelector('.message.user, .message.assistant') !== null;
+  els.chatEmptyState.classList.toggle('hidden', hasMessages);
+}
+
+function updateExecEmptyState(hasResult) {
+  els.execEmptyState.classList.toggle('hidden', hasResult);
+  els.execOutput.classList.toggle('hidden', !hasResult);
+}
+
+function showToast(msg, type = 'info') {
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = msg;
+  els.toastContainer.appendChild(toast);
+
+  setTimeout(() => {
+    toast.classList.add('toast-fade-out');
+    setTimeout(() => toast.remove(), TOAST_FADE_MS);
+  }, TOAST_DURATION_MS);
+}
+
+function saveSessionConfig() {
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify({
+      baseUrl: state.baseUrl,
+      sessionId: state.sessionId
+    })
+  );
+}
+
+function loadSessionConfig() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) {
+      return;
+    }
+
+    const parsed = JSON.parse(raw);
+    if (typeof parsed.baseUrl === 'string') {
+      state.baseUrl = parsed.baseUrl;
+    }
+    if (typeof parsed.sessionId === 'string' && parsed.sessionId.trim()) {
+      state.sessionId = parsed.sessionId;
+    }
+  } catch {
+    // ignore
+  }
+}
+
+function applyFontSize(scale) {
+  document.documentElement.style.setProperty('--font-scale', String(scale));
+  els.fontToggleBtns.forEach((btn) => {
+    btn.classList.toggle('active', Number(btn.dataset.scale) === scale);
+  });
+}
+
+function loadFontSize() {
+  try {
+    const raw = localStorage.getItem(FONT_SIZE_KEY);
+    if (raw) {
+      const scale = parseFloat(raw);
+      if ([0.875, 1, 1.2].includes(scale)) {
+        applyFontSize(scale);
+        return;
+      }
+    }
+  } catch {
+    // ignore
+  }
+  applyFontSize(1); // default: medium
+}
+
+function setFontSize(scale) {
+  try {
+    localStorage.setItem(FONT_SIZE_KEY, String(scale));
+  } catch {
+    // ignore
+  }
+  applyFontSize(scale);
+}
+
+function formatTimestamp() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2, '0');
+  const m = String(now.getMinutes()).padStart(2, '0');
+  return `${h}:${m}`;
+}
+
+function createMessageElement(role, text, isError = false, isHtml = false) {
+  const item = document.createElement('div');
+  item.className = `message ${role} ${isError ? 'error' : ''}`.trim();
+
+  const roleEl = document.createElement('span');
+  roleEl.className = 'role';
+  roleEl.textContent = role === 'user' ? '你' : role === 'assistant' ? '助手' : '系统';
+
+  const body = document.createElement('div');
+  body.className = 'body';
+  if (isHtml) {
+    body.innerHTML = text;
+  } else {
+    body.textContent = text;
+  }
+
+  const timestamp = document.createElement('span');
+  timestamp.className = 'message-timestamp';
+  timestamp.textContent = formatTimestamp();
+
+  item.append(roleEl, body, timestamp);
+  return { item, body };
+}
+
+function appendMessage(role, text, isError = false, isHtml = false) {
+  const node = createMessageElement(role, text, isError, isHtml);
+  els.chatMessages.appendChild(node.item);
+  els.chatMessages.scrollTop = els.chatMessages.scrollHeight;
+  updateChatEmptyState();
+  return node;
+}
+
+function getApiUrl(path) {
+  const base = state.baseUrl.trim();
+  if (!base) {
+    return path;
+  }
+  return `${base.replace(/\/$/, '')}${path}`;
+}
+
+function getEventsUrl() {
+  const query = new URLSearchParams({
+    channel: 'web',
+    sessionId: state.sessionId
+  }).toString();
+
+  return `${getApiUrl('/api/events')}?${query}`;
+}
+
+function closeRealtime() {
+  if (state.eventSource) {
+    state.eventSource.close();
+    state.eventSource = null;
+  }
+}
+
+// ── Command Autocomplete ──────────────────────────────────────────────────────
+
+let commandDropdown = null;
+
+function createCommandDropdown() {
+  commandDropdown = document.createElement('div');
+  commandDropdown.className = 'command-dropdown';
+  commandDropdown.style.cssText = 'position:absolute;background:#1e1e2e;border:1px solid #444;border-radius:4px;max-height:200px;overflow-y:auto;z-index:100;width:100%;box-sizing:border-box;display:none;';
+  els.chatForm.style.position = 'relative';
+  els.chatForm.appendChild(commandDropdown);
+}
+
+function showCommandDropdown(commands) {
+  if (!commandDropdown) createCommandDropdown();
+  commandDropdown.innerHTML = '';
+
+  if (commands.length === 0) {
+    commandDropdown.style.display = 'none';
+    state.commandDropdownVisible = false;
+    return;
+  }
+
+  commands.forEach((cmd) => {
+    const item = document.createElement('div');
+    item.style.cssText = 'padding:6px 10px;cursor:pointer;font-family:monospace;font-size:13px;';
+    item.innerHTML = `<strong>/${cmd.name}</strong> — ${cmd.description}`;
+    item.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      els.chatInput.value = `/${cmd.name} `;
+      hideCommandDropdown();
+      els.chatInput.focus();
+    });
+    item.addEventListener('mouseover', () => { item.style.background = '#313244'; });
+    item.addEventListener('mouseout', () => { item.style.background = ''; });
+    commandDropdown.appendChild(item);
+  });
+
+  commandDropdown.style.display = 'block';
+  state.commandDropdownVisible = true;
+}
+
+function hideCommandDropdown() {
+  if (commandDropdown) commandDropdown.style.display = 'none';
+  state.commandDropdownVisible = false;
+}
+
+function filterCommands(prefix) {
+  const query = prefix.slice(1).toLowerCase(); // Remove leading /
+  return state.availableCommands.filter((cmd) => {
+    return cmd.name.startsWith(query) || (cmd.aliases || []).some((a) => a.startsWith(query));
+  });
+}
+
+async function loadAvailableCommands() {
+  try {
+    const response = await fetch(getApiUrl('/api/commands'));
+    const data = await response.json();
+    if (data.ok && Array.isArray(data.commands)) {
+      state.availableCommands = data.commands;
+    }
+  } catch {
+    // Non-critical — autocomplete just won't work
+  }
+}
+
+function connectRealtime() {
+  closeRealtime();
+
+  if (typeof EventSource === 'undefined') {
+    setStatus('当前浏览器不支持实时推送（EventSource）');
+    return;
+  }
+
+  const es = new EventSource(getEventsUrl());
+  state.eventSource = es;
+
+  es.addEventListener('connected', () => {
+    setStatus('实时通道已连接', 'connected');
+    updateSessionInfoPanel('connected');
+  });
+
+  es.addEventListener('status', (event) => {
+    const payload = JSON.parse(event.data);
+    if (payload.stage === 'running') {
+      setStatus('助手处理中...');
+      return;
+    }
+
+    if (payload.stage === 'accepted') {
+      setStatus('已接收请求');
+      return;
+    }
+
+    setStatus('实时通道在线', 'connected');
+  });
+
+  es.addEventListener('assistant_chunk', (event) => {
+    const payload = JSON.parse(event.data);
+
+    if (!state.streamingMessageBody) {
+      const node = appendMessage('assistant', '');
+      state.streamingMessageBody = node.body;
+      state.streamedText = '';
+    }
+
+    state.streamedText += payload.text ?? '';
+    state.streamingMessageBody.textContent = state.streamedText;
+    els.chatMessages.scrollTop = els.chatMessages.scrollHeight;
+  });
+
+  es.addEventListener('assistant_done', (event) => {
+    const payload = JSON.parse(event.data);
+    if (state.streamingMessageBody) {
+      state.streamingMessageBody.textContent = payload.reply ?? state.streamedText;
+    } else if (payload.isCommand) {
+      // Command result came via SSE (not via HTTP response) — render as HTML
+      appendMessage('assistant', payload.reply || '(命令已执行)', false, true);
+    }
+    setStatus('就绪');
+  });
+
+  es.onerror = () => {
+    setStatus('实时通道重连中...', 'error');
+    updateSessionInfoPanel('error');
+  };
+}
+
+async function callJson(path, payload) {
+  const response = await fetch(getApiUrl(path), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+
+  const data = await response.json();
+  if (!response.ok || !data.ok) {
+    throw new Error(data.error || `请求失败: ${response.status}`);
+  }
+  return data;
+}
+
+function normalizeZeroHost() {
+  if (window.location.hostname !== '0.0.0.0') {
+    return false;
+  }
+
+  const nextUrl = new URL(window.location.href);
+  nextUrl.hostname = '127.0.0.1';
+  window.location.replace(nextUrl.toString());
+  return true;
+}
+
+// ── Panel Resize Handle ───────────────────────────────────────────────────────
+
+function applyColumnWidths(chatFr, sideFr) {
+  els.dashboardGrid.style.setProperty('--chat-col', `${chatFr}fr`);
+  els.dashboardGrid.style.setProperty('--side-col', `${sideFr}fr`);
+}
+
+function loadColumnWidths() {
+  try {
+    const raw = localStorage.getItem(COLUMN_WIDTHS_KEY);
+    if (raw) {
+      const { chat, side } = JSON.parse(raw);
+      if (typeof chat === 'number' && typeof side === 'number' && chat > 0 && side > 0) {
+        applyColumnWidths(chat, side);
+        return;
+      }
+    }
+  } catch {
+    // ignore
+  }
+  applyColumnWidths(2, 1); // default: 2fr 1fr
+}
+
+function saveColumnWidths(chatFr, sideFr) {
+  try {
+    localStorage.setItem(COLUMN_WIDTHS_KEY, JSON.stringify({ chat: chatFr, side: sideFr }));
+  } catch {
+    // ignore
+  }
+}
+
+function initResizeHandle() {
+  const handle = els.resizeHandle;
+  if (!handle) return;
+
+  let isDragging = false;
+  let startX = 0;
+  let startChatWidth = 0;
+  let startSideWidth = 0;
+
+  handle.addEventListener('mousedown', (event) => {
+    event.preventDefault();
+    isDragging = true;
+    startX = event.clientX;
+
+    const grid = els.dashboardGrid;
+    const cols = getComputedStyle(grid).gridTemplateColumns.split(' ');
+    // cols: [chatWidth, handleWidth, sideWidth]
+    startChatWidth = parseFloat(cols[0]);
+    startSideWidth = parseFloat(cols[2]);
+
+    handle.classList.add('dragging');
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  });
+
+  document.addEventListener('mousemove', (event) => {
+    if (!isDragging) return;
+
+    const delta = event.clientX - startX;
+    const totalWidth = startChatWidth + startSideWidth;
+    const minWidth = totalWidth * 0.2; // 20% minimum for each column
+
+    const newChatWidth = Math.min(Math.max(startChatWidth + delta, minWidth), totalWidth - minWidth);
+    const newSideWidth = totalWidth - newChatWidth;
+
+    // Convert pixel widths back to fr units (ratio-based, normalize to total of 3fr)
+    const chatFr = (newChatWidth / totalWidth) * 3;
+    const sideFr = (newSideWidth / totalWidth) * 3;
+
+    applyColumnWidths(chatFr, sideFr);
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (!isDragging) return;
+    isDragging = false;
+    handle.classList.remove('dragging');
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+
+    // Persist the fr ratios
+    const grid = els.dashboardGrid;
+    const cols = getComputedStyle(grid).gridTemplateColumns.split(' ');
+    const chatPx = parseFloat(cols[0]);
+    const sidePx = parseFloat(cols[2]);
+    const total = chatPx + sidePx;
+    saveColumnWidths((chatPx / total) * 3, (sidePx / total) * 3);
+  });
+}
+
+function init() {
+  if (normalizeZeroHost()) {
+    return;
+  }
+
+  loadSessionConfig();
+  loadFontSize();
+  loadColumnWidths();
+  initResizeHandle();
+
+  if (!state.sessionId) {
+    state.sessionId = randomSessionId();
+  }
+
+  els.baseUrlInput.value = state.baseUrl;
+  els.sessionIdInput.value = state.sessionId;
+
+  updateSessionInfoPanel();
+  appendMessage('system', '欢迎使用 PrizmClaw。你可以聊天、抓取截图、执行受控系统命令。输入 / 查看可用命令。');
+  connectRealtime();
+  loadAvailableCommands();
+}
+
+els.baseUrlInput.addEventListener('change', () => {
+  state.baseUrl = els.baseUrlInput.value.trim();
+  saveSessionConfig();
+  connectRealtime();
+});
+
+els.sessionIdInput.addEventListener('change', () => {
+  const value = els.sessionIdInput.value.trim();
+  state.sessionId = value || randomSessionId();
+  els.sessionIdInput.value = state.sessionId;
+  saveSessionConfig();
+  updateSessionInfoPanel();
+  connectRealtime();
+});
+
+els.clearChatBtn.addEventListener('click', () => {
+  els.chatMessages.innerHTML = '';
+  els.chatMessages.appendChild(els.chatEmptyState);
+  appendMessage('system', '界面消息已清空。');
+});
+
+els.chatForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  if (state.busy) return;
+
+  const message = els.chatInput.value.trim();
+  if (!message) return;
+
+  appendMessage('user', message);
+  els.chatInput.value = '';
+  updateCharCounter();
+
+  state.streamingMessageBody = null;
+  state.streamedText = '';
+
+  try {
+    setBusy(true, '聊天处理中...', els.sendChatBtn);
+    const data = await callJson('/api/chat', {
+      channel: 'web',
+      sessionId: state.sessionId,
+      message
+    });
+
+    if (!state.streamedText) {
+      const isHtml = data.isCommand === true;
+      appendMessage('assistant', data.reply || '(空响应)', false, isHtml);
+    }
+    showToast('消息发送成功', 'success');
+  } catch (error) {
+    appendMessage('system', error instanceof Error ? error.message : String(error), true);
+    showToast(error instanceof Error ? error.message : String(error), 'error');
+  } finally {
+    state.streamingMessageBody = null;
+    setBusy(false, '就绪');
+  }
+});
+
+els.chatInput.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && state.commandDropdownVisible) {
+    hideCommandDropdown();
+    return;
+  }
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault();
+    hideCommandDropdown();
+    els.chatForm.requestSubmit();
+  }
+});
+
+els.chatInput.addEventListener('input', () => {
+  updateCharCounter();
+  const value = els.chatInput.value;
+  const firstWord = value.split(/\s/)[0];
+  if (firstWord.startsWith('/') && value === firstWord) {
+    // User is still typing the command name (no space yet)
+    const matches = filterCommands(firstWord);
+    showCommandDropdown(matches);
+  } else {
+    hideCommandDropdown();
+  }
+});
+
+els.chatInput.addEventListener('blur', () => {
+  // Delay hide to allow mousedown on dropdown item to fire first
+  setTimeout(hideCommandDropdown, 150);
+});
+
+function openLightbox(src) {
+  els.lightboxImg.src = src;
+  els.lightbox.classList.remove('hidden');
+}
+
+function closeLightbox() {
+  els.lightbox.classList.add('hidden');
+  els.lightboxImg.src = '';
+}
+
+els.screenshotImage.addEventListener('click', () => {
+  if (!els.screenshotImage.classList.contains('hidden')) {
+    openLightbox(els.screenshotImage.src);
+  }
+});
+
+els.lightbox.addEventListener('click', (event) => {
+  if (event.target !== els.lightboxImg) {
+    closeLightbox();
+  }
+});
+
+els.takeScreenshotBtn.addEventListener('click', async () => {
+  if (state.busy) return;
+
+  try {
+    setBusy(true, '正在获取截图...', els.takeScreenshotBtn);
+    const data = await callJson('/api/screenshot', {
+      channel: 'web',
+      sessionId: state.sessionId
+    });
+
+    els.screenshotImage.src = `data:${data.mimeType};base64,${data.imageBase64}`;
+    els.screenshotImage.classList.remove('hidden');
+    els.screenshotMeta.textContent = `mimeType: ${data.mimeType}\nsize(base64): ${data.imageBase64.length}`;
+    showToast('截图获取成功', 'success');
+  } catch (error) {
+    els.screenshotMeta.textContent = error instanceof Error ? error.message : String(error);
+    showToast(error instanceof Error ? error.message : String(error), 'error');
+  } finally {
+    setBusy(false, '就绪');
+  }
+});
+
+els.execForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  if (state.busy) return;
+
+  const command = els.execInput.value.trim();
+  if (!command) return;
+
+  els.exitCodeOutput.classList.remove('exit-error');
+  els.stderrOutput.classList.remove('error');
+
+  try {
+    setBusy(true, '正在执行命令...', els.runExecBtn);
+    const data = await callJson('/api/system/exec', {
+      channel: 'web',
+      sessionId: state.sessionId,
+      command
+    });
+
+    updateExecEmptyState(true);
+    els.exitCodeOutput.textContent = String(data.exitCode);
+    els.exitCodeOutput.classList.toggle('exit-error', data.exitCode !== 0);
+    els.stdoutOutput.textContent = data.stdout || '(empty)';
+    els.stderrOutput.textContent = data.stderr || '(empty)';
+    els.stderrOutput.classList.toggle('error', Boolean(data.stderr));
+    if (data.exitCode === 0) {
+      showToast('命令执行成功', 'success');
+    } else {
+      showToast(`命令退出码: ${data.exitCode}`, 'error');
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    updateExecEmptyState(true);
+    els.exitCodeOutput.textContent = 'error';
+    els.exitCodeOutput.classList.add('exit-error');
+    els.stdoutOutput.textContent = '';
+    els.stderrOutput.textContent = message;
+    els.stderrOutput.classList.add('error');
+    showToast(message, 'error');
+  } finally {
+    setBusy(false, '就绪');
+  }
+});
+
+window.addEventListener('beforeunload', () => {
+  closeRealtime();
+});
+
+els.chatMessages.addEventListener('scroll', updateScrollToBottomBtn);
+
+els.scrollToBottomBtn.addEventListener('click', () => {
+  els.chatMessages.scrollTo({ top: els.chatMessages.scrollHeight, behavior: 'smooth' });
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && !els.lightbox.classList.contains('hidden')) {
+    closeLightbox();
+  }
+});
+
+async function copyToClipboard(el) {
+  const text = el.textContent.trim();
+  if (!text || text === '-') {
+    showToast('内容为空', 'info');
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('已复制', 'success');
+  } catch {
+    showToast('复制失败', 'error');
+  }
+}
+
+document.addEventListener('click', (event) => {
+  const btn = event.target.closest('.copy-btn');
+  if (!btn) return;
+  const targetId = btn.dataset.target;
+  const targetEl = targetId ? document.getElementById(targetId) : null;
+  if (targetEl) copyToClipboard(targetEl);
+});
+
+els.fontToggleBtns.forEach((btn) => {
+  btn.addEventListener('click', () => {
+    setFontSize(Number(btn.dataset.scale));
+  });
+});
+
+init();

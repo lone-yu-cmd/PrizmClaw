@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PrizmClaw 管理台</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="app-header">
+        <div>
+          <h1>PrizmClaw 管理台</h1>
+          <p class="subtitle">聊天、截图、系统命令执行</p>
+        </div>
+        <div class="font-toggle" role="group" aria-label="字体大小">
+          <button type="button" class="font-toggle-btn" data-scale="0.875">小</button>
+          <button type="button" class="font-toggle-btn active" data-scale="1">中</button>
+          <button type="button" class="font-toggle-btn" data-scale="1.2">大</button>
+        </div>
+        <div id="status" class="status" role="status" aria-live="polite">就绪</div>
+      </header>
+
+      <details class="panel config-panel" open>
+        <summary>连接设置</summary>
+        <div class="form-grid">
+          <label>
+            API Base URL（可选）
+            <input id="baseUrlInput" type="text" placeholder="留空表示同源，例如 http://127.0.0.1:3000" />
+          </label>
+          <label>
+            Session ID
+            <input id="sessionIdInput" type="text" placeholder="默认自动生成，可手动修改" />
+          </label>
+        </div>
+      </details>
+
+      <section class="panel session-info-panel" aria-label="会话信息">
+        <h2>会话信息</h2>
+        <dl class="info-grid">
+          <div class="info-row">
+            <dt class="info-label">Session ID</dt>
+            <dd id="infoSessionId" class="info-value">—</dd>
+          </div>
+          <div class="info-row">
+            <dt class="info-label">连接状态</dt>
+            <dd id="infoConnState" class="info-value">—</dd>
+          </div>
+          <div class="info-row">
+            <dt class="info-label">绑定 Telegram Chat ID</dt>
+            <dd id="infoTelegramChatId" class="info-value muted">未绑定</dd>
+          </div>
+        </dl>
+      </section>
+
+      <main class="dashboard-grid" id="dashboardGrid">
+        <section class="panel chat-panel">
+          <div class="panel-head">
+            <h2>双向聊天</h2>
+            <button id="clearChatBtn" type="button" class="btn ghost">清空界面消息</button>
+          </div>
+
+          <div class="chat-messages-wrapper">
+            <div id="chatMessages" class="chat-messages" aria-live="polite">
+              <div id="chatEmptyState" class="empty-state">
+                <span class="empty-state-icon">💬</span>
+                <span class="empty-state-title">还没有消息</span>
+                <span class="empty-state-hint">在下方输入内容，开始与助手对话</span>
+              </div>
+            </div>
+            <button id="scrollToBottomBtn" type="button" class="scroll-to-bottom" aria-label="滚动到底部" title="滚动到底部">↓</button>
+          </div>
+
+          <form id="chatForm" class="chat-form">
+            <label class="sr-only" for="chatInput">输入消息</label>
+            <textarea id="chatInput" rows="3" placeholder="请输入对话"></textarea>
+            <div class="char-counter"><span id="charCounter">0</span> / 8000</div>
+            <div class="chat-form-actions">
+              <button id="sendChatBtn" type="submit" class="btn primary">发送</button>
+              <kbd class="kbd">Ctrl+Enter</kbd>
+            </div>
+          </form>
+        </section>
+
+        <div id="resizeHandle" class="resize-handle" role="separator" aria-orientation="vertical" aria-label="调整列宽"></div>
+
+        <section class="panel side-panel">
+          <section class="sub-panel">
+            <h2>一键截图</h2>
+            <p class="hint">调用 <code>POST /api/screenshot</code> 并展示图片结果。</p>
+            <button id="takeScreenshotBtn" type="button" class="btn primary">获取截图</button>
+            <img id="screenshotImage" class="screenshot-image hidden" alt="截图预览" />
+            <div class="output-box-wrapper">
+              <pre id="screenshotMeta" class="output-box"></pre>
+              <button type="button" class="copy-btn" aria-label="复制内容" title="复制内容" data-target="screenshotMeta">⧉</button>
+            </div>
+          </section>
+
+          <section class="sub-panel">
+            <h2>系统命令</h2>
+            <p class="hint">调用 <code>POST /api/system/exec</code>，展示 stdout/stderr/exit code。</p>
+            <form id="execForm" class="exec-form">
+              <label class="sr-only" for="execInput">输入系统命令</label>
+              <input id="execInput" type="text" placeholder="例如：pwd" />
+              <div class="exec-form-actions">
+                <button id="runExecBtn" type="submit" class="btn warning">执行</button>
+                <kbd class="kbd">Enter</kbd>
+              </div>
+            </form>
+            <div class="exec-result">
+              <div id="execEmptyState" class="empty-state">
+                <span class="empty-state-icon">⚡</span>
+                <span class="empty-state-title">尚未执行命令</span>
+                <span class="empty-state-hint">在上方输入命令并点击执行</span>
+              </div>
+              <div id="execOutput" class="hidden">
+                <div>
+                  <h3>Exit Code</h3>
+                  <div class="output-box-wrapper">
+                    <pre id="exitCodeOutput" class="output-box">-</pre>
+                    <button type="button" class="copy-btn" aria-label="复制内容" title="复制内容" data-target="exitCodeOutput">⧉</button>
+                  </div>
+                </div>
+                <div>
+                  <h3>Stdout</h3>
+                  <div class="output-box-wrapper">
+                    <pre id="stdoutOutput" class="output-box"></pre>
+                    <button type="button" class="copy-btn" aria-label="复制内容" title="复制内容" data-target="stdoutOutput">⧉</button>
+                  </div>
+                </div>
+                <div>
+                  <h3>Stderr</h3>
+                  <div class="output-box-wrapper">
+                    <pre id="stderrOutput" class="output-box"></pre>
+                    <button type="button" class="copy-btn" aria-label="复制内容" title="复制内容" data-target="stderrOutput">⧉</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <div id="lightbox" class="lightbox hidden" role="dialog" aria-modal="true" aria-label="截图放大预览">
+      <img id="lightboxImg" class="lightbox-img" alt="截图放大预览" />
+    </div>
+
+    <div id="toast-container" class="toast-container" role="status" aria-live="polite"></div>
+
+    <script type="module" src="./js/main.js"></script>
+  </body>
+</html>

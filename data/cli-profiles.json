@@ -1,0 +1,13 @@
+{
+  "defaultProfileName": "default",
+  "profiles": [
+    {
+      "name": "default",
+      "binPath": "codebuddy",
+      "permissionFlag": "-y",
+      "timeoutMs": null,
+      "description": "Default backend (CODEBUDDY_BIN)",
+      "isDefault": true
+    }
+  ]
+}

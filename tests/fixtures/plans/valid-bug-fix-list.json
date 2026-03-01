@@ -1,0 +1,31 @@
+{
+  "$schema": "dev-pipeline-bug-fix-list-v1",
+  "project_name": "TestProject",
+  "bugs": [
+    {
+      "id": "B-TEST-001",
+      "title": "Test Bug One",
+      "description": "First test bug for validation",
+      "severity": "medium",
+      "error_source": {
+        "type": "user_report"
+      },
+      "verification_type": "manual",
+      "acceptance_criteria": ["AC1: Bug is fixed"],
+      "status": "pending"
+    },
+    {
+      "id": "B-TEST-002",
+      "title": "Test Bug Two",
+      "description": "Second test bug for validation",
+      "severity": "high",
+      "error_source": {
+        "type": "log",
+        "log_pattern": "ERROR:"
+      },
+      "verification_type": "automated",
+      "acceptance_criteria": ["AC1: No more errors in logs"],
+      "status": "pending"
+    }
+  ]
+}

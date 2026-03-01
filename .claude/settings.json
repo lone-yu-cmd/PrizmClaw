@@ -1,0 +1,50 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 dev-pipeline/scripts/*)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git diff *)",
+      "Bash(git status)",
+      "Bash(git log *)",
+      "Bash(jq *)",
+      "Bash(./dev-pipeline/run.sh *)",
+      "Bash(./dev-pipeline/launch-daemon.sh *)"
+    ]
+  },
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "matcher": "(?i)\\b(commit|push|finish|ship|merge|pull request|pr)\\b|提交|推送|收尾|完成任务|合并|发版|发布",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "SRC=$(git diff --cached --name-only 2>/dev/null | grep -cE '\\.(ts|tsx|js|jsx|py|go|rs|java)$'); if [ \"$SRC\" -gt 0 ]; then PRIZM=$(git diff --cached --name-only 2>/dev/null | grep -c '^\\.prizm-docs/'); if [ \"$PRIZM\" -gt 0 ]; then echo \"PRIZMKIT_DOC_STATUS: $SRC source file(s) staged | .prizm-docs/ updated ($PRIZM file(s))\"; else echo \"PRIZMKIT_DOC_STATUS: $SRC source file(s) staged | .prizm-docs/ NOT UPDATED — update if this is a feature change\"; fi; fi"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "TOOL_INPUT=\"${CLAUDE_TOOL_INPUT:-${CODEBUDDY_TOOL_INPUT:-}}\"; if echo \"$TOOL_INPUT\" | grep -qE 'git (commit|merge|rebase)' 2>/dev/null; then DRIFT=$(sh .prizmkit/scripts/diff-prizm-docs.sh 2>/dev/null); if [ -n \"$DRIFT\" ]; then echo \"PRIZMKIT_DRIFT_DETECTED: prizm-docs structural differences found:\"; echo \"$DRIFT\"; echo \"Please update affected .prizm-docs/ files.\"; fi; fi"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "test -f .prizm-docs/root.prizm && echo \"PrizmKit: .prizm-docs found. Read root.prizm for project context.\" || echo \"PrizmKit: No .prizm-docs found. Run /prizmkit-init to bootstrap.\""
+          }
+        ]
+      }
+    ]
+  }
+}

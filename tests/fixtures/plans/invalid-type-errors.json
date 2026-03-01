@@ -1,0 +1,15 @@
+{
+  "$schema": "dev-pipeline-feature-list-v1",
+  "app_name": "TypeErrorsApp",
+  "features": [
+    {
+      "id": "F-001",
+      "title": "Type Error Feature",
+      "description": "Feature with wrong types",
+      "priority": "not-a-number",
+      "dependencies": "not-an-array",
+      "acceptance_criteria": "not-an-array",
+      "status": "pending"
+    }
+  ]
+}

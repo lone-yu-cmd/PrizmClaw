@@ -1,0 +1,14 @@
+{
+  "app_name": "MissingSchemaApp",
+  "features": [
+    {
+      "id": "F-001",
+      "title": "Feature without schema",
+      "description": "This plan is missing $schema field",
+      "priority": 1,
+      "dependencies": [],
+      "acceptance_criteria": ["AC1: Should be rejected"],
+      "status": "pending"
+    }
+  ]
+}
