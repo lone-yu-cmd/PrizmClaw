@@ -1,5 +1,6 @@
 import { Telegraf } from 'telegraf';
-import { access } from 'node:fs/promises';
+import { createReadStream } from 'node:fs';
+import { access, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { config } from '../config.js';
 import { logger } from '../utils/logger.js';
@@ -12,6 +13,12 @@ const TELEGRAM_MSG_CHUNK_SIZE = 3800;
 const STREAM_MIN_CHARS = 220;
 const STREAM_FLUSH_INTERVAL_MS = 1200;
 const TYPING_INTERVAL_MS = 3500;
+const PHOTO_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp']);
+const DOCUMENT_EXTENSIONS = new Set(['.pdf', '.txt', '.json', '.md', '.csv', '.log']);
+const ALLOWED_FILE_EXTENSIONS = new Set([...PHOTO_EXTENSIONS, ...DOCUMENT_EXTENSIONS]);
+const TELEGRAM_MAX_PHOTO_BYTES = 10 * 1024 * 1024;
+const TELEGRAM_MAX_DOCUMENT_BYTES = 45 * 1024 * 1024;
+const TELEGRAM_HANDLER_TIMEOUT_MS = 10 * 60 * 1000;
 
 function splitMessage(text, chunkSize = TELEGRAM_MSG_CHUNK_SIZE) {
   const chunks = [];
@@ -21,75 +28,210 @@ function splitMessage(text, chunkSize = TELEGRAM_MSG_CHUNK_SIZE) {
   return chunks;
 }
 
-function extractImageMarkers(text = '') {
-  const markerRegex = /@image:([^\s`]+)/g;
-  const imageRefs = [];
-  const cleanedText = text.replace(markerRegex, (_full, rawRef) => {
-    const ref = String(rawRef ?? '').trim();
-    if (!ref) {
-      return '';
+function sanitizeMarkerPath(raw) {
+  return String(raw ?? '')
+    .trim()
+    .replace(/^['"`]+/, '')
+    .replace(/['"`]+$/, '');
+}
+
+function extractFileMarkers(text = '') {
+  const fileRefs = [];
+
+  const withSendFileRemoved = text.replace(
+    /(?:^|\n)\s*(?:[-*]\s*)?`?SEND_FILE:([^\n`]+)`?\s*(?=\n|$)/g,
+    (_full, rawRef) => {
+      const ref = sanitizeMarkerPath(rawRef);
+      if (ref) {
+        fileRefs.push(ref);
+      }
+      return '\n';
     }
-    imageRefs.push(ref);
+  );
+
+  const withImageRemoved = withSendFileRemoved.replace(/@image:([^\s`]+)/g, (_full, rawRef) => {
+    const ref = sanitizeMarkerPath(rawRef);
+    if (ref) {
+      fileRefs.push(ref);
+    }
     return '';
   });
 
+  const withAbsolutePathRemoved = withImageRemoved.replace(
+    /(?:^|\n)\s*(?:[-*]\s*)?`?((?:\/Users|\/tmp|\/private\/tmp|\/var\/folders)\/[^\n`]+\.(?:png|jpg|jpeg|webp|pdf|txt|json|md|csv|log))`?\s*(?=\n|$)/gi,
+    (_full, rawRef) => {
+      const ref = sanitizeMarkerPath(rawRef);
+      if (ref) {
+        fileRefs.push(ref);
+      }
+      return '\n';
+    }
+  );
+
   return {
-    imageRefs,
-    cleanedText: cleanedText.replace(/\n{3,}/g, '\n\n').trim()
+    fileRefs: [...new Set(fileRefs)],
+    cleanedText: withAbsolutePathRemoved.replace(/\n{3,}/g, '\n\n').trim()
   };
 }
 
-async function resolveLocalImagePath(imageRef) {
-  const normalized = String(imageRef ?? '').trim();
-  if (!normalized) {
-    return null;
+function buildFileCandidates(normalizedPath) {
+  if (path.isAbsolute(normalizedPath)) {
+    return [normalizedPath];
   }
 
-  const candidates = path.isAbsolute(normalized)
-    ? [normalized]
-    : [
-        path.resolve(process.cwd(), normalized),
-        path.resolve(process.cwd(), path.basename(normalized)),
-        path.resolve('/Users/loneyu/Desktop', path.basename(normalized))
-      ];
+  const baseName = path.basename(normalizedPath);
+  const candidates = [
+    path.resolve(process.cwd(), normalizedPath),
+    path.resolve(process.cwd(), baseName),
+    path.resolve('/Users/loneyu/Desktop', baseName),
+    path.resolve('/Users/loneyu/Downloads', baseName),
+    path.resolve('/tmp', baseName),
+    path.resolve('/var/folders', baseName)
+  ];
+
+  return [...new Set(candidates)];
+}
+
+async function resolveLocalFilePath(fileRef) {
+  const normalized = sanitizeMarkerPath(fileRef);
+  if (!normalized) {
+    return { filePath: null, triedPaths: [] };
+  }
+
+  const candidates = buildFileCandidates(normalized);
 
   for (const candidate of candidates) {
     try {
       await access(candidate);
-      return candidate;
+      return { filePath: candidate, triedPaths: candidates };
     } catch {
       // ignore
     }
   }
 
-  return null;
+  return { filePath: null, triedPaths: candidates };
 }
 
-async function replyImages(ctx, imageRefs = []) {
+async function validateFileForTelegram(filePath) {
+  const ext = path.extname(filePath).toLowerCase();
+  if (!ALLOWED_FILE_EXTENSIONS.has(ext)) {
+    return { ok: false, reason: `不支持的文件类型：${ext || '(unknown)'}` };
+  }
+
+  const fileStat = await stat(filePath);
+  const isPhoto = PHOTO_EXTENSIONS.has(ext);
+  const maxSize = isPhoto ? TELEGRAM_MAX_PHOTO_BYTES : TELEGRAM_MAX_DOCUMENT_BYTES;
+
+  if (fileStat.size > maxSize) {
+    return {
+      ok: false,
+      reason: `文件过大：${Math.ceil(fileStat.size / 1024 / 1024)}MB，限制 ${Math.floor(maxSize / 1024 / 1024)}MB`
+    };
+  }
+
+  return { ok: true, isPhoto };
+}
+
+function isTimeoutLikeError(message = '') {
+  const normalized = String(message).toLowerCase();
+  return normalized.includes('timed out') || normalized.includes('etimedout') || normalized.includes('timeout');
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function sendTelegramFileByType(ctx, filePath, isPhoto) {
+  if (isPhoto) {
+    await ctx.replyWithPhoto({ source: createReadStream(filePath) }, { caption: path.basename(filePath) });
+    return;
+  }
+
+  await ctx.replyWithDocument({ source: createReadStream(filePath), filename: path.basename(filePath) });
+}
+
+async function replyFiles(ctx, fileRefs = []) {
   const results = [];
 
-  for (const imageRef of imageRefs) {
-    const filePath = await resolveLocalImagePath(imageRef);
+  for (const fileRef of fileRefs) {
+    const { filePath, triedPaths } = await resolveLocalFilePath(fileRef);
     if (!filePath) {
-      results.push({ imageRef, sent: false, reason: 'not_found' });
+      results.push({ fileRef, sent: false, reason: 'not_found', triedPaths });
+      logger.warn({ fileRef, triedPaths }, 'File not found for telegram upload');
       continue;
     }
 
     try {
-      await ctx.replyWithPhoto({ source: filePath });
-      results.push({ imageRef, sent: true });
+      const validation = await validateFileForTelegram(filePath);
+      if (!validation.ok) {
+        results.push({ fileRef, sent: false, reason: validation.reason, filePath, triedPaths });
+        logger.warn({ fileRef, filePath, reason: validation.reason }, 'File validation failed for telegram upload');
+        continue;
+      }
+
+      let sent = false;
+      let lastReason = '';
+
+      for (let attempt = 1; attempt <= 2; attempt += 1) {
+        try {
+          await sendTelegramFileByType(ctx, filePath, validation.isPhoto);
+          sent = true;
+          logger.info(
+            { fileRef, filePath, as: validation.isPhoto ? 'photo' : 'document', attempt },
+            'Telegram file sent'
+          );
+          break;
+        } catch (error) {
+          lastReason = error instanceof Error ? error.message : String(error);
+          logger.warn(
+            { fileRef, filePath, err: lastReason, attempt },
+            'Telegram file send attempt failed'
+          );
+
+          if (attempt < 2 && isTimeoutLikeError(lastReason)) {
+            await sleep(600);
+            continue;
+          }
+
+          break;
+        }
+      }
+
+      if (!sent) {
+        results.push({ fileRef, sent: false, reason: lastReason || 'unknown_error', filePath, triedPaths });
+        logger.error({ fileRef, filePath, err: lastReason }, 'Failed to send file to telegram');
+        continue;
+      }
+
+      results.push({ fileRef, sent: true, filePath, triedPaths });
     } catch (error) {
-      results.push({ imageRef, sent: false, reason: error instanceof Error ? error.message : String(error) });
+      const reason = error instanceof Error ? error.message : String(error);
+      results.push({ fileRef, sent: false, reason, filePath, triedPaths });
+      logger.error({ fileRef, filePath, err: reason }, 'Failed to send file to telegram');
     }
   }
 
   return results;
 }
 
+async function safeReply(ctx, text) {
+  try {
+    await ctx.reply(text);
+    return true;
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    logger.error({ err: reason }, 'Failed to send telegram text reply');
+    return false;
+  }
+}
+
 async function replyLargeText(ctx, text) {
   const chunks = splitMessage(text);
   for (const chunk of chunks) {
-    await ctx.reply(chunk);
+    const ok = await safeReply(ctx, chunk);
+    if (!ok) {
+      break;
+    }
   }
 }
 
@@ -202,7 +344,14 @@ function ensureAllowed(ctx) {
 }
 
 export function createTelegramBot() {
-  const bot = new Telegraf(config.telegramBotToken);
+  const bot = new Telegraf(config.telegramBotToken, {
+    handlerTimeout: TELEGRAM_HANDLER_TIMEOUT_MS
+  });
+
+  bot.catch((error, ctx) => {
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error({ err: message, chatId: ctx?.chat?.id, updateType: ctx?.updateType }, 'Unhandled error while processing telegram update');
+  });
 
   bot.start(async (ctx) => {
     await ctx.reply('PrizmClaw 已启动。可直接聊天，也可用 /screenshot 和 /exec。');
@@ -290,8 +439,9 @@ export function createTelegramBot() {
         }
       });
 
-      const { imageRefs, cleanedText } = extractImageMarkers(reply);
-      const finalText = cleanedText || '已执行，见下方图片。';
+      const { fileRefs, cleanedText } = extractFileMarkers(reply);
+      logger.info({ sessionId, fileRefsCount: fileRefs.length, fileRefs }, 'Parsed file markers from assistant reply');
+      const finalText = cleanedText || (fileRefs.length > 0 ? '已执行，正在发送文件。' : '已执行。');
 
       streamPublisher.setFinalText(finalText);
       const streamed = await streamPublisher.finish();
@@ -299,25 +449,28 @@ export function createTelegramBot() {
         await replyLargeText(ctx, finalText);
       }
 
-      if (imageRefs.length > 0) {
-        const imageSendResults = await replyImages(ctx, imageRefs);
-        const failed = imageSendResults.filter((item) => !item.sent);
+      if (fileRefs.length > 0) {
+        const fileSendResults = await replyFiles(ctx, fileRefs);
+        const failed = fileSendResults.filter((item) => !item.sent);
 
-        if (failed.length > 0) {
+        if (failed.length === 0) {
+          await safeReply(ctx, `已发送 ${fileSendResults.length} 个文件。`);
+        } else {
           const failedList = failed
             .map((item) => {
               const reason = item.reason === 'not_found' ? '文件不存在或不可访问' : item.reason;
-              return `- @image:${item.imageRef}${reason ? `（${reason}）` : ''}`;
+              const tried = Array.isArray(item.triedPaths) && item.triedPaths.length > 0 ? `；尝试路径：${item.triedPaths.join(' | ')}` : '';
+              return `- SEND_FILE:${item.fileRef}${reason ? `（${reason}）` : ''}${tried}`;
             })
             .join('\n');
-          await ctx.reply(`以下图片发送失败，已附回原始引用：\n${failedList}`);
-          logger.warn({ sessionId, failed }, 'Some images failed to send to telegram');
+          await safeReply(ctx, `以下文件发送失败，已附回原始引用：\n${failedList}`);
+          logger.warn({ sessionId, failed }, 'Some files failed to send to telegram');
         }
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       logger.error({ err: message, sessionId }, 'Failed to process telegram message');
-      await ctx.reply(`处理失败：${message}`);
+      await safeReply(ctx, `处理失败：${message}`);
     } finally {
       if (typingTimer) {
         clearInterval(typingTimer);

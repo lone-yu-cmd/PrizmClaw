@@ -7,7 +7,7 @@ const schema = z.object({
   ALLOWED_USER_IDS: z.string().optional().default(''),
   CODEBUDDY_BIN: z.string().min(1).default('codebuddy'),
   CODEBUDDY_PERMISSION_FLAG: z.string().default('-y'),
-  REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(120000),
+  REQUEST_TIMEOUT_MS: z.coerce.number().int().nonnegative().default(120000),
   MAX_PROMPT_CHARS: z.coerce.number().int().positive().default(8000),
   MAX_HISTORY_TURNS: z.coerce.number().int().positive().default(10),
   WEB_HOST: z.string().default('127.0.0.1'),

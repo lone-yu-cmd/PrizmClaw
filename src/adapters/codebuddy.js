@@ -16,10 +16,13 @@ export async function runCodeBuddy(prompt, options = {}) {
 
     let stdout = '';
     let stderr = '';
-    const timeout = setTimeout(() => {
-      child.kill('SIGTERM');
-      reject(new Error(`CodeBuddy 执行超时（>${config.requestTimeoutMs}ms）`));
-    }, config.requestTimeoutMs);
+    const timeout =
+      config.requestTimeoutMs > 0
+        ? setTimeout(() => {
+            child.kill('SIGTERM');
+            reject(new Error(`CodeBuddy 执行超时（>${config.requestTimeoutMs}ms）`));
+          }, config.requestTimeoutMs)
+        : null;
 
     child.stdout.on('data', (chunk) => {
       const text = chunk.toString();
