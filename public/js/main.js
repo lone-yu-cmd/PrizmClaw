@@ -1,0 +1,320 @@
+const STORAGE_KEY = 'prizmclaw-web-session';
+
+const state = {
+  baseUrl: '',
+  sessionId: '',
+  busy: false,
+  eventSource: null,
+  streamingMessageBody: null,
+  streamedText: ''
+};
+
+const els = {
+  status: document.getElementById('status'),
+  baseUrlInput: document.getElementById('baseUrlInput'),
+  sessionIdInput: document.getElementById('sessionIdInput'),
+  chatMessages: document.getElementById('chatMessages'),
+  chatForm: document.getElementById('chatForm'),
+  chatInput: document.getElementById('chatInput'),
+  sendChatBtn: document.getElementById('sendChatBtn'),
+  clearChatBtn: document.getElementById('clearChatBtn'),
+  takeScreenshotBtn: document.getElementById('takeScreenshotBtn'),
+  screenshotImage: document.getElementById('screenshotImage'),
+  screenshotMeta: document.getElementById('screenshotMeta'),
+  execForm: document.getElementById('execForm'),
+  execInput: document.getElementById('execInput'),
+  runExecBtn: document.getElementById('runExecBtn'),
+  exitCodeOutput: document.getElementById('exitCodeOutput'),
+  stdoutOutput: document.getElementById('stdoutOutput'),
+  stderrOutput: document.getElementById('stderrOutput')
+};
+
+function randomSessionId() {
+  const rand = Math.random().toString(36).slice(2, 10);
+  return `web-${Date.now()}-${rand}`;
+}
+
+function setStatus(text) {
+  els.status.textContent = text;
+}
+
+function setBusy(busy, text) {
+  state.busy = busy;
+  els.sendChatBtn.disabled = busy;
+  els.takeScreenshotBtn.disabled = busy;
+  els.runExecBtn.disabled = busy;
+  setStatus(text);
+}
+
+function saveSessionConfig() {
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify({
+      baseUrl: state.baseUrl,
+      sessionId: state.sessionId
+    })
+  );
+}
+
+function loadSessionConfig() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) {
+      return;
+    }
+
+    const parsed = JSON.parse(raw);
+    if (typeof parsed.baseUrl === 'string') {
+      state.baseUrl = parsed.baseUrl;
+    }
+    if (typeof parsed.sessionId === 'string' && parsed.sessionId.trim()) {
+      state.sessionId = parsed.sessionId;
+    }
+  } catch {
+    // ignore
+  }
+}
+
+function createMessageElement(role, text, isError = false) {
+  const item = document.createElement('div');
+  item.className = `message ${role} ${isError ? 'error' : ''}`.trim();
+
+  const roleEl = document.createElement('span');
+  roleEl.className = 'role';
+  roleEl.textContent = role === 'user' ? '你' : role === 'assistant' ? '助手' : '系统';
+
+  const body = document.createElement('div');
+  body.className = 'body';
+  body.textContent = text;
+
+  item.append(roleEl, body);
+  return { item, body };
+}
+
+function appendMessage(role, text, isError = false) {
+  const node = createMessageElement(role, text, isError);
+  els.chatMessages.appendChild(node.item);
+  els.chatMessages.scrollTop = els.chatMessages.scrollHeight;
+  return node;
+}
+
+function getApiUrl(path) {
+  const base = state.baseUrl.trim();
+  if (!base) {
+    return path;
+  }
+  return `${base.replace(/\/$/, '')}${path}`;
+}
+
+function getEventsUrl() {
+  const query = new URLSearchParams({
+    channel: 'web',
+    sessionId: state.sessionId
+  }).toString();
+
+  return `${getApiUrl('/api/events')}?${query}`;
+}
+
+function closeRealtime() {
+  if (state.eventSource) {
+    state.eventSource.close();
+    state.eventSource = null;
+  }
+}
+
+function connectRealtime() {
+  closeRealtime();
+
+  if (typeof EventSource === 'undefined') {
+    setStatus('当前浏览器不支持实时推送（EventSource）');
+    return;
+  }
+
+  const es = new EventSource(getEventsUrl());
+  state.eventSource = es;
+
+  es.addEventListener('connected', () => {
+    setStatus('实时通道已连接');
+  });
+
+  es.addEventListener('status', (event) => {
+    const payload = JSON.parse(event.data);
+    if (payload.stage === 'running') {
+      setStatus('助手处理中...');
+      return;
+    }
+
+    if (payload.stage === 'accepted') {
+      setStatus('已接收请求');
+      return;
+    }
+
+    setStatus('实时通道在线');
+  });
+
+  es.addEventListener('assistant_chunk', (event) => {
+    const payload = JSON.parse(event.data);
+
+    if (!state.streamingMessageBody) {
+      const node = appendMessage('assistant', '');
+      state.streamingMessageBody = node.body;
+      state.streamedText = '';
+    }
+
+    state.streamedText += payload.text ?? '';
+    state.streamingMessageBody.textContent = state.streamedText;
+    els.chatMessages.scrollTop = els.chatMessages.scrollHeight;
+  });
+
+  es.addEventListener('assistant_done', (event) => {
+    const payload = JSON.parse(event.data);
+    if (state.streamingMessageBody) {
+      state.streamingMessageBody.textContent = payload.reply ?? state.streamedText;
+    }
+    setStatus('就绪');
+  });
+
+  es.onerror = () => {
+    setStatus('实时通道重连中...');
+  };
+}
+
+async function callJson(path, payload) {
+  const response = await fetch(getApiUrl(path), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+
+  const data = await response.json();
+  if (!response.ok || !data.ok) {
+    throw new Error(data.error || `请求失败: ${response.status}`);
+  }
+  return data;
+}
+
+function init() {
+  loadSessionConfig();
+
+  if (!state.sessionId) {
+    state.sessionId = randomSessionId();
+  }
+
+  els.baseUrlInput.value = state.baseUrl;
+  els.sessionIdInput.value = state.sessionId;
+
+  appendMessage('system', '欢迎使用 PrizmClaw。你可以聊天、抓取截图、执行受控系统命令。');
+  connectRealtime();
+}
+
+els.baseUrlInput.addEventListener('change', () => {
+  state.baseUrl = els.baseUrlInput.value.trim();
+  saveSessionConfig();
+  connectRealtime();
+});
+
+els.sessionIdInput.addEventListener('change', () => {
+  const value = els.sessionIdInput.value.trim();
+  state.sessionId = value || randomSessionId();
+  els.sessionIdInput.value = state.sessionId;
+  saveSessionConfig();
+  connectRealtime();
+});
+
+els.clearChatBtn.addEventListener('click', () => {
+  els.chatMessages.innerHTML = '';
+  appendMessage('system', '界面消息已清空。');
+});
+
+els.chatForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  if (state.busy) return;
+
+  const message = els.chatInput.value.trim();
+  if (!message) return;
+
+  appendMessage('user', message);
+  els.chatInput.value = '';
+
+  state.streamingMessageBody = null;
+  state.streamedText = '';
+
+  try {
+    setBusy(true, '聊天处理中...');
+    const data = await callJson('/api/chat', {
+      channel: 'web',
+      sessionId: state.sessionId,
+      message
+    });
+
+    if (!state.streamedText) {
+      appendMessage('assistant', data.reply || '(空响应)');
+    }
+  } catch (error) {
+    appendMessage('system', error instanceof Error ? error.message : String(error), true);
+  } finally {
+    state.streamingMessageBody = null;
+    setBusy(false, '就绪');
+  }
+});
+
+els.chatInput.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault();
+    els.chatForm.requestSubmit();
+  }
+});
+
+els.takeScreenshotBtn.addEventListener('click', async () => {
+  if (state.busy) return;
+
+  try {
+    setBusy(true, '正在获取截图...');
+    const data = await callJson('/api/screenshot', {
+      channel: 'web',
+      sessionId: state.sessionId
+    });
+
+    els.screenshotImage.src = `data:${data.mimeType};base64,${data.imageBase64}`;
+    els.screenshotImage.classList.remove('hidden');
+    els.screenshotMeta.textContent = `mimeType: ${data.mimeType}\nsize(base64): ${data.imageBase64.length}`;
+  } catch (error) {
+    els.screenshotMeta.textContent = error instanceof Error ? error.message : String(error);
+  } finally {
+    setBusy(false, '就绪');
+  }
+});
+
+els.execForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  if (state.busy) return;
+
+  const command = els.execInput.value.trim();
+  if (!command) return;
+
+  try {
+    setBusy(true, '正在执行命令...');
+    const data = await callJson('/api/system/exec', {
+      channel: 'web',
+      sessionId: state.sessionId,
+      command
+    });
+
+    els.exitCodeOutput.textContent = String(data.exitCode);
+    els.stdoutOutput.textContent = data.stdout || '(empty)';
+    els.stderrOutput.textContent = data.stderr || '(empty)';
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    els.exitCodeOutput.textContent = 'error';
+    els.stdoutOutput.textContent = '';
+    els.stderrOutput.textContent = message;
+  } finally {
+    setBusy(false, '就绪');
+  }
+});
+
+window.addEventListener('beforeunload', () => {
+  closeRealtime();
+});
+
+init();
