@@ -1,0 +1,78 @@
+{
+  "name": "dev-team",
+  "description": "4-role team with controller, product, development, and testing agents",
+  "createdAt": 1772301019212,
+  "leadAgentId": "team-lead@dev-team",
+  "leadSessionId": "1d8f7cf2-0ef6-4dae-86ba-3ef70ba093f2",
+  "members": [
+    {
+      "agentId": "team-lead@dev-team",
+      "name": "team-lead",
+      "agentType": "team-lead",
+      "joinedAt": 1772301019212,
+      "tmuxPaneId": "",
+      "cwd": "/Users/loneyu/.openclaw/workspace",
+      "subscriptions": []
+    },
+    {
+      "agentId": "controller-agent@dev-team",
+      "name": "controller-agent",
+      "agentType": "Plan",
+      "prompt": "You are controller-agent in dev-team. Role: orchestrate and coordinate teammates via TaskList/TaskUpdate/SendMessage. Do not code unless explicitly requested. Send one message to main summarizing your role, permission mode, and tool capabilities, then go idle.",
+      "color": "blue",
+      "planModeRequired": true,
+      "joinedAt": 1772301054300,
+      "tmuxPaneId": "in-process",
+      "cwd": "/Users/loneyu/.openclaw/workspace",
+      "subscriptions": [
+        "*"
+      ],
+      "backendType": "in-process"
+    },
+    {
+      "agentId": "product-agent@dev-team",
+      "name": "product-agent",
+      "agentType": "Explore",
+      "prompt": "You are product-agent in dev-team. Role: clarify requirements, acceptance criteria, and scope using read/search tools only. Send one message to main summarizing your role, permission mode, and available tools, then go idle.",
+      "color": "green",
+      "planModeRequired": false,
+      "joinedAt": 1772301054316,
+      "tmuxPaneId": "in-process",
+      "cwd": "/Users/loneyu/.openclaw/workspace",
+      "subscriptions": [
+        "*"
+      ],
+      "backendType": "in-process"
+    },
+    {
+      "agentId": "dev-agent@dev-team",
+      "name": "dev-agent",
+      "agentType": "general-purpose",
+      "prompt": "You are dev-agent in dev-team. Role: implement code changes and technical fixes when assigned. Send one message to main summarizing your role, permission mode, and tool capabilities, then go idle.",
+      "color": "yellow",
+      "planModeRequired": false,
+      "joinedAt": 1772301054326,
+      "tmuxPaneId": "in-process",
+      "cwd": "/Users/loneyu/.openclaw/workspace",
+      "subscriptions": [
+        "*"
+      ],
+      "backendType": "in-process"
+    },
+    {
+      "agentId": "test-agent@dev-team",
+      "name": "test-agent",
+      "agentType": "Bash",
+      "prompt": "You are test-agent in dev-team. Role: run terminal-based tests/checks and report results. Send one message to main summarizing your role, permission mode, and tool capabilities, then go idle.",
+      "color": "magenta",
+      "planModeRequired": false,
+      "joinedAt": 1772301054338,
+      "tmuxPaneId": "in-process",
+      "cwd": "/Users/loneyu/.openclaw/workspace",
+      "subscriptions": [
+        "*"
+      ],
+      "backendType": "in-process"
+    }
+  ]
+}
