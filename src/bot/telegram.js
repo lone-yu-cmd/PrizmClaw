@@ -1,6 +1,7 @@
 import { Telegraf } from 'telegraf';
 import { createReadStream } from 'node:fs';
 import { access, stat } from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 import { config } from '../config.js';
 import { logger } from '../utils/logger.js';
@@ -19,6 +20,28 @@ const ALLOWED_FILE_EXTENSIONS = new Set([...PHOTO_EXTENSIONS, ...DOCUMENT_EXTENS
 const TELEGRAM_MAX_PHOTO_BYTES = 10 * 1024 * 1024;
 const TELEGRAM_MAX_DOCUMENT_BYTES = 45 * 1024 * 1024;
 const TELEGRAM_HANDLER_TIMEOUT_MS = 10 * 60 * 1000;
+const TMP_DIR = path.resolve(os.tmpdir());
+const HOME_DIR = path.resolve(os.homedir());
+const DESKTOP_DIR = path.join(HOME_DIR, 'Desktop');
+const DOWNLOADS_DIR = path.join(HOME_DIR, 'Downloads');
+const DEFAULT_ALLOWED_FILE_ROOTS = [path.resolve(process.cwd()), DESKTOP_DIR, DOWNLOADS_DIR, TMP_DIR];
+const DEFAULT_FILE_CANDIDATE_DIRS = [path.resolve(process.cwd()), DESKTOP_DIR, DOWNLOADS_DIR, TMP_DIR];
+
+function resolveConfiguredDirs(configuredDirs = [], fallbackDirs = []) {
+  const normalized = configuredDirs
+    .map((dir) => String(dir ?? '').trim())
+    .filter(Boolean)
+    .map((dir) => path.resolve(dir));
+
+  if (normalized.length > 0) {
+    return [...new Set(normalized)];
+  }
+
+  return [...new Set(fallbackDirs.map((dir) => path.resolve(String(dir))))];
+}
+
+const ALLOWED_FILE_ROOTS = resolveConfiguredDirs(config.telegramFileAllowedRoots, DEFAULT_ALLOWED_FILE_ROOTS);
+const FILE_CANDIDATE_DIRS = resolveConfiguredDirs(config.telegramFileCandidateDirs, DEFAULT_FILE_CANDIDATE_DIRS);
 
 function splitMessage(text, chunkSize = TELEGRAM_MSG_CHUNK_SIZE) {
   const chunks = [];
@@ -57,8 +80,30 @@ function extractFileMarkers(text = '') {
     return '';
   });
 
-  const withAbsolutePathRemoved = withImageRemoved.replace(
-    /(?:^|\n)\s*(?:[-*]\s*)?`?((?:\/Users|\/tmp|\/private\/tmp|\/var\/folders)\/[^\n`]+\.(?:png|jpg|jpeg|webp|pdf|txt|json|md|csv|log))`?\s*(?=\n|$)/gi,
+  const withBacktickPathRemoved = withImageRemoved.replace(
+    /`((?:\/[^`\n\r]+)+\.(?:png|jpg|jpeg|webp|pdf|txt|json|md|csv|log))`/gi,
+    (_full, rawRef) => {
+      const ref = sanitizeMarkerPath(rawRef);
+      if (ref) {
+        fileRefs.push(ref);
+      }
+      return '';
+    }
+  );
+
+  const withLabeledPathRemoved = withBacktickPathRemoved.replace(
+    /(?:文件路径|path)\s*[:：]\s*((?:\/[^\n`\r]+)+\.(?:png|jpg|jpeg|webp|pdf|txt|json|md|csv|log))/gi,
+    (_full, rawRef) => {
+      const ref = sanitizeMarkerPath(rawRef);
+      if (ref) {
+        fileRefs.push(ref);
+      }
+      return '';
+    }
+  );
+
+  const withAbsolutePathLineRemoved = withLabeledPathRemoved.replace(
+    /(?:^|\n)\s*(?:[-*]\s*)?((?:\/[^\n`\r]+)+\.(?:png|jpg|jpeg|webp|pdf|txt|json|md|csv|log))\s*(?=\n|$)/gi,
     (_full, rawRef) => {
       const ref = sanitizeMarkerPath(rawRef);
       if (ref) {
@@ -70,8 +115,18 @@ function extractFileMarkers(text = '') {
 
   return {
     fileRefs: [...new Set(fileRefs)],
-    cleanedText: withAbsolutePathRemoved.replace(/\n{3,}/g, '\n\n').trim()
+    cleanedText: withAbsolutePathLineRemoved.replace(/\n{3,}/g, '\n\n').trim()
   };
+}
+
+function isPathWithinRoot(targetPath, rootPath) {
+  const relative = path.relative(rootPath, targetPath);
+  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+}
+
+function isAllowedFilePath(filePath) {
+  const resolved = path.resolve(filePath);
+  return ALLOWED_FILE_ROOTS.some((root) => isPathWithinRoot(resolved, root));
 }
 
 function buildFileCandidates(normalizedPath) {
@@ -82,11 +137,7 @@ function buildFileCandidates(normalizedPath) {
   const baseName = path.basename(normalizedPath);
   const candidates = [
     path.resolve(process.cwd(), normalizedPath),
-    path.resolve(process.cwd(), baseName),
-    path.resolve('/Users/loneyu/Desktop', baseName),
-    path.resolve('/Users/loneyu/Downloads', baseName),
-    path.resolve('/tmp', baseName),
-    path.resolve('/var/folders', baseName)
+    ...FILE_CANDIDATE_DIRS.map((dir) => path.resolve(dir, baseName))
   ];
 
   return [...new Set(candidates)];
@@ -95,7 +146,11 @@ function buildFileCandidates(normalizedPath) {
 async function resolveLocalFilePath(fileRef) {
   const normalized = sanitizeMarkerPath(fileRef);
   if (!normalized) {
-    return { filePath: null, triedPaths: [] };
+    return { filePath: null, triedPaths: [], rejectReason: 'empty_path' };
+  }
+
+  if (!path.isAbsolute(normalized)) {
+    return { filePath: null, triedPaths: [], rejectReason: 'relative_path_not_allowed' };
   }
 
   const candidates = buildFileCandidates(normalized);
@@ -109,16 +164,21 @@ async function resolveLocalFilePath(fileRef) {
     }
   }
 
-  return { filePath: null, triedPaths: candidates };
+  return { filePath: null, triedPaths: candidates, rejectReason: 'not_found' };
 }
 
 async function validateFileForTelegram(filePath) {
-  const ext = path.extname(filePath).toLowerCase();
+  const resolvedPath = path.resolve(filePath);
+  if (!isAllowedFilePath(resolvedPath)) {
+    return { ok: false, reason: `路径不在允许范围：${resolvedPath}` };
+  }
+
+  const ext = path.extname(resolvedPath).toLowerCase();
   if (!ALLOWED_FILE_EXTENSIONS.has(ext)) {
     return { ok: false, reason: `不支持的文件类型：${ext || '(unknown)'}` };
   }
 
-  const fileStat = await stat(filePath);
+  const fileStat = await stat(resolvedPath);
   const isPhoto = PHOTO_EXTENSIONS.has(ext);
   const maxSize = isPhoto ? TELEGRAM_MAX_PHOTO_BYTES : TELEGRAM_MAX_DOCUMENT_BYTES;
 
@@ -129,7 +189,7 @@ async function validateFileForTelegram(filePath) {
     };
   }
 
-  return { ok: true, isPhoto };
+  return { ok: true, isPhoto, resolvedPath };
 }
 
 function isTimeoutLikeError(message = '') {
@@ -154,10 +214,11 @@ async function replyFiles(ctx, fileRefs = []) {
   const results = [];
 
   for (const fileRef of fileRefs) {
-    const { filePath, triedPaths } = await resolveLocalFilePath(fileRef);
+    const { filePath, triedPaths, rejectReason } = await resolveLocalFilePath(fileRef);
     if (!filePath) {
-      results.push({ fileRef, sent: false, reason: 'not_found', triedPaths });
-      logger.warn({ fileRef, triedPaths }, 'File not found for telegram upload');
+      const reason = rejectReason || 'not_found';
+      results.push({ fileRef, sent: false, reason, triedPaths });
+      logger.warn({ fileRef, reason, triedPaths }, 'File unavailable for telegram upload');
       continue;
     }
 
@@ -169,22 +230,23 @@ async function replyFiles(ctx, fileRefs = []) {
         continue;
       }
 
+      const actualPath = validation.resolvedPath;
       let sent = false;
       let lastReason = '';
 
       for (let attempt = 1; attempt <= 2; attempt += 1) {
         try {
-          await sendTelegramFileByType(ctx, filePath, validation.isPhoto);
+          await sendTelegramFileByType(ctx, actualPath, validation.isPhoto);
           sent = true;
           logger.info(
-            { fileRef, filePath, as: validation.isPhoto ? 'photo' : 'document', attempt },
+            { fileRef, filePath: actualPath, as: validation.isPhoto ? 'photo' : 'document', attempt },
             'Telegram file sent'
           );
           break;
         } catch (error) {
           lastReason = error instanceof Error ? error.message : String(error);
           logger.warn(
-            { fileRef, filePath, err: lastReason, attempt },
+            { fileRef, filePath: actualPath, err: lastReason, attempt },
             'Telegram file send attempt failed'
           );
 
@@ -198,12 +260,12 @@ async function replyFiles(ctx, fileRefs = []) {
       }
 
       if (!sent) {
-        results.push({ fileRef, sent: false, reason: lastReason || 'unknown_error', filePath, triedPaths });
-        logger.error({ fileRef, filePath, err: lastReason }, 'Failed to send file to telegram');
+        results.push({ fileRef, sent: false, reason: lastReason || 'unknown_error', filePath: actualPath, triedPaths });
+        logger.error({ fileRef, filePath: actualPath, err: lastReason }, 'Failed to send file to telegram');
         continue;
       }
 
-      results.push({ fileRef, sent: true, filePath, triedPaths });
+      results.push({ fileRef, sent: true, filePath: actualPath, triedPaths });
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
       results.push({ fileRef, sent: false, reason, filePath, triedPaths });
@@ -458,7 +520,12 @@ export function createTelegramBot() {
         } else {
           const failedList = failed
             .map((item) => {
-              const reason = item.reason === 'not_found' ? '文件不存在或不可访问' : item.reason;
+              const reason =
+                item.reason === 'relative_path_not_allowed'
+                  ? '仅允许绝对路径，拒绝相对路径（请使用 SEND_FILE:/var/folders/.../xxx.png）'
+                  : item.reason === 'not_found'
+                    ? '文件不存在或不可访问（建议返回绝对路径，例如 SEND_FILE:/var/folders/.../xxx.png）'
+                    : item.reason;
               const tried = Array.isArray(item.triedPaths) && item.triedPaths.length > 0 ? `；尝试路径：${item.triedPaths.join(' | ')}` : '';
               return `- SEND_FILE:${item.fileRef}${reason ? `（${reason}）` : ''}${tried}`;
             })
