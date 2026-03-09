@@ -24,6 +24,8 @@ import shutil
 import sys
 from datetime import datetime, timezone
 
+from path_policy import resolve_bug_paths
+
 
 SESSION_STATUS_VALUES = [
     "success",
@@ -328,7 +330,9 @@ def cleanup_bug_artifacts(state_dir, bug_id, project_root=None):
     cleaned = []
 
     # 1) Remove all session history
-    sessions_dir = os.path.join(state_dir, "bugs", bug_id, "sessions")
+    sessions_dir = os.path.dirname(
+        resolve_bug_paths(project_root, bug_id, "SESSION_PLACEHOLDER")["sessionDir"]
+    )
     sessions_deleted = 0
     if os.path.isdir(sessions_dir):
         for entry in os.listdir(sessions_dir):
@@ -378,10 +382,12 @@ def cleanup_bug_artifacts(state_dir, bug_id, project_root=None):
 
 
 def load_session_status(state_dir, bug_id, session_id):
-    session_status_path = os.path.join(
-        state_dir, "bugs", bug_id, "sessions",
-        session_id, "session-status.json"
-    )
+    project_root = os.path.abspath(os.path.join(state_dir, "..", ".."))
+    session_status_path = resolve_bug_paths(
+        project_root,
+        bug_id,
+        session_id,
+    )["sessionStatus"]
     data, err = load_json_file(session_status_path)
     if err:
         return None, err

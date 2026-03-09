@@ -14,6 +14,8 @@ import os
 import sys
 from datetime import datetime, timezone
 
+from path_policy import resolve_specs_dir
+
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -43,22 +45,17 @@ def create_directories(project_root, feature_slug=None):
 
     # PrizmKit per-feature directories
     if feature_slug:
-        dirs_to_create.extend([
-            ".prizmkit/specs/{}".format(feature_slug),
-        ])
+        dirs_to_create.append(resolve_specs_dir(project_root, feature_slug))
     else:
         # Fallback: create flat directories (not recommended)
-        dirs_to_create.extend([
-            ".prizmkit/specs",
-        ])
-    
+        dirs_to_create.append(os.path.join(project_root, ".prizmkit", "specs"))
+
     created = []
-    for dir_path in dirs_to_create:
-        full_path = os.path.join(project_root, dir_path)
+    for full_path in dirs_to_create:
         if not os.path.exists(full_path):
             os.makedirs(full_path, exist_ok=True)
-            created.append(dir_path)
-    
+            created.append(os.path.relpath(full_path, project_root))
+
     return created
 
 

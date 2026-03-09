@@ -1,0 +1,24 @@
+DOC_LEVEL: L2
+MODULE: runtime/services
+PATH: src/services/**
+DESCRIPTION: runtime service layer for chat/session/system actions plus pipeline control facade
+
+KEY_FILES:
+- src/services/chat-service.js
+- src/services/chat-queue.js
+- src/services/session-store.js
+- src/services/realtime-hub.js
+- src/services/system-exec-service.js
+- src/services/pipeline-control-service.js
+
+PUBLIC_APIS:
+- chatWithSession({ channel, sessionId, message, realtimeHooks })
+- resetSession({ channel, sessionId })
+- pipeline control: startPipeline/getPipelineStatus/stopPipeline/retryTarget/getPipelineLogs/resetTarget
+
+TRAPS:
+- chat operations are serialized by session key; keep async queue semantics unchanged
+- pipeline-control-service must delegate to script-runner instead of shell string concatenation
+
+DECISIONS:
+- 2026-03-10 | f001-pipeline-service | expose logs/reset methods in pipeline-control-service to satisfy US3 reusable control surface

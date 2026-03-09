@@ -1,0 +1,209 @@
+{
+  "$schema": "dev-pipeline-feature-list-v1",
+  "app_name": "PrizmClaw",
+  "app_description": "面向 Telegram 的研发流水线控制台。用户可在 Telegram 内完成规划、开发、测试、提交的自动化编排与监控，不包含部署上线。",
+  "created_at": "2026-03-09T16:27:33Z",
+  "created_by": "app-planner",
+  "features": [
+    {
+      "id": "F-001",
+      "title": "Project Infrastructure Setup",
+      "description": "为 Telegram 管道模式建立统一的工程基线：明确配置分层、目录约定、日志与状态文件位置、脚本入口与错误码规范。该功能聚焦于让后续命令路由与 pipeline 控制能力有稳定的运行基础，并保持与现有 dev-pipeline 脚本兼容。\n\n范围包括：规范 feature-list / bug-fix-list 输入目录、规范 state 与 session 日志目录、统一启动参数解析、补全 TypeScript 迁移所需的基础构建与检查配置（不要求一次性迁移全部历史代码）。",
+      "priority": 1,
+      "estimated_complexity": "medium",
+      "dependencies": [],
+      "acceptance_criteria": [
+        "提供统一的配置加载与校验入口，缺失关键配置时返回可读错误信息",
+        "定义并落地计划文件、状态文件、日志文件的标准目录结构与命名规则",
+        "提供可复用的脚本入口封装，能够以一致参数调用现有 dev-pipeline 脚本",
+        "基础构建与静态检查流程可运行，且不会破坏现有 Telegram 对话主流程"
+      ],
+      "status": "pending",
+      "session_granularity": "feature",
+      "sub_features": []
+    },
+    {
+      "id": "F-002",
+      "title": "Telegram Pipeline Command Router",
+      "description": "在 Telegram Bot 中新增管道控制命令路由层，支持解析与分发 /pipeline、/bugfix、/planner、/status、/logs、/stop 等命令，并将参数规范化后交给后端控制模块执行。该功能只负责命令语义与输入验证，不直接承载长任务执行。\n\n需要提供统一帮助文本、参数错误提示、未授权用户拦截以及命令别名映射，以保证后续可扩展性。",
+      "priority": 2,
+      "estimated_complexity": "medium",
+      "dependencies": [
+        "F-001"
+      ],
+      "acceptance_criteria": [
+        "Bot 能识别并正确路由核心管道命令，未知命令返回帮助信息",
+        "参数解析支持子命令与可选参数，错误参数会返回明确修正建议",
+        "未授权用户无法调用高权限命令，且会收到统一拒绝提示",
+        "命令路由层与执行层解耦，具备可测试的 handler 接口"
+      ],
+      "status": "pending",
+      "session_granularity": "feature",
+      "sub_features": []
+    },
+    {
+      "id": "F-003",
+      "title": "Feature and Bug Plan Ingestion",
+      "description": "实现 Telegram 侧计划文件接入能力，支持 feature-list.json 与 bug-fix-list.json 的上传、引用与落盘管理。系统需完成 JSON 解析、schema 校验、错误定位、版本化存储与回滚选择，使用户能在 Telegram 中完成“提供计划输入”的闭环。\n\n该功能需兼容 app-planner/bug-planner 产物格式，并为后续 pipeline 执行提供稳定输入路径。",
+      "priority": 3,
+      "estimated_complexity": "high",
+      "dependencies": [
+        "F-001",
+        "F-002"
+      ],
+      "acceptance_criteria": [
+        "支持通过 Telegram 上传或引用计划文件并成功保存到约定目录",
+        "对 feature-list 与 bug-fix-list 执行 schema 校验，失败时返回字段级错误",
+        "支持同名文件版本化管理，并可指定某个版本作为当前执行输入",
+        "当输入文件不合法时，不会污染当前可运行配置且会保留原有稳定版本",
+        "保存成功后可被 pipeline 控制层直接读取并启动执行"
+      ],
+      "status": "pending",
+      "session_granularity": "auto",
+      "sub_features": [
+        {
+          "id": "F-003-A",
+          "title": "Plan Upload and Parsing",
+          "description": "实现 Telegram 计划文件上传、文件类型识别、JSON 读取与结构化错误返回。"
+        },
+        {
+          "id": "F-003-B",
+          "title": "Schema Validation and Versioning",
+          "description": "实现 schema 校验、版本目录管理、当前生效版本切换与回滚能力。"
+        }
+      ]
+    },
+    {
+      "id": "F-004",
+      "title": "Pipeline Process Controller",
+      "description": "构建 pipeline 进程控制层，统一封装 dev-pipeline/run.sh 与 run-bugfix.sh 的启动、停止、重试、单特性执行与后台守护模式。该层提供稳定 API 给 Telegram 命令路由调用，并负责并发锁、超时、退出码映射与异常恢复。\n\n目标是把当前“终端操作脚本”能力抽象为“程序可调用控制接口”。",
+      "priority": 4,
+      "estimated_complexity": "high",
+      "dependencies": [
+        "F-001",
+        "F-002"
+      ],
+      "acceptance_criteria": [
+        "可通过统一控制接口启动 feature pipeline 与 bugfix pipeline",
+        "支持 stop/retry/run-single 等关键控制动作，且具备并发互斥保护",
+        "执行过程中的超时、非零退出、脚本缺失等错误可映射为结构化结果",
+        "后台守护运行时可查询 PID、运行状态与最近一次执行结果",
+        "控制层接口可被 Telegram handler 复用而不依赖终端交互"
+      ],
+      "status": "pending",
+      "session_granularity": "auto",
+      "sub_features": [
+        {
+          "id": "F-004-A",
+          "title": "Runner Adapter Layer",
+          "description": "封装 run.sh/run-bugfix.sh 的参数构造、执行与结果标准化输出。"
+        },
+        {
+          "id": "F-004-B",
+          "title": "Daemon Control and Locking",
+          "description": "实现后台运行控制、并发锁、停止与重试机制。"
+        }
+      ]
+    },
+    {
+      "id": "F-005",
+      "title": "Pipeline Status and Log Streaming",
+      "description": "实现 pipeline 状态聚合与日志流式回传到 Telegram，包括当前执行 feature、已完成/失败统计、关键错误摘要、日志 tail 分页与节流推送。该功能应兼顾可读性与消息长度限制，避免刷屏并支持按需拉取详细日志。",
+      "priority": 5,
+      "estimated_complexity": "high",
+      "dependencies": [
+        "F-004"
+      ],
+      "acceptance_criteria": [
+        "`/status` 可返回当前 pipeline 阶段、统计信息和正在执行的特性",
+        "`/logs` 支持读取最近日志片段并支持偏移或行数参数",
+        "长日志输出自动分段并遵守 Telegram 消息长度限制",
+        "执行中可按固定策略推送心跳进度，失败时自动推送错误摘要",
+        "日志读取异常或状态文件缺失时返回可诊断错误而非静默失败"
+      ],
+      "status": "pending",
+      "session_granularity": "auto",
+      "sub_features": [
+        {
+          "id": "F-005-A",
+          "title": "Status Aggregation Engine",
+          "description": "聚合 state JSON 与 session 元数据，生成可展示的运行状态摘要。"
+        },
+        {
+          "id": "F-005-B",
+          "title": "Telegram Streaming Publisher",
+          "description": "实现日志分段、节流推送、失败告警与按需详情拉取。"
+        }
+      ]
+    },
+    {
+      "id": "F-006",
+      "title": "Safety and Permission Guard",
+      "description": "为 Telegram 管道控制增加安全护栏：命令白名单、用户权限分级、参数净化、敏感动作二次确认与审计日志。重点覆盖 stop/reset/retry/exec 等高风险指令，确保“可用”与“可控”并存。",
+      "priority": 6,
+      "estimated_complexity": "medium",
+      "dependencies": [
+        "F-002",
+        "F-004"
+      ],
+      "acceptance_criteria": [
+        "支持基于用户 ID 的权限分级与高风险命令授权校验",
+        "高风险命令执行前需要明确确认或满足策略条件",
+        "命令参数经过净化与规则校验，拒绝非法路径与危险参数组合",
+        "每次敏感操作都会写入审计日志并可按会话检索"
+      ],
+      "status": "pending",
+      "session_granularity": "feature",
+      "sub_features": []
+    },
+    {
+      "id": "F-007",
+      "title": "Test and Validation Suite",
+      "description": "建立 Telegram 管道能力的测试体系，覆盖命令路由、计划文件接入、进程控制、状态聚合与权限校验。测试策略以 Jest 为主，包含单元与必要的集成测试，确保核心流程在改动后可回归验证。",
+      "priority": 7,
+      "estimated_complexity": "medium",
+      "dependencies": [
+        "F-003",
+        "F-004",
+        "F-005",
+        "F-006"
+      ],
+      "acceptance_criteria": [
+        "Jest 测试可覆盖命令解析、控制层返回与错误路径",
+        "提供至少一条端到端级集成测试验证 start → status → stop 主链路",
+        "计划文件校验与版本切换存在自动化测试覆盖",
+        "权限与安全策略存在负向测试，确保未授权操作被阻断"
+      ],
+      "status": "pending",
+      "session_granularity": "feature",
+      "sub_features": []
+    },
+    {
+      "id": "F-008",
+      "title": "Commit Workflow Integration",
+      "description": "打通 Telegram 侧“规划→开发→测试→提交”的闭环提交能力：在 pipeline 通过后可触发标准提交流程，回传 commit 结果摘要，并在前置条件不满足时阻止提交。该功能不涉及部署上线，只覆盖代码提交阶段。",
+      "priority": 8,
+      "estimated_complexity": "medium",
+      "dependencies": [
+        "F-005",
+        "F-006",
+        "F-007"
+      ],
+      "acceptance_criteria": [
+        "支持从 Telegram 触发标准提交动作并返回 commit hash 与摘要",
+        "提交前会校验测试结果与 pipeline 状态，不满足条件则拒绝提交",
+        "提交失败时返回明确失败原因与建议操作",
+        "提交记录可在会话中追踪并与对应 feature/bugfix 关联"
+      ],
+      "status": "pending",
+      "session_granularity": "feature",
+      "sub_features": []
+    }
+  ],
+  "global_context": {
+    "tech_stack": "Node.js + Express + Telegraf + JSON state files + Shell/Python dev-pipeline",
+    "design_system": "Telegram command UX with structured message templates",
+    "testing_strategy": "Jest (unit + integration)",
+    "language": "TypeScript"
+  }
+}

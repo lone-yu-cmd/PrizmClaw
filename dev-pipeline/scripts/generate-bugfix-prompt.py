@@ -19,6 +19,8 @@ import os
 import re
 import sys
 
+from path_policy import resolve_bug_paths
+
 
 DEFAULT_MAX_RETRIES = 3
 
@@ -220,10 +222,11 @@ def build_replacements(args, bug, global_context, script_dir):
     reviewer_subagent = os.path.join(agents_dir, "prizm-dev-team-reviewer.md")
 
     # Session status path
-    session_status_path = os.path.join(
-        project_root, "dev-pipeline", "bugfix-state", "bugs", args.bug_id,
-        "sessions", args.session_id, "session-status.json"
-    )
+    session_status_path = resolve_bug_paths(
+        project_root,
+        args.bug_id,
+        args.session_id,
+    )["sessionStatus"]
 
     prev_status = get_prev_session_status(args.state_dir, args.bug_id)
 

@@ -11,6 +11,9 @@ KEY_FILES:
 - src/http/server.js
 - src/routes/api-routes.js
 - src/services/chat-service.js
+- src/services/pipeline-control-service.js
+- src/pipeline-infra/config-loader.js
+- src/pipeline-infra/script-runner.js
 - src/adapters/codebuddy.js
 - src/bot/telegram.js
 - src/services/system-exec-service.js
@@ -21,7 +24,8 @@ SUBDIRS:
 - src/http -> (lazy) .prizm-docs/runtime/http.prizm
 - src/routes -> (lazy) .prizm-docs/runtime/routes.prizm
 - src/security -> (lazy) .prizm-docs/runtime/security.prizm
-- src/services -> (lazy) .prizm-docs/runtime/services.prizm
+- src/services -> .prizm-docs/runtime/services.prizm
+- src/pipeline-infra -> .prizm-docs/runtime/pipeline-infra.prizm
 - src/utils -> (lazy) .prizm-docs/runtime/utils.prizm
 
 INTERFACES:
@@ -36,3 +40,4 @@ TRAPS:
 
 DECISIONS:
 - 2026-03-09 | runtime-doc-init | model first-pass runtime map from source + API surface
+- 2026-03-10 | runtime-infra-f001 | expose pipeline infra config in src/config.js and pipeline-control-service API for feature/bugfix run/status/stop/retry/logs/reset

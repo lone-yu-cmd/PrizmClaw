@@ -1,6 +1,9 @@
 import 'dotenv/config';
 import { z } from 'zod';
 
+import { loadPipelineInfraConfig } from './pipeline-infra/config-loader.js';
+import { resolveDaemonLogPaths } from './pipeline-infra/path-policy.js';
+
 const schema = z.object({
   TELEGRAM_BOT_TOKEN: z.string().optional().default(''),
   ENABLE_TELEGRAM: z.string().optional().default('true'),
@@ -50,6 +53,14 @@ if (enableTelegram && !parsed.TELEGRAM_BOT_TOKEN) {
   throw new Error('ENABLE_TELEGRAM=true 时必须提供 TELEGRAM_BOT_TOKEN');
 }
 
+const pipelineInfra = loadPipelineInfraConfig({
+  env: process.env,
+  argv: process.argv.slice(2),
+  cwd: process.cwd()
+});
+
+const daemonLogPaths = resolveDaemonLogPaths(pipelineInfra.projectRoot);
+
 export const config = Object.freeze({
   telegramBotToken: parsed.TELEGRAM_BOT_TOKEN,
   enableTelegram,
@@ -68,5 +79,9 @@ export const config = Object.freeze({
   enableSystemExec: parseBoolean(parsed.ENABLE_SYSTEM_EXEC),
   allowedCommandPrefixes: parseCsvList(parsed.ALLOWED_COMMAND_PREFIXES),
   systemExecTimeoutMs: parsed.SYSTEM_EXEC_TIMEOUT_MS,
-  logLevel: parsed.LOG_LEVEL
+  logLevel: parsed.LOG_LEVEL,
+  pipelineInfra: Object.freeze({
+    ...pipelineInfra,
+    daemonLogPaths
+  })
 });

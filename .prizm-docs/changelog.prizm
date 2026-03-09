@@ -1,2 +1,3 @@
 CHANGELOG:
 - 2026-03-09 | init | bootstrap .prizm-docs L0/L1 + assessment + platform config(codebuddy)
+- 2026-03-10 | f001-infra-setup | implement pipeline infra contracts (config/path/errors/runner/service), add TS/lint baseline, and document L2 runtime/pipeline modules

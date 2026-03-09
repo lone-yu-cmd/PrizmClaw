@@ -19,6 +19,8 @@ import os
 import re
 import sys
 
+from path_policy import compute_feature_slug, resolve_feature_paths, resolve_specs_dir
+
 
 DEFAULT_MAX_RETRIES = 3
 
@@ -120,27 +122,6 @@ def find_feature(features, feature_id):
         if isinstance(feature, dict) and feature.get("id") == feature_id:
             return feature
     return None
-
-
-def compute_feature_slug(feature_id, title):
-    """Compute the prizmkit feature slug: ###-kebab-case-name.
-
-    e.g. F-001 + "Project Infrastructure Setup" -> "001-project-infrastructure-setup"
-    The prizmkit skills use this slug to create per-feature directories.
-    """
-    # Extract numeric part from feature_id (e.g., "F-001" -> "001")
-    numeric = feature_id.replace("F-", "").replace("f-", "")
-    # Pad to 3 digits
-    numeric = numeric.zfill(3)
-
-    # Convert title to kebab-case
-    slug = title.lower()
-    slug = re.sub(r"[^a-z0-9\s-]", "", slug)  # remove non-alphanumeric
-    slug = re.sub(r"[\s]+", "-", slug.strip())  # spaces to hyphens
-    slug = re.sub(r"-+", "-", slug)  # collapse multiple hyphens
-    slug = slug.strip("-")
-
-    return "{}-{}".format(numeric, slug)
 
 
 def format_acceptance_criteria(criteria):
@@ -336,7 +317,7 @@ def detect_existing_artifacts(project_root, feature_slug):
 
     Returns a dict with keys: has_spec, has_plan, has_tasks, all_complete.
     """
-    specs_dir = os.path.join(project_root, ".prizmkit", "specs", feature_slug)
+    specs_dir = resolve_specs_dir(project_root, feature_slug)
     result = {
         "has_spec": os.path.isfile(os.path.join(specs_dir, "spec.md")),
         "has_plan": os.path.isfile(os.path.join(specs_dir, "plan.md")),
@@ -407,13 +388,13 @@ def build_replacements(args, feature, features, global_context, script_dir):
     validator_scripts_dir = os.path.join(project_root, "dev-pipeline", "scripts")
     init_script_path = os.path.join(validator_scripts_dir, "init-dev-team.py")
 
-    # Session status path (relative to dev-pipeline/)
-    session_status_path = os.path.join(
-        "dev-pipeline", "state", "features", args.feature_id,
-        "sessions", args.session_id, "session-status.json",
+    feature_paths = resolve_feature_paths(
+        project_root,
+        args.feature_id,
+        feature.get("title", ""),
+        args.session_id,
     )
-    # Make it relative from project root
-    session_status_abs = os.path.join(project_root, session_status_path)
+    session_status_abs = feature_paths["sessionStatus"]
 
     prev_status = get_prev_session_status(args.state_dir, args.feature_id)
 

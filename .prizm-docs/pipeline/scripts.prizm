@@ -1,0 +1,27 @@
+DOC_LEVEL: L2
+MODULE: pipeline/scripts
+PATH: dev-pipeline/scripts/**
+DESCRIPTION: python automation scripts for feature+bugfix state management and prompt generation
+
+KEY_FILES:
+- dev-pipeline/scripts/path_policy.py
+- dev-pipeline/scripts/init-dev-team.py
+- dev-pipeline/scripts/generate-bootstrap-prompt.py
+- dev-pipeline/scripts/generate-bugfix-prompt.py
+- dev-pipeline/scripts/update-feature-status.py
+- dev-pipeline/scripts/update-bug-status.py
+
+PATH_POLICY:
+- feature slug: ###-kebab-case via compute_feature_slug
+- feature session status: dev-pipeline/state/features/{id}/sessions/{sessionId}/session-status.json
+- bug session status: dev-pipeline/bugfix-state/bugs/{id}/sessions/{sessionId}/session-status.json
+- daemon logs: state/pipeline-daemon.log + bugfix-state/pipeline-daemon.log
+
+TRAPS:
+- scripts are invoked by shell wrappers; CLI arg compatibility is required
+- avoid introducing implicit relative paths; resolve from project_root
+- cleanup flows in update-* scripts must preserve status.json while clearing session artifacts
+
+DECISIONS:
+- 2026-03-10 | f001-shared-python-policy | imported path_policy.py in init/generate/update scripts to remove hardcoded path fragments
+- 2026-03-10 | f001-daemon-log-policy | daemon log locations documented and consumed via unified path policy for US2

@@ -21,10 +21,11 @@ Usage:
 import argparse
 import json
 import os
-import re
 import shutil
 import sys
 from datetime import datetime, timezone
+
+from path_policy import compute_feature_slug, resolve_feature_paths, resolve_specs_dir
 
 
 SESSION_STATUS_VALUES = [
@@ -211,13 +212,7 @@ def _default_project_root():
 
 
 def _build_feature_slug(feature_id, title):
-    numeric = feature_id.replace("F-", "").replace("f-", "").zfill(3)
-    cleaned = re.sub(r"[^a-z0-9\s-]", "", (title or "").lower())
-    cleaned = re.sub(r"[\s]+", "-", cleaned.strip())
-    cleaned = re.sub(r"-+", "-", cleaned).strip("-")
-    if not cleaned:
-        cleaned = "feature"
-    return "{}-{}".format(numeric, cleaned)
+    return compute_feature_slug(feature_id, title)
 
 
 def _get_feature_slug(feature_list_path, feature_id):
@@ -269,7 +264,7 @@ def cleanup_feature_artifacts(feature_list_path, state_dir, feature_id, project_
     # 3) Remove generated prizm specs for this feature
     feature_slug = _get_feature_slug(feature_list_path, feature_id)
     if feature_slug:
-        specs_dir = os.path.join(project_root, ".prizmkit", "specs", feature_slug)
+        specs_dir = resolve_specs_dir(project_root, feature_slug)
         if os.path.isdir(specs_dir):
             file_count = sum(len(files) for _, _, files in os.walk(specs_dir))
             shutil.rmtree(specs_dir)
@@ -295,10 +290,13 @@ def cleanup_feature_artifacts(feature_list_path, state_dir, feature_id, project_
 
 def load_session_status(state_dir, feature_id, session_id):
     """Load a session's session-status.json file."""
-    session_status_path = os.path.join(
-        state_dir, "features", feature_id, "sessions",
-        session_id, "session-status.json"
-    )
+    project_root = os.path.abspath(os.path.join(state_dir, "..", ".."))
+    session_status_path = resolve_feature_paths(
+        project_root,
+        feature_id,
+        "",
+        session_id,
+    )["sessionStatus"]
     data, err = load_json_file(session_status_path)
     if err:
         return None, err

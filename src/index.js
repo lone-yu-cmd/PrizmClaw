@@ -6,6 +6,13 @@ import { logger } from './utils/logger.js';
 const app = createHttpServer({ logger });
 const server = app.listen(config.webPort, config.webHost, () => {
   logger.info(`Web server running at http://${config.webHost}:${config.webPort}`);
+  logger.info(
+    {
+      pipelineDir: config.pipelineInfra.pipelineDir,
+      platform: config.pipelineInfra.platform
+    },
+    'Pipeline infra config loaded'
+  );
 });
 
 let bot = null;
