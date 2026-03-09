@@ -6,7 +6,7 @@ import path from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
 
 import { loadPipelineInfraConfig } from '../../src/pipeline-infra/config-loader.js';
-import { resolveFeaturePaths, resolveBugPaths } from '../../src/pipeline-infra/path-policy.js';
+import { resolveFeaturePaths, resolveBugPaths, resolveDaemonLogPaths } from '../../src/pipeline-infra/path-policy.js';
 import { createPipelineControlService } from '../../src/services/pipeline-control-service.js';
 
 const PROJECT_ROOT = path.resolve(process.cwd());
@@ -127,6 +127,27 @@ test('US2: path policy keeps stable naming and Python compatibility', () => {
   });
   assert.match(jsBug.sessionDir, /dev-pipeline\/bugfix-state\/bugs\/B-001\/sessions\/B-001-20260310020202$/);
 
+  const daemonLogs = resolveDaemonLogPaths('/tmp/prizmclaw-f001-us2');
+  assert.equal(daemonLogs.featureDaemonLog, '/tmp/prizmclaw-f001-us2/dev-pipeline/state/pipeline-daemon.log');
+  assert.equal(daemonLogs.bugfixDaemonLog, '/tmp/prizmclaw-f001-us2/dev-pipeline/bugfix-state/pipeline-daemon.log');
+
+  assert.throws(() => {
+    resolveFeaturePaths({
+      projectRoot: '/tmp/prizmclaw-f001-us2',
+      featureId: '../F-001',
+      title: 'Project Infrastructure Setup',
+      sessionId: 'F-001-20260310020202'
+    });
+  }, /invalid path segment/i);
+
+  assert.throws(() => {
+    resolveBugPaths({
+      projectRoot: '/tmp/prizmclaw-f001-us2',
+      bugId: 'B-001',
+      sessionId: '../../escape'
+    });
+  }, /invalid path segment/i);
+
   const pyFeature = runPythonJson(
     "import json; from path_policy import resolve_feature_paths; print(json.dumps(resolve_feature_paths('/tmp/prizmclaw-f001-us2','F-001','Project Infrastructure Setup','F-001-20260310020202')))"
   );
@@ -156,6 +177,10 @@ case \"$action\" in
   run)
     shift || true
     if [ \"\${SIMULATE_TIMEOUT:-0}\" = \"1\" ]; then sleep 1; fi
+    if [ \"\${SIMULATE_FAIL:-0}\" = \"1\" ]; then
+      echo \"feature-run-failed\" >&2
+      exit 7
+    fi
     echo \"feature-run:\${1:-all}\"
     ;;
   status)
@@ -242,6 +267,18 @@ esac
       assert.equal(timeoutResult.ok, false);
       assert.equal(timeoutResult.normalizedStatus, 'timed_out');
       assert.equal(timeoutResult.errorCode, 'EXEC_TIMEOUT');
+
+      const nonZeroResult = await service.startPipeline({
+        pipelineType: 'feature',
+        targetId: 'F-001',
+        envOverrides: { SIMULATE_FAIL: '1' }
+      });
+      assertStructuredPipelineResult(nonZeroResult);
+      assert.equal(nonZeroResult.ok, false);
+      assert.equal(nonZeroResult.normalizedStatus, 'failed');
+      assert.equal(nonZeroResult.errorCode, 'EXEC_FAILED');
+      assert.equal(nonZeroResult.exitCode, 7);
+      assert.match(nonZeroResult.stderr, /feature-run-failed/);
 
       const bugStatus = await service.getPipelineStatus({ pipelineType: 'bugfix' });
       assertStructuredPipelineResult(bugStatus);
