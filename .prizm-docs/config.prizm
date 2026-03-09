@@ -1,0 +1,25 @@
+DOC_LEVEL: L1
+MODULE: project-config
+PATH: package.json,.env.example,.codebuddy/settings.json,CODEBUDDY.md
+DESCRIPTION: runtime dependencies, environment contract, and AI workflow rules
+
+MANIFEST:
+- package.json scripts: start, dev
+- dependencies: dotenv, express, pino, screenshot-desktop, telegraf, zod
+
+ENV_CONTRACT:
+- telegram: TELEGRAM_BOT_TOKEN, ENABLE_TELEGRAM, ALLOWED_USER_IDS
+- codebuddy bridge: CODEBUDDY_BIN, CODEBUDDY_PERMISSION_FLAG, CODEBUDDY_ECHO_STDIO, CODEBUDDY_HEARTBEAT_MS
+- web: WEB_HOST, WEB_PORT
+- system exec: ENABLE_SYSTEM_EXEC, ALLOWED_COMMAND_PREFIXES, SYSTEM_EXEC_TIMEOUT_MS
+
+PLATFORM_SETTINGS:
+- .codebuddy/settings.json -> UserPromptSubmit reminder hook present
+- CODEBUDDY.md -> PrizmKit protocol section already present
+
+DEPENDENCY_HEALTH:
+- outdated_major: dotenv, express, zod
+- npm_audit_prod: 0
+
+DECISIONS:
+- 2026-03-09 | config-doc-init | lock platform=codebuddy and passive adoption defaults

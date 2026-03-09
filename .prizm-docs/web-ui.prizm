@@ -1,0 +1,18 @@
+DOC_LEVEL: L1
+MODULE: web-ui
+PATH: public/**
+DESCRIPTION: static UI for interacting with /api chat and event stream
+
+KEY_FILES:
+- public/index.html
+- public/js/main.js
+- public/styles.css
+
+INTERFACES:
+- depends_on: /api/chat, /api/events, /api/chat/reset, /api/screenshot, /api/system/exec
+
+TRAPS:
+- no dedicated frontend test setup detected
+
+DECISIONS:
+- 2026-03-09 | web-ui-doc-init | keep as L1-only until public/js grows into submodules

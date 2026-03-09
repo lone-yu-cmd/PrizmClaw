@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "If this message mentions committing, pushing, or finishing a task, remind about updating .prizm-docs/ first. Suggest using the prizmkit-committer skill."
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,23 @@
+DOC_LEVEL: L1
+MODULE: pipeline
+PATH: dev-pipeline/**
+DESCRIPTION: automation scripts + templates for feature/bugfix pipelines
+
+KEY_FILES:
+- dev-pipeline/run.sh
+- dev-pipeline/run-bugfix.sh
+- dev-pipeline/launch-daemon.sh
+- dev-pipeline/launch-bugfix-daemon.sh
+- dev-pipeline/scripts/*.py
+- dev-pipeline/templates/*
+
+STATE_PATHS:
+- dev-pipeline/state/
+- dev-pipeline/bugfix-state/
+
+TRAPS:
+- several large operational scripts (>500 lines) require cautious edits
+- TODO density is concentrated in this module
+
+DECISIONS:
+- 2026-03-09 | pipeline-doc-init | treat shell+python pipeline as independent module

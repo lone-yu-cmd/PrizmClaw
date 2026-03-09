@@ -1,0 +1,38 @@
+DOC_LEVEL: L1
+MODULE: runtime
+PATH: src/**
+DESCRIPTION: telegram + web request handling + sessioned CodeBuddy bridge
+
+ENTRYPOINT:
+- src/index.js -> createHttpServer + optional Telegram bot launch
+
+KEY_FILES:
+- src/config.js
+- src/http/server.js
+- src/routes/api-routes.js
+- src/services/chat-service.js
+- src/adapters/codebuddy.js
+- src/bot/telegram.js
+- src/services/system-exec-service.js
+
+SUBDIRS:
+- src/adapters -> (lazy) .prizm-docs/runtime/adapters.prizm
+- src/bot -> (lazy) .prizm-docs/runtime/bot.prizm
+- src/http -> (lazy) .prizm-docs/runtime/http.prizm
+- src/routes -> (lazy) .prizm-docs/runtime/routes.prizm
+- src/security -> (lazy) .prizm-docs/runtime/security.prizm
+- src/services -> (lazy) .prizm-docs/runtime/services.prizm
+- src/utils -> (lazy) .prizm-docs/runtime/utils.prizm
+
+INTERFACES:
+- HTTP: /healthz, /api/events(SSE), /api/chat, /api/chat/reset, /api/screenshot, /api/system/exec
+- Telegram: /start, /help, /reset, /screenshot, /exec, text message relay
+
+TRAPS:
+- ENABLE_TELEGRAM=true requires TELEGRAM_BOT_TOKEN
+- system exec is disabled unless ENABLE_SYSTEM_EXEC=true
+- system exec requires ALLOWED_COMMAND_PREFIXES whitelist
+- chat is serialized per session via chat-queue
+
+DECISIONS:
+- 2026-03-09 | runtime-doc-init | model first-pass runtime map from source + API surface

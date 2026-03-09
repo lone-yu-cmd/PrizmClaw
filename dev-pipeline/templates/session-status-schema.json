@@ -1,0 +1,77 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Dev-Pipeline Session Status",
+  "description": "Schema for session-status.json written by agent at session end",
+  "type": "object",
+  "required": ["session_id", "feature_id", "status", "timestamp"],
+  "properties": {
+    "session_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "feature_id": {
+      "type": "string",
+      "pattern": "^F-\\d{3}(-[A-Z])?$"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["success", "partial", "failed"]
+    },
+    "completed_phases": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 7
+      }
+    },
+    "current_phase": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 7
+    },
+    "checkpoint_reached": {
+      "type": "string",
+      "pattern": "^CP-[0-3]$"
+    },
+    "tasks_completed": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "tasks_total": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["message"],
+        "properties": {
+          "phase": { "type": "integer" },
+          "type": { "type": "string" },
+          "message": { "type": "string" },
+          "recoverable": { "type": "boolean" }
+        }
+      }
+    },
+    "can_resume": {
+      "type": "boolean"
+    },
+    "resume_from_phase": {
+      "type": ["integer", "null"]
+    },
+    "artifacts": {
+      "type": "object",
+      "properties": {
+        "spec_path": { "type": "string" },
+        "plan_path": { "type": "string" },
+        "tasks_path": { "type": "string" }
+      }
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

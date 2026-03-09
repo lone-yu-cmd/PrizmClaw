@@ -1,0 +1,27 @@
+DOC_LEVEL: L0
+PROJECT_NAME: PrizmClaw
+PROJECT_TYPE: telegram-bridge + web-api
+ADOPTION_MODE: brownfield
+PLATFORM: codebuddy
+LANGUAGES: JavaScript(ESM), HTML, CSS, Python, Shell
+PACKAGE_MANAGER: npm
+ENTRYPOINTS: src/index.js -> src/http/server.js + src/bot/telegram.js
+DOC_STATUS: initialized
+ASSESSMENT: ASSESSMENT.md
+MIGRATION_CANDIDATE: docs/AI_CONTEXT -> not_found
+
+MODULE_INDEX:
+- runtime: src/** -> .prizm-docs/runtime.prizm
+- web-ui: public/** -> .prizm-docs/web-ui.prizm
+- pipeline: dev-pipeline/** -> .prizm-docs/pipeline.prizm
+- dev-team: dev-team/** -> .prizm-docs/team.prizm
+- project-config: package.json,.env.example,.codebuddy/settings.json,CODEBUDDY.md -> .prizm-docs/config.prizm
+
+LOAD_RULES:
+- ON_SESSION_START: read .prizm-docs/root.prizm
+- ON_TASK: load related L1 via MODULE_INDEX
+- ON_EDIT: load/create related L2 lazily
+
+DEPENDENCY_HEALTH:
+- outdated_major: dotenv,express,zod
+- npm_audit_prod: 0 vulnerabilities
