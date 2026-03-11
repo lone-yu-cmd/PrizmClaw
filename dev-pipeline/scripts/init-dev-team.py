@@ -14,8 +14,6 @@ import os
 import sys
 from datetime import datetime, timezone
 
-from path_policy import resolve_specs_dir
-
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -45,16 +43,21 @@ def create_directories(project_root, feature_slug=None):
 
     # PrizmKit per-feature directories
     if feature_slug:
-        dirs_to_create.append(resolve_specs_dir(project_root, feature_slug))
+        dirs_to_create.extend([
+            ".prizmkit/specs/{}".format(feature_slug),
+        ])
     else:
         # Fallback: create flat directories (not recommended)
-        dirs_to_create.append(os.path.join(project_root, ".prizmkit", "specs"))
+        dirs_to_create.extend([
+            ".prizmkit/specs",
+        ])
 
     created = []
-    for full_path in dirs_to_create:
+    for dir_path in dirs_to_create:
+        full_path = os.path.join(project_root, dir_path)
         if not os.path.exists(full_path):
             os.makedirs(full_path, exist_ok=True)
-            created.append(os.path.relpath(full_path, project_root))
+            created.append(dir_path)
 
     return created
 
@@ -62,7 +65,7 @@ def create_directories(project_root, feature_slug=None):
 def init_prizmkit_config(project_root, feature_id):
     """Initialize or update .prizmkit/config.json."""
     config_path = os.path.join(project_root, ".prizmkit", "config.json")
-    
+
     if os.path.exists(config_path):
         # Update existing config
         with open(config_path, "r", encoding="utf-8") as f:
@@ -81,7 +84,7 @@ def init_prizmkit_config(project_root, feature_id):
                     project_name = pkg.get("name", project_name)
             except (json.JSONDecodeError, IOError):
                 pass
-        
+
         config = {
             "adoption_mode": "active",
             "speckit_hooks_enabled": True,
@@ -90,17 +93,17 @@ def init_prizmkit_config(project_root, feature_id):
             "feature_prefix": "F-",
             "current_feature": feature_id,
         }
-    
+
     with open(config_path, "w", encoding="utf-8") as f:
         json.dump(config, f, indent=2)
-    
+
     return config_path
 
 
 def main():
     args = parse_args()
     project_root = os.path.abspath(args.project_root)
-    
+
     if not os.path.isdir(project_root):
         result = {
             "success": False,
@@ -108,13 +111,13 @@ def main():
         }
         print(json.dumps(result, indent=2))
         sys.exit(1)
-    
+
     # Create directories
     created_dirs = create_directories(project_root, args.feature_slug)
-    
+
     # Initialize config
     config_path = init_prizmkit_config(project_root, args.feature_id)
-    
+
     result = {
         "success": True,
         "project_root": project_root,
@@ -122,7 +125,7 @@ def main():
         "directories_created": created_dirs,
         "config_path": config_path,
     }
-    
+
     print(json.dumps(result, indent=2))
     sys.exit(0)
 

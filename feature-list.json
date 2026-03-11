@@ -18,7 +18,7 @@
         "提供可复用的脚本入口封装，能够以一致参数调用现有 dev-pipeline 脚本",
         "基础构建与静态检查流程可运行，且不会破坏现有 Telegram 对话主流程"
       ],
-      "status": "pending",
+      "status": "completed",
       "session_granularity": "feature",
       "sub_features": []
     },

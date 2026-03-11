@@ -2,11 +2,11 @@
   "hooks": {
     "UserPromptSubmit": [
       {
+        "matcher": "\\b(commit|Commit|push|Push|finish|Finish|ship|Ship|merge|Merge|pull request|Pull Request|pr|PR)\\b|提交|推送|收尾|完成任务|合并|发版|发布",
         "hooks": [
           {
-            "type": "prompt",
-            "prompt": "You are a commit-intent detector for PrizmKit. Analyze the user prompt and determine if the user intends to COMMIT, PUSH, FINISH, SHIP, MERGE, or create a PULL REQUEST.\n\nUser prompt: $ARGUMENTS\n\nIF commit intent detected, respond with:\n{\"ok\": true, \"reason\": \"PRIZMKIT_DOC_UPDATE_REQUIRED: Before committing, you MUST update .prizm-docs/ per Prizm auto-update protocol. Steps: 1) Run git diff --cached --name-status. 2) Map changed files to modules via root.prizm MODULE_INDEX. 3) Read and update affected .prizm files (only changed sections). 4) Append to changelog.prizm. 5) Stage .prizm files with git add .prizm-docs/. 6) Then proceed with commit using prizmkit-committer workflow. RULES: Never rewrite entire .prizm files. Never add prose. Only update affected sections.\"}\n\nIF no commit intent, respond with:\n{\"ok\": true}\n\nRespond with JSON only. No explanation.",
-            "timeout": 10
+            "type": "command",
+            "command": "echo 'PRIZMKIT_DOC_UPDATE_REQUIRED: Before committing, you MUST update .prizm-docs/ per Prizm auto-update protocol. Steps: 1) Run git diff --cached --name-status. 2) Map changed files to modules via root.prizm MODULE_INDEX. 3) Read and update affected .prizm files (only changed sections). 4) Append to changelog.prizm. 5) Stage .prizm files with git add .prizm-docs/. 6) Then proceed with commit using prizmkit-committer workflow. RULES: Never rewrite entire .prizm files. Never add prose. Only update affected sections.'"
           }
         ]
       }

@@ -21,10 +21,15 @@ import argparse
 import json
 import os
 import shutil
-import sys
 from datetime import datetime, timezone
 
-from path_policy import resolve_bug_paths
+from utils import (
+    load_json_file,
+    write_json_file,
+    error_out,
+    pad_right,
+    _build_progress_bar,
+)
 
 
 SESSION_STATUS_VALUES = [
@@ -71,37 +76,6 @@ def parse_args():
 
 def now_iso():
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-def load_json_file(path):
-    abs_path = os.path.abspath(path)
-    if not os.path.isfile(abs_path):
-        return None, "File not found: {}".format(abs_path)
-    try:
-        with open(abs_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-    except json.JSONDecodeError as e:
-        return None, "Invalid JSON: {}".format(str(e))
-    except IOError as e:
-        return None, "Cannot read file: {}".format(str(e))
-    return data, None
-
-
-def write_json_file(path, data):
-    abs_path = os.path.abspath(path)
-    parent = os.path.dirname(abs_path)
-    if parent and not os.path.isdir(parent):
-        try:
-            os.makedirs(parent, exist_ok=True)
-        except OSError as e:
-            return "Cannot create directory: {}".format(str(e))
-    try:
-        with open(abs_path, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
-            f.write("\n")
-    except IOError as e:
-        return "Cannot write file: {}".format(str(e))
-    return None
 
 
 def load_bug_status(state_dir, bug_id):
@@ -330,9 +304,7 @@ def cleanup_bug_artifacts(state_dir, bug_id, project_root=None):
     cleaned = []
 
     # 1) Remove all session history
-    sessions_dir = os.path.dirname(
-        resolve_bug_paths(project_root, bug_id, "SESSION_PLACEHOLDER")["sessionDir"]
-    )
+    sessions_dir = os.path.join(state_dir, "bugs", bug_id, "sessions")
     sessions_deleted = 0
     if os.path.isdir(sessions_dir):
         for entry in os.listdir(sessions_dir):
@@ -382,12 +354,10 @@ def cleanup_bug_artifacts(state_dir, bug_id, project_root=None):
 
 
 def load_session_status(state_dir, bug_id, session_id):
-    project_root = os.path.abspath(os.path.join(state_dir, "..", ".."))
-    session_status_path = resolve_bug_paths(
-        project_root,
-        bug_id,
-        session_id,
-    )["sessionStatus"]
+    session_status_path = os.path.join(
+        state_dir, "bugs", bug_id, "sessions",
+        session_id, "session-status.json"
+    )
     data, err = load_json_file(session_status_path)
     if err:
         return None, err
@@ -407,31 +377,6 @@ COLOR_BOLD = "\033[1m"
 COLOR_RESET = "\033[0m"
 
 BOX_WIDTH = 68
-
-
-def pad_right(text, width):
-    visible = text
-    i = 0
-    visible_len = 0
-    while i < len(text):
-        if text[i] == "\033":
-            while i < len(text) and text[i] != "m":
-                i += 1
-            i += 1
-        else:
-            visible_len += 1
-            i += 1
-    padding = width - visible_len
-    if padding > 0:
-        return text + " " * padding
-    return text
-
-
-def _build_progress_bar(percent, width=20):
-    filled = int(width * percent / 100)
-    empty = width - filled
-    bar = "█" * filled + "░" * empty
-    return "{} {:>3}%".format(bar, int(percent))
 
 
 SEVERITY_ICONS = {
@@ -701,16 +646,6 @@ def action_pause(state_dir):
         "paused_at": data["paused_at"],
     }
     print(json.dumps(result, indent=2, ensure_ascii=False))
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-def error_out(message):
-    output = {"error": message}
-    print(json.dumps(output, indent=2, ensure_ascii=False))
-    sys.exit(1)
 
 
 # ---------------------------------------------------------------------------

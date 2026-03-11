@@ -7,6 +7,12 @@ description: Launch and manage the bugfix pipeline from within a cbc session. St
 
 Launch the autonomous bug fix pipeline from within a cbc conversation. The pipeline runs as a fully detached background process -- closing the cbc session does NOT stop the pipeline.
 
+### Mandatory Execution Mode (MUST)
+
+- Always use daemon mode via `dev-pipeline/launch-bugfix-daemon.sh` for start/stop/status/log actions.
+- NEVER run `dev-pipeline/run-bugfix.sh run ...` directly from this skill.
+- Reason: foreground `run-bugfix.sh` can be terminated by AI CLI command timeout (e.g. cbc 120s), while daemon mode survives session timeout.
+
 ### When to Use
 
 **Start bugfix pipeline** -- User says:
@@ -14,7 +20,7 @@ Launch the autonomous bug fix pipeline from within a cbc conversation. The pipel
 - "start bug fix", "run bug fix", "execute bug list", "begin fixing"
 - "启动 bug 修复", "开始修复 bug", "运行 bug 修复流水线", "开始修 bug"
 - "修复所有 bug", "批量修复", "启动修复流水线"
-- After bug-planner completes: "go", "start", "fix them", "开始吧", "开始修复"
+- After bug-planner completes: "fix them", "开始修复"
 
 **Check status** -- User says:
 - "bugfix status", "check bug fixes", "how's the fixing going", "bug fix progress"

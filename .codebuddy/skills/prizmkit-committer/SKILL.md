@@ -87,8 +87,25 @@ python3 ${SKILL_DIR}/scripts/manage_changelog.py add --type <type> --message "<d
 ```
 
 #### Step 5: Git Commit
+
+5a. Safety check before staging:
 ```bash
-git add .
+git diff --name-only
+git ls-files --others --exclude-standard
+```
+Review the output for sensitive files. If any file matches these patterns, **STOP and warn the user**:
+- `.env`, `.env.*`
+- `*.key`, `*.pem`, `*.p12`
+- `credentials.*`, `*secret*`
+- `*.sqlite`, `*.db` (database files)
+
+5b. Stage and commit:
+```bash
+git add -A
+git diff --cached --name-only
+```
+Review staged file list one final time, then:
+```bash
 git commit -m "<type>(<scope>): <description>"
 ```
 Follow Conventional Commits format.
@@ -104,7 +121,7 @@ Then verify working tree is clean:
 git status
 ```
 - If "nothing to commit, working tree clean": commit verified successfully, proceed
-- If there are uncommitted changes remaining: **STOP** and report error — all changes must be captured in the commit. Run `git add . && git commit --amend --no-edit` to include missed files, then re-verify
+- If there are uncommitted changes remaining: **STOP** and report error — all changes must be captured in the commit. Run `git add -A && git commit --amend --no-edit` to include missed files, then re-verify
 
 #### Step 7: Optional Push
 Ask user: "Push to remote?"
@@ -112,6 +129,7 @@ Ask user: "Push to remote?"
 - No: Stop
 
 ### Error Handling
-- If git diff is empty but untracked files exist: run `git add -N .` first
+- If git diff is empty but untracked files exist: run `git add -N .` first (respects .gitignore)
 - If CHANGELOG.md script fails: update manually or ask user
 - If .prizm-docs/ doesn't exist: skip Step 2 entirely (project not initialized)
+- If sensitive files are detected during Step 5a safety check: warn user and do NOT stage them automatically

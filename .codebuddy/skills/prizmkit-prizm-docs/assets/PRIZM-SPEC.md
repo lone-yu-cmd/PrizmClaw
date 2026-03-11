@@ -665,11 +665,11 @@ STEPS:
 
 ## 11.1 Mechanism
 
-HOOK_TYPE: prompt (LLM-evaluated, not script-based)
+HOOK_TYPE: command (shell echo, fast and reliable)
 EVENT: UserPromptSubmit
-BEHAVIOR: Detects commit intent in user prompt, injects doc update reminder
-ALWAYS_RETURNS: ok: true (never blocks the user prompt)
-INJECTION: When commit intent detected, "reason" field carries update instructions that AI sees as additional context
+BEHAVIOR: When matcher detects commit-related keywords, echoes doc update reminder as stdout
+INJECTION: stdout content is injected into AI's context as a system-reminder
+NOTE: Previously used type: prompt (LLM-evaluated), but switched to type: command for reliability — prompt type is prone to timeout and JSON format errors
 
 ## 11.2 Configuration Template
 
@@ -680,11 +680,11 @@ JSON:
   "hooks": {
     "UserPromptSubmit": [
       {
+        "matcher": "(?i)\\b(commit|push|finish|ship|merge|pull request|pr)\\b|提交|推送|收尾|完成任务|合并|发版|发布",
         "hooks": [
           {
-            "type": "prompt",
-            "prompt": "You are a commit-intent detector for the Prizm documentation framework. Analyze the user prompt and determine if the user intends to COMMIT, PUSH, FINISH, SHIP, MERGE, or create a PULL REQUEST.\n\nUser prompt: $ARGUMENTS\n\nIF commit intent detected, respond with:\n{\"ok\": true, \"reason\": \"PRIZM_UPDATE_REQUIRED: Before committing, you MUST update .prizm-docs/. Steps: 1) Run git diff --cached --name-status. 2) Map changed files to modules via root.prizm MODULE_INDEX. 3) Read and update affected .prizm files (only changed sections). 4) Append to changelog.prizm. 5) Stage .prizm files. 6) Then commit. RULES: Never rewrite entire files. Never add prose. Only update affected sections.\"}\n\nIF no commit intent, respond with:\n{\"ok\": true}\n\nJSON only.",
-            "timeout": 10
+            "type": "command",
+            "command": "echo 'PRIZMKIT_DOC_UPDATE_REQUIRED: Before committing, you MUST update .prizm-docs/ per Prizm auto-update protocol. Steps: 1) Run git diff --cached --name-status. 2) Map changed files to modules via root.prizm MODULE_INDEX. 3) Read and update affected .prizm files (only changed sections). 4) Append to changelog.prizm. 5) Stage .prizm files with git add .prizm-docs/. 6) Then proceed with commit. RULES: Never rewrite entire .prizm files. Never add prose. Only update affected sections.'"
           }
         ]
       }
@@ -696,13 +696,10 @@ JSON:
 
 FLOW:
 1. User types prompt (e.g., "commit these changes" or "push to main")
-2. UserPromptSubmit hook fires before AI processes the prompt
-3. Fast LLM (Haiku) evaluates the prompt against commit-intent keywords
-4. IF commit intent: Returns {ok: true, reason: "PRIZM_UPDATE_REQUIRED: ..."}
-   - The "reason" content is injected into AI's context as additional instructions
+2. UserPromptSubmit hook fires, matcher regex checks for commit-related keywords
+3. IF matcher matches: command hook runs echo, stdout is injected as system-reminder
    - AI sees the update instructions and executes them before committing
-5. IF no commit intent: Returns {ok: true} with no reason
-   - AI proceeds normally, no extra context injected
+4. IF matcher does not match: hook does not fire, AI proceeds normally
 
 KEYWORDS_DETECTED: commit, push, finish, done, ship, merge, PR, pull request, /commit, save changes
 

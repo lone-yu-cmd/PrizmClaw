@@ -14,6 +14,10 @@ set -euo pipefail
 #   ./launch-bugfix-daemon.sh logs [--lines N] [--follow]
 #   ./launch-bugfix-daemon.sh restart [bug-fix-list.json] [--env "KEY=VAL ..."]
 #
+# NOTE:
+#   In AI skill sessions, always use this daemon wrapper.
+#   Do NOT call `run-bugfix.sh run ...` directly, because foreground sessions may be killed by CLI timeout.
+#
 # Files managed:
 #   bugfix-state/.pipeline.pid          - PID of the background run-bugfix.sh process
 #   bugfix-state/pipeline-daemon.log    - Consolidated stdout+stderr

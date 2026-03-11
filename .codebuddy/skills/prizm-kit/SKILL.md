@@ -70,7 +70,7 @@ PrizmKit produces two complementary knowledge layers:
 .prizmkit/specs/       → Feature "what to do" (workflow: spec → plan → tasks → code)
 ```
 
-## Skill Inventory (32 skills)
+## Skill Inventory (34 skills)
 
 ### Foundation (3)
 - **prizm-kit** — Full-lifecycle dev toolkit entry point
@@ -80,7 +80,7 @@ PrizmKit produces two complementary knowledge layers:
 ### Spec-Driven Workflow (10)
 - **prizmkit-specify** — Create structured feature specifications from natural language
 - **prizmkit-clarify** — Interactive requirement clarification
-- **prizmkit-plan** — Generate technical plan + data model + API contracts
+- **prizmkit-plan** — Generate technical plan (with data model & API contracts as inline sections)
 - **prizmkit-tasks** — Break plan into executable task list
 - **prizmkit-analyze** — Cross-document consistency analysis (spec ↔ plan ↔ tasks)
 - **prizmkit-implement** — Execute tasks following TDD approach
@@ -111,8 +111,10 @@ PrizmKit produces two complementary knowledge layers:
 - **prizmkit-onboarding-generator** — [Tier 2] Generate developer onboarding guides
 - **prizmkit-api-doc-generator** — [Tier 2] Extract API documentation from source code
 
-### Pipeline & Companion (5)
+### Pipeline & Companion (7)
 - **prizmkit-bug-fix-workflow** — [Tier 1] End-to-end bug fix workflow: triage → reproduce → fix → verify → commit
+- **feature-workflow** — [Tier 1] End-to-end feature workflow: specify → plan → tasks → analyze → implement → review → commit
+- **refactor-workflow** — [Tier 1] End-to-end refactor workflow: analyze → plan → tasks → implement → review → commit
 - **app-planner** — Interactive app planning that produces feature-list.json for dev-pipeline
 - **bug-planner** — Interactive bug planning that produces bug-fix-list.json for bugfix-pipeline
 - **dev-pipeline-launcher** — Launch and manage the dev-pipeline from within a CLI session

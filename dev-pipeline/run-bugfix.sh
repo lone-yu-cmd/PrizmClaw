@@ -57,6 +57,12 @@ else
 fi
 export PRIZMKIT_PLATFORM="$PLATFORM"
 
+# Source shared heartbeat library
+source "$SCRIPT_DIR/lib/heartbeat.sh"
+
+# Detect stream-json support
+detect_stream_json_support "$CLI_CMD"
+
 # Bug list path (set in main, used by cleanup trap)
 BUG_LIST=""
 
@@ -87,10 +93,16 @@ spawn_and_wait_session() {
     local max_retries="$6"
 
     local session_log="$session_dir/logs/session.log"
+    local progress_json="$session_dir/logs/progress.json"
 
     local verbose_flag=""
     if [[ "$VERBOSE" == "1" ]]; then
         verbose_flag="--verbose"
+    fi
+
+    local stream_json_flag=""
+    if [[ "$USE_STREAM_JSON" == "true" ]]; then
+        stream_json_flag="--output-format stream-json"
     fi
 
     case "$CLI_CMD" in
@@ -100,6 +112,7 @@ spawn_and_wait_session() {
                 -p "$(cat "$bootstrap_prompt")" \
                 --yes \
                 $verbose_flag \
+                $stream_json_flag \
                 > "$session_log" 2>&1 &
             ;;
         *)
@@ -107,11 +120,16 @@ spawn_and_wait_session() {
                 --print \
                 -y \
                 $verbose_flag \
+                $stream_json_flag \
                 < "$bootstrap_prompt" \
                 > "$session_log" 2>&1 &
             ;;
     esac
     local cli_pid=$!
+
+    # Start progress parser (no-op if stream-json not supported)
+    start_progress_parser "$session_log" "$progress_json" "$SCRIPTS_DIR"
+    local parser_pid="${_PARSER_PID:-}"
 
     # Timeout watchdog
     local watcher_pid=""
@@ -121,52 +139,8 @@ spawn_and_wait_session() {
     fi
 
     # Heartbeat monitor
-    local heartbeat_interval=$HEARTBEAT_INTERVAL
-    (
-        local elapsed=0
-        local prev_size=0
-        while kill -0 "$cli_pid" 2>/dev/null; do
-            sleep "$heartbeat_interval"
-            elapsed=$((elapsed + heartbeat_interval))
-            kill -0 "$cli_pid" 2>/dev/null || break
-
-            local cur_size=0
-            if [[ -f "$session_log" ]]; then
-                cur_size=$(wc -c < "$session_log" 2>/dev/null || echo 0)
-                cur_size=$(echo "$cur_size" | tr -d ' ')
-            fi
-
-            local growth=$((cur_size - prev_size))
-            prev_size=$cur_size
-
-            local size_display
-            if [[ $cur_size -gt 1048576 ]]; then
-                size_display="$((cur_size / 1048576))MB"
-            elif [[ $cur_size -gt 1024 ]]; then
-                size_display="$((cur_size / 1024))KB"
-            else
-                size_display="${cur_size}B"
-            fi
-
-            local mins=$((elapsed / 60))
-            local secs=$((elapsed % 60))
-
-            local last_activity=""
-            if [[ -f "$session_log" ]]; then
-                last_activity=$(tail -20 "$session_log" 2>/dev/null | grep -v '^$' | tail -1 | cut -c1-80 || echo "")
-            fi
-
-            local status_icon
-            if [[ $growth -gt 0 ]]; then
-                status_icon="${GREEN}▶${NC}"
-            else
-                status_icon="${YELLOW}⏸${NC}"
-            fi
-
-            echo -e "  ${status_icon} ${BLUE}[HEARTBEAT]${NC} ${mins}m${secs}s elapsed | log: ${size_display} (+${growth}B) | ${last_activity}"
-        done
-    ) &
-    local heartbeat_pid=$!
+    start_heartbeat "$cli_pid" "$session_log" "$progress_json" "$HEARTBEAT_INTERVAL"
+    local heartbeat_pid="${_HEARTBEAT_PID:-}"
 
     # Wait for AI CLI to finish
     local exit_code=0
@@ -178,9 +152,9 @@ spawn_and_wait_session() {
 
     # Cleanup
     [[ -n "$watcher_pid" ]] && kill "$watcher_pid" 2>/dev/null || true
-    kill "$heartbeat_pid" 2>/dev/null || true
+    stop_heartbeat "$heartbeat_pid"
+    stop_progress_parser "$parser_pid"
     [[ -n "$watcher_pid" ]] && wait "$watcher_pid" 2>/dev/null || true
-    wait "$heartbeat_pid" 2>/dev/null || true
 
     [[ $exit_code -eq 143 ]] && exit_code=124
 

@@ -19,7 +19,7 @@ import os
 import re
 import sys
 
-from path_policy import resolve_bug_paths
+from utils import load_json_file
 
 
 DEFAULT_MAX_RETRIES = 3
@@ -42,21 +42,6 @@ def parse_args():
     parser.add_argument("--output", required=True, help="Output path for the rendered prompt")
     parser.add_argument("--template", default=None, help="Custom template path. Defaults to {script_dir}/../templates/bugfix-bootstrap-prompt.md")
     return parser.parse_args()
-
-
-def load_json_file(path):
-    """Load and return parsed JSON from a file."""
-    abs_path = os.path.abspath(path)
-    if not os.path.isfile(abs_path):
-        return None, "File not found: {}".format(abs_path)
-    try:
-        with open(abs_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-    except json.JSONDecodeError as e:
-        return None, "Invalid JSON: {}".format(str(e))
-    except IOError as e:
-        return None, "Cannot read file: {}".format(str(e))
-    return data, None
 
 
 def read_text_file(path):
@@ -222,11 +207,10 @@ def build_replacements(args, bug, global_context, script_dir):
     reviewer_subagent = os.path.join(agents_dir, "prizm-dev-team-reviewer.md")
 
     # Session status path
-    session_status_path = resolve_bug_paths(
-        project_root,
-        args.bug_id,
-        args.session_id,
-    )["sessionStatus"]
+    session_status_path = os.path.join(
+        project_root, "dev-pipeline", "bugfix-state", "bugs", args.bug_id,
+        "sessions", args.session_id, "session-status.json"
+    )
 
     prev_status = get_prev_session_status(args.state_dir, args.bug_id)
 
@@ -241,9 +225,8 @@ def build_replacements(args, bug, global_context, script_dir):
     else:
         fix_scope = bug.get("title", "unknown").split()[0].lower() if bug.get("title") else "unknown"
 
-    # Determine if manual/hybrid verification
+    # Determine verification type
     vtype = bug.get("verification_type", "automated")
-    is_manual_or_hybrid = vtype in ("manual", "hybrid")
 
     replacements = {
         "{{RUN_ID}}": args.run_id,

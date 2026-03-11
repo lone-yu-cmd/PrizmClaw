@@ -7,6 +7,12 @@ description: Launch and manage the dev-pipeline from within a cbc session. Start
 
 Launch the autonomous development pipeline from within a cbc conversation. The pipeline runs as a fully detached background process -- closing the cbc session does NOT stop the pipeline.
 
+### Mandatory Execution Mode (MUST)
+
+- Always use daemon mode via `dev-pipeline/launch-daemon.sh` for start/stop/status/log actions.
+- NEVER run `dev-pipeline/run.sh run ...` directly from this skill.
+- Reason: foreground `run.sh` can be terminated by AI CLI command timeout (e.g. cbc 120s), while daemon mode survives session timeout.
+
 ### When to Use
 
 **Start pipeline** -- User says:
@@ -14,7 +20,7 @@ Launch the autonomous development pipeline from within a cbc conversation. The p
 - "run the features", "execute feature list", "start implementing"
 - "启动流水线", "开始实现", "运行流水线", "开始自动开发"
 - "实现接下来的步骤", "执行 feature list", "开始构建"
-- After app-planner completes: "go", "start", "build it", "开始吧"
+- After app-planner completes: "build it", "按 feature list 开始开发"
 
 **Check status** -- User says:
 - "pipeline status", "check pipeline", "how's it going", "progress"
@@ -27,6 +33,10 @@ Launch the autonomous development pipeline from within a cbc conversation. The p
 **Show logs** -- User says:
 - "show logs", "pipeline logs", "tail logs", "what's happening"
 - "查看日志", "流水线日志", "看看日志"
+
+**Retry single feature node** -- User says:
+- "retry F-003", "retry this feature", "retry this node"
+- "重试 F-003", "重试这个节点", "重跑这个 feature"
 
 **Do NOT use this skill when:**
 - User wants to plan features (use `app-planner` instead)
@@ -201,6 +211,26 @@ Pass via `--env`:
 dev-pipeline/launch-daemon.sh start feature-list.json --env "SESSION_TIMEOUT=7200 MAX_RETRIES=5 VERBOSE=1"
 ```
 
+---
+
+#### Intent F: Retry Single Feature Node
+
+When user says "retry F-003" or "重试 F-003":
+
+```bash
+dev-pipeline/retry-feature.sh F-003 feature-list.json
+```
+
+When user says "从头重试 F-003" or "clean retry F-003":
+
+```bash
+dev-pipeline/reset-feature.sh F-003 --clean --run feature-list.json
+```
+
+Notes:
+- `retry-feature.sh` runs exactly one feature session and exits.
+- Keep pipeline daemon mode for main run management (`launch-daemon.sh`).
+
 ### Error Handling
 
 | Error | Action |
@@ -211,7 +241,7 @@ dev-pipeline/launch-daemon.sh start feature-list.json --env "SESSION_TIMEOUT=720
 | Pipeline already running | Show status, ask if user wants to stop and restart |
 | PID file stale (process dead) | `launch-daemon.sh` auto-cleans, retry start |
 | Launch failed (process died immediately) | Show last 20 lines of log: `tail -20 dev-pipeline/state/pipeline-daemon.log` |
-| All features blocked/failed | Show status, suggest resetting failed features: `dev-pipeline/run.sh run <F-XXX> --clean` |
+| All features blocked/failed | Show status, suggest daemon-safe recovery: `dev-pipeline/reset-feature.sh <F-XXX> --clean --run feature-list.json` |
 | Permission denied on script | Run `chmod +x dev-pipeline/launch-daemon.sh dev-pipeline/run.sh` |
 
 ### Integration Notes

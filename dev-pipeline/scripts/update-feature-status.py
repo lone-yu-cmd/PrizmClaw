@@ -21,11 +21,17 @@ Usage:
 import argparse
 import json
 import os
+import re
 import shutil
-import sys
 from datetime import datetime, timezone
 
-from path_policy import compute_feature_slug, resolve_feature_paths, resolve_specs_dir
+from utils import (
+    load_json_file,
+    write_json_file,
+    error_out,
+    pad_right,
+    _build_progress_bar,
+)
 
 
 SESSION_STATUS_VALUES = [
@@ -98,45 +104,6 @@ def parse_args():
 def now_iso():
     """Return the current UTC time in ISO8601 format."""
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-def load_json_file(path):
-    """Load and return parsed JSON from a file.
-
-    Returns (data, error_string). On success error_string is None.
-    """
-    abs_path = os.path.abspath(path)
-    if not os.path.isfile(abs_path):
-        return None, "File not found: {}".format(abs_path)
-    try:
-        with open(abs_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-    except json.JSONDecodeError as e:
-        return None, "Invalid JSON: {}".format(str(e))
-    except IOError as e:
-        return None, "Cannot read file: {}".format(str(e))
-    return data, None
-
-
-def write_json_file(path, data):
-    """Write data as JSON to a file. Creates parent directories if needed.
-
-    Returns an error string on failure, None on success.
-    """
-    abs_path = os.path.abspath(path)
-    parent = os.path.dirname(abs_path)
-    if parent and not os.path.isdir(parent):
-        try:
-            os.makedirs(parent, exist_ok=True)
-        except OSError as e:
-            return "Cannot create directory: {}".format(str(e))
-    try:
-        with open(abs_path, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
-            f.write("\n")
-    except IOError as e:
-        return "Cannot write file: {}".format(str(e))
-    return None
 
 
 def load_feature_status(state_dir, feature_id):
@@ -212,7 +179,13 @@ def _default_project_root():
 
 
 def _build_feature_slug(feature_id, title):
-    return compute_feature_slug(feature_id, title)
+    numeric = feature_id.replace("F-", "").replace("f-", "").zfill(3)
+    cleaned = re.sub(r"[^a-z0-9\s-]", "", (title or "").lower())
+    cleaned = re.sub(r"[\s]+", "-", cleaned.strip())
+    cleaned = re.sub(r"-+", "-", cleaned).strip("-")
+    if not cleaned:
+        cleaned = "feature"
+    return "{}-{}".format(numeric, cleaned)
 
 
 def _get_feature_slug(feature_list_path, feature_id):
@@ -264,7 +237,7 @@ def cleanup_feature_artifacts(feature_list_path, state_dir, feature_id, project_
     # 3) Remove generated prizm specs for this feature
     feature_slug = _get_feature_slug(feature_list_path, feature_id)
     if feature_slug:
-        specs_dir = resolve_specs_dir(project_root, feature_slug)
+        specs_dir = os.path.join(project_root, ".prizmkit", "specs", feature_slug)
         if os.path.isdir(specs_dir):
             file_count = sum(len(files) for _, _, files in os.walk(specs_dir))
             shutil.rmtree(specs_dir)
@@ -290,13 +263,10 @@ def cleanup_feature_artifacts(feature_list_path, state_dir, feature_id, project_
 
 def load_session_status(state_dir, feature_id, session_id):
     """Load a session's session-status.json file."""
-    project_root = os.path.abspath(os.path.join(state_dir, "..", ".."))
-    session_status_path = resolve_feature_paths(
-        project_root,
-        feature_id,
-        "",
-        session_id,
-    )["sessionStatus"]
+    session_status_path = os.path.join(
+        state_dir, "features", feature_id, "sessions",
+        session_id, "session-status.json"
+    )
     data, err = load_json_file(session_status_path)
     if err:
         return None, err
@@ -507,27 +477,6 @@ COLOR_RESET = "\033[0m"
 BOX_WIDTH = 68
 
 
-def pad_right(text, width):
-    """Pad text with spaces to fill width, accounting for ANSI escape codes."""
-    # Strip ANSI codes to calculate visible length
-    visible = text
-    i = 0
-    visible_len = 0
-    while i < len(text):
-        if text[i] == "\033":
-            # Skip until 'm'
-            while i < len(text) and text[i] != "m":
-                i += 1
-            i += 1  # skip the 'm'
-        else:
-            visible_len += 1
-            i += 1
-    padding = width - visible_len
-    if padding > 0:
-        return text + " " * padding
-    return text
-
-
 def _calc_feature_duration(state_dir, feature_id):
     """计算已完成 Feature 的耗时（秒）。
 
@@ -575,17 +524,6 @@ def _format_duration(seconds):
         h = seconds // 3600
         m = (seconds % 3600) // 60
         return "{}h{}m".format(h, m)
-
-
-def _build_progress_bar(percent, width=20):
-    """生成文本进度条。
-
-    例如: ████████░░░░░░░░░░░░ 40%
-    """
-    filled = int(width * percent / 100)
-    empty = width - filled
-    bar = "█" * filled + "░" * empty
-    return "{} {:>3}%".format(bar, int(percent))
 
 
 def _estimate_remaining_time(features, state_dir, counts):
@@ -1011,17 +949,6 @@ def action_pause(state_dir):
         "paused_at": data["paused_at"],
     }
     print(json.dumps(result, indent=2, ensure_ascii=False))
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-def error_out(message):
-    """Print an error JSON and exit with code 1."""
-    output = {"error": message}
-    print(json.dumps(output, indent=2, ensure_ascii=False))
-    sys.exit(1)
 
 
 # ---------------------------------------------------------------------------

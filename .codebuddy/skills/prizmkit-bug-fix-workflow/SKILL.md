@@ -315,26 +315,31 @@ When `affected_feature` is non-empty:
 | `prizmkit-specify` | NOT used (no spec.md for bugs) |
 | `prizmkit-plan` | NOT used (no plan.md for bugs) |
 | `prizmkit-tasks` | NOT used (no tasks.md for bugs) |
+| `refactor-workflow` | NOT used (separate pipeline for refactoring) |
 
 ---
 
-## Comparison with Feature Pipeline
+## Comparison with Feature and Refactor Pipelines
 
-| Dimension | Feature Pipeline | Bug Fix Pipeline |
-|-----------|-----------------|-----------------|
-| Input Skill | `app-planner` (7-phase interactive) | `bug-planner` (multi-format parser) |
-| Input File | `feature-list.json` (F-NNN) | `bug-fix-list.json` (B-NNN) |
-| Schema Version | `dev-pipeline-feature-list-v1` | `dev-pipeline-bug-fix-list-v1` |
-| Pipeline Phases | 10 Phase (0-7 + init + cleanup) | 5 Phase (Fast Path: 3) |
-| Artifact Docs | 3: spec.md + plan.md + tasks.md | 2: fix-plan.md + fix-report.md |
-| Artifact Path | `.prizmkit/specs/<feature-slug>/` | `.prizmkit/bugfix/<bug-id>/` |
-| Prompt Template | `bootstrap-prompt.md` | `bugfix-bootstrap-prompt.md` |
-| Skills Chain | specify → plan → tasks → implement → review → summarize → commit | error-triage → bug-reproduce → implement → code-review → commit |
-| Commit Prefix | `feat(<scope>):` | `fix(<scope>):` |
-| REGISTRY Update | ✅ via summarize | ❌ not applicable |
-| TRAPS Update | Only in retrospective | ✅ automatic after every fix |
-| Manual Verification | None | Supported (verification_type=manual/hybrid) |
-| Agent Roles | PM → Dev → Reviewer → Doc | Dev → Reviewer (streamlined) |
+| Dimension | Feature Pipeline | Refactor Workflow | Bug Fix Pipeline |
+|-----------|-----------------|-------------------|------------------|
+| Input Skill | `app-planner` (7-phase interactive) | Direct invocation (prizmkit.refactor) | `bug-planner` (multi-format parser) |
+| Input File | `feature-list.json` (F-NNN) | N/A (conversation trigger) | `bug-fix-list.json` (B-NNN) |
+| Schema Version | `dev-pipeline-feature-list-v1` | N/A | `dev-pipeline-bug-fix-list-v1` |
+| Pipeline Phases | 7 Phase (Fast Path: 5) | 6 Phase (Fast Path: 4) | 5 Phase (Fast Path: 3) |
+| Phase 1 | Specify (spec.md) | Analyze (refactor-analysis.md) | Triage (fix-plan.md) |
+| Artifact Docs | 3: spec.md + plan.md + tasks.md | 3: refactor-analysis.md + plan.md + tasks.md | 2: fix-plan.md + fix-report.md |
+| Artifact Path | `.prizmkit/specs/<feature-slug>/` | `.prizmkit/refactor/<slug>/` | `.prizmkit/bugfix/<bug-id>/` |
+| Prompt Template | `bootstrap-prompt.md` | N/A (in-session) | `bugfix-bootstrap-prompt.md` |
+| Skills Chain | specify → plan → tasks → implement → review → summarize → commit | tech-debt-tracker → plan → tasks → implement → review → commit | error-triage → bug-reproduce → implement → code-review → commit |
+| Commit Prefix | `feat(<scope>):` | `refactor(<scope>):` | `fix(<scope>):` |
+| REGISTRY Update | ✅ via summarize | ❌ not applicable | ❌ not applicable |
+| TRAPS Update | Only in retrospective | Resolved TRAPS removed | ✅ automatic after every fix |
+| Test Strategy | TDD per task | Full suite after EVERY task | Reproduction test |
+| Scope Guard | N/A | ✅ (enforced) | N/A |
+| Behavior Change | ✅ Expected | ❌ Forbidden | ✅ Fix behavior |
+| Manual Verification | None | None | Supported (verification_type=manual/hybrid) |
+| Agent Roles | PM → Dev → Reviewer → Doc | Dev → Reviewer (streamlined) | Dev → Reviewer (streamlined) |
 
 ## Path References
 

@@ -14,6 +14,10 @@ set -euo pipefail
 #   ./launch-daemon.sh logs [--lines N] [--follow]
 #   ./launch-daemon.sh restart [feature-list.json] [--env "KEY=VAL ..."]
 #
+# NOTE:
+#   In AI skill sessions, always use this daemon wrapper.
+#   Do NOT call `run.sh run ...` directly, because foreground sessions may be killed by CLI timeout.
+#
 # Files managed:
 #   state/.pipeline.pid          - PID of the background run.sh process
 #   state/pipeline-daemon.log    - Consolidated stdout+stderr from run.sh
@@ -191,18 +195,18 @@ cmd_start() {
 
     # Write start metadata
     python3 -c "
-import json
-from datetime import datetime
+import json, sys, os
+pid, started_at, feature_list, env_overrides, log_file, state_dir = int(sys.argv[1]), sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], sys.argv[6]
 data = {
-    'pid': $pipeline_pid,
-    'started_at': '$start_time',
-    'feature_list': '$feature_list',
-    'env_overrides': '$env_overrides',
-    'log_file': '$LOG_FILE'
+    'pid': pid,
+    'started_at': started_at,
+    'feature_list': feature_list,
+    'env_overrides': env_overrides,
+    'log_file': log_file
 }
-with open('$STATE_DIR/.pipeline-meta.json', 'w') as f:
+with open(os.path.join(state_dir, '.pipeline-meta.json'), 'w') as f:
     json.dump(data, f, indent=2)
-" 2>/dev/null || true
+" "$pipeline_pid" "$start_time" "$feature_list" "$env_overrides" "$LOG_FILE" "$STATE_DIR" 2>/dev/null || true
 
     # Wait briefly and verify
     sleep 2
@@ -304,10 +308,10 @@ cmd_status() {
         if [[ -f "$STATE_DIR/.pipeline-meta.json" ]]; then
             local last_feature_list
             last_feature_list=$(python3 -c "
-import json
-with open('$STATE_DIR/.pipeline-meta.json') as f:
+import json, sys
+with open(sys.argv[1]) as f:
     print(json.load(f).get('feature_list', ''))
-" 2>/dev/null || echo "")
+" "$STATE_DIR/.pipeline-meta.json" 2>/dev/null || echo "")
 
             if [[ -n "$last_feature_list" && -f "$last_feature_list" ]]; then
                 echo "" >&2
@@ -339,15 +343,15 @@ with open('$STATE_DIR/.pipeline-meta.json') as f:
     local feature_list_path=""
     if [[ -f "$STATE_DIR/.pipeline-meta.json" ]]; then
         started_at=$(python3 -c "
-import json
-with open('$STATE_DIR/.pipeline-meta.json') as f:
+import json, sys
+with open(sys.argv[1]) as f:
     print(json.load(f).get('started_at', ''))
-" 2>/dev/null || echo "")
+" "$STATE_DIR/.pipeline-meta.json" 2>/dev/null || echo "")
         feature_list_path=$(python3 -c "
-import json
-with open('$STATE_DIR/.pipeline-meta.json') as f:
+import json, sys
+with open(sys.argv[1]) as f:
     print(json.load(f).get('feature_list', ''))
-" 2>/dev/null || echo "")
+" "$STATE_DIR/.pipeline-meta.json" 2>/dev/null || echo "")
     fi
 
     log_success "Pipeline is running (PID: $pid)"
@@ -381,20 +385,19 @@ with open('$STATE_DIR/.pipeline-meta.json') as f:
     if [[ -n "$feature_list_path" && -f "$feature_list_path" ]]; then
         progress_json=$(python3 -c "
 import json, sys, os
-sys.path.insert(0, '$SCRIPT_DIR/scripts')
-from datetime import datetime
 
 def load_json(p):
     with open(p, 'r') as f:
         return json.load(f)
 
-fl = load_json('$feature_list_path')
+feature_list_path, state_dir = sys.argv[1], sys.argv[2]
+fl = load_json(feature_list_path)
 features = fl.get('features', [])
 total = len(features)
 counts = {'completed': 0, 'in_progress': 0, 'failed': 0, 'pending': 0, 'skipped': 0}
 for feat in features:
     fid = feat.get('id', '')
-    sp = os.path.join('$STATE_DIR', 'features', fid, 'status.json')
+    sp = os.path.join(state_dir, 'features', fid, 'status.json')
     if os.path.isfile(sp):
         fs = load_json(sp)
         st = fs.get('status', 'pending')
@@ -414,7 +417,7 @@ print(json.dumps({
     'pending': counts['pending'],
     'percent': pct
 }))
-" 2>/dev/null || echo "")
+" "$feature_list_path" "$STATE_DIR" 2>/dev/null || echo "")
     fi
 
     if [[ -n "$progress_json" ]]; then

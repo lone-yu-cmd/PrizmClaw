@@ -48,6 +48,12 @@ else
 fi
 export PRIZMKIT_PLATFORM="$PLATFORM"
 
+# Source shared heartbeat library
+source "$SCRIPT_DIR/lib/heartbeat.sh"
+
+# Detect stream-json support
+detect_stream_json_support "$CLI_CMD"
+
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -188,6 +194,13 @@ echo -e "${BOLD}═════════════════════�
 echo ""
 
 SESSION_LOG="$SESSION_DIR/logs/session.log"
+PROGRESS_JSON="$SESSION_DIR/logs/progress.json"
+
+# Build stream-json flag
+STREAM_JSON_FLAG=""
+if [[ "$USE_STREAM_JSON" == "true" ]]; then
+    STREAM_JSON_FLAG="--output-format stream-json"
+fi
 
 # Spawn AI CLI session
 case "$CLI_CMD" in
@@ -196,17 +209,23 @@ case "$CLI_CMD" in
             --print \
             -p "$(cat "$BOOTSTRAP_PROMPT")" \
             --yes \
+            $STREAM_JSON_FLAG \
             > "$SESSION_LOG" 2>&1 &
         ;;
     *)
         "$CLI_CMD" \
             --print \
             -y \
+            $STREAM_JSON_FLAG \
             < "$BOOTSTRAP_PROMPT" \
             > "$SESSION_LOG" 2>&1 &
         ;;
 esac
 CBC_PID=$!
+
+# Start progress parser (no-op if stream-json not supported)
+start_progress_parser "$SESSION_LOG" "$PROGRESS_JSON" "$SCRIPTS_DIR"
+PARSER_PID="${_PARSER_PID:-}"
 
 # Timeout watchdog (only if SESSION_TIMEOUT > 0)
 WATCHER_PID=""
@@ -216,49 +235,8 @@ if [[ $SESSION_TIMEOUT -gt 0 ]]; then
 fi
 
 # Heartbeat
-(
-    elapsed=0
-    prev_size=0
-    while kill -0 "$CBC_PID" 2>/dev/null; do
-        sleep "$HEARTBEAT_INTERVAL"
-        elapsed=$((elapsed + HEARTBEAT_INTERVAL))
-        kill -0 "$CBC_PID" 2>/dev/null || break
-
-        cur_size=0
-        if [[ -f "$SESSION_LOG" ]]; then
-            cur_size=$(wc -c < "$SESSION_LOG" 2>/dev/null || echo 0)
-            cur_size=$(echo "$cur_size" | tr -d ' ')
-        fi
-
-        growth=$((cur_size - prev_size))
-        prev_size=$cur_size
-
-        if [[ $cur_size -gt 1048576 ]]; then
-            size_display="$((cur_size / 1048576))MB"
-        elif [[ $cur_size -gt 1024 ]]; then
-            size_display="$((cur_size / 1024))KB"
-        else
-            size_display="${cur_size}B"
-        fi
-
-        mins=$((elapsed / 60))
-        secs=$((elapsed % 60))
-
-        last_activity=""
-        if [[ -f "$SESSION_LOG" ]]; then
-            last_activity=$(tail -20 "$SESSION_LOG" 2>/dev/null | grep -v '^$' | tail -1 | cut -c1-80 || echo "")
-        fi
-
-        if [[ $growth -gt 0 ]]; then
-            icon="${GREEN}▶${NC}"
-        else
-            icon="${YELLOW}⏸${NC}"
-        fi
-
-        echo -e "  ${icon} ${BLUE}[HEARTBEAT]${NC} ${mins}m${secs}s | log: ${size_display} (+${growth}B) | ${last_activity}"
-    done
-) &
-HEARTBEAT_PID=$!
+start_heartbeat "$CBC_PID" "$SESSION_LOG" "$PROGRESS_JSON" "$HEARTBEAT_INTERVAL"
+HEARTBEAT_PID="${_HEARTBEAT_PID:-}"
 
 # Ctrl+C cleanup
 cleanup() {
@@ -266,10 +244,10 @@ cleanup() {
     log_warn "Interrupted. Killing session..."
     kill "$CBC_PID" 2>/dev/null || true
     [[ -n "$WATCHER_PID" ]] && kill "$WATCHER_PID" 2>/dev/null || true
-    kill "$HEARTBEAT_PID" 2>/dev/null || true
+    stop_heartbeat "$HEARTBEAT_PID"
+    stop_progress_parser "$PARSER_PID"
     wait "$CBC_PID" 2>/dev/null || true
     [[ -n "$WATCHER_PID" ]] && wait "$WATCHER_PID" 2>/dev/null || true
-    wait "$HEARTBEAT_PID" 2>/dev/null || true
     log_info "Session log: $SESSION_LOG"
     exit 130
 }
@@ -285,9 +263,9 @@ fi
 
 # Cleanup background processes
 [[ -n "$WATCHER_PID" ]] && kill "$WATCHER_PID" 2>/dev/null || true
-kill "$HEARTBEAT_PID" 2>/dev/null || true
+stop_heartbeat "$HEARTBEAT_PID"
+stop_progress_parser "$PARSER_PID"
 [[ -n "$WATCHER_PID" ]] && wait "$WATCHER_PID" 2>/dev/null || true
-wait "$HEARTBEAT_PID" 2>/dev/null || true
 
 [[ $EXIT_CODE -eq 143 ]] && EXIT_CODE=124
 

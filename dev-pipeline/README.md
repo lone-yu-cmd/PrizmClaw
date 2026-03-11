@@ -468,15 +468,17 @@ dev-pipeline/bugfix-state/        # Runtime state (gitignored)
                     └── session.log      # Full session output
 ```
 
-### Differences from Feature Pipeline
+### Differences Between Pipelines
 
-| Aspect | Feature Pipeline | Bug Fix Pipeline |
-|--------|-----------------|-----------------|
-| Input file | `feature-list.json` | `bug-fix-list.json` |
-| ID format | `F-NNN` | `B-NNN` |
-| State dir | `state/` | `bugfix-state/` |
-| Ordering | Dependencies DAG → priority | Severity → priority (no dependencies) |
-| Phases | 10-phase (specify → plan → tasks → implement → review) | 5-phase (triage → reproduce → fix → verify → commit) |
-| Agents | Coordinator + PM + Dev + Reviewer | Dev + Reviewer only |
-| Artifacts | spec.md, plan.md, tasks.md, REGISTRY.md | fix-plan.md, fix-report.md only |
-| Commit prefix | `feat(<scope>):` | `fix(<scope>):` |
+| Aspect | Feature Pipeline | Refactor Workflow | Bug Fix Pipeline |
+|--------|-----------------|-------------------|------------------|
+| Input file | `feature-list.json` | N/A (conversation trigger) | `bug-fix-list.json` |
+| ID format | `F-NNN` | `<refactor-slug>` | `B-NNN` |
+| State dir | `state/` | N/A (in-session) | `bugfix-state/` |
+| Ordering | Dependencies DAG → priority | N/A (single refactor per session) | Severity → priority (no dependencies) |
+| Phases | 10-phase (specify → plan → tasks → implement → review) | 6-phase (analyze → plan → tasks → implement → review → commit) | 5-phase (triage → reproduce → fix → verify → commit) |
+| Agents | Coordinator + PM + Dev + Reviewer | Dev + Reviewer only | Dev + Reviewer only |
+| Artifacts | spec.md, plan.md, tasks.md, REGISTRY.md | refactor-analysis.md, plan.md, tasks.md | fix-plan.md, fix-report.md only |
+| Commit prefix | `feat(<scope>):` | `refactor(<scope>):` | `fix(<scope>):` |
+| Scope Guard | N/A | ✅ (behavior change → STOP) | N/A |
+| Test Strategy | TDD per task | Full suite after EVERY task | Reproduction test |

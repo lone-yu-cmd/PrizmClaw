@@ -61,6 +61,12 @@ fi
 
 export PRIZMKIT_PLATFORM="$PLATFORM"
 
+# Source shared heartbeat library
+source "$SCRIPT_DIR/lib/heartbeat.sh"
+
+# Detect stream-json support
+detect_stream_json_support "$CLI_CMD"
+
 # Feature list path (set in main, used by cleanup trap)
 FEATURE_LIST=""
 
@@ -100,11 +106,17 @@ spawn_and_wait_session() {
     local max_retries="$6"
 
     local session_log="$session_dir/logs/session.log"
+    local progress_json="$session_dir/logs/progress.json"
 
     # Spawn AI CLI session
     local verbose_flag=""
     if [[ "$VERBOSE" == "1" ]]; then
         verbose_flag="--verbose"
+    fi
+
+    local stream_json_flag=""
+    if [[ "$USE_STREAM_JSON" == "true" ]]; then
+        stream_json_flag="--output-format stream-json"
     fi
 
     case "$CLI_CMD" in
@@ -115,6 +127,7 @@ spawn_and_wait_session() {
                 -p "$(cat "$bootstrap_prompt")" \
                 --yes \
                 $verbose_flag \
+                $stream_json_flag \
                 > "$session_log" 2>&1 &
             ;;
         *)
@@ -123,11 +136,16 @@ spawn_and_wait_session() {
                 --print \
                 -y \
                 $verbose_flag \
+                $stream_json_flag \
                 < "$bootstrap_prompt" \
                 > "$session_log" 2>&1 &
             ;;
     esac
     local cbc_pid=$!
+
+    # Start progress parser (no-op if stream-json not supported)
+    start_progress_parser "$session_log" "$progress_json" "$SCRIPTS_DIR"
+    local parser_pid="${_PARSER_PID:-}"
 
     # Timeout watchdog (only if SESSION_TIMEOUT > 0)
     local watcher_pid=""
@@ -136,53 +154,9 @@ spawn_and_wait_session() {
         watcher_pid=$!
     fi
 
-    # Heartbeat monitor
-    local heartbeat_interval=$HEARTBEAT_INTERVAL
-    (
-        local elapsed=0
-        local prev_size=0
-        while kill -0 "$cbc_pid" 2>/dev/null; do
-            sleep "$heartbeat_interval"
-            elapsed=$((elapsed + heartbeat_interval))
-            kill -0 "$cbc_pid" 2>/dev/null || break
-
-            local cur_size=0
-            if [[ -f "$session_log" ]]; then
-                cur_size=$(wc -c < "$session_log" 2>/dev/null || echo 0)
-                cur_size=$(echo "$cur_size" | tr -d ' ')
-            fi
-
-            local growth=$((cur_size - prev_size))
-            prev_size=$cur_size
-
-            local size_display
-            if [[ $cur_size -gt 1048576 ]]; then
-                size_display="$((cur_size / 1048576))MB"
-            elif [[ $cur_size -gt 1024 ]]; then
-                size_display="$((cur_size / 1024))KB"
-            else
-                size_display="${cur_size}B"
-            fi
-
-            local mins=$((elapsed / 60))
-            local secs=$((elapsed % 60))
-
-            local last_activity=""
-            if [[ -f "$session_log" ]]; then
-                last_activity=$(tail -20 "$session_log" 2>/dev/null | grep -v '^$' | tail -1 | cut -c1-80 || echo "")
-            fi
-
-            local status_icon
-            if [[ $growth -gt 0 ]]; then
-                status_icon="${GREEN}▶${NC}"
-            else
-                status_icon="${YELLOW}⏸${NC}"
-            fi
-
-            echo -e "  ${status_icon} ${BLUE}[HEARTBEAT]${NC} ${mins}m${secs}s elapsed | log: ${size_display} (+${growth}B) | ${last_activity}"
-        done
-    ) &
-    local heartbeat_pid=$!
+    # Heartbeat monitor (reads progress.json when available, falls back to tail)
+    start_heartbeat "$cbc_pid" "$session_log" "$progress_json" "$HEARTBEAT_INTERVAL"
+    local heartbeat_pid="${_HEARTBEAT_PID:-}"
 
     # Wait for AI CLI to finish
     local exit_code=0
@@ -192,11 +166,11 @@ spawn_and_wait_session() {
         exit_code=$?
     fi
 
-    # Clean up watcher and heartbeat
+    # Clean up watcher, heartbeat, and parser
     [[ -n "$watcher_pid" ]] && kill "$watcher_pid" 2>/dev/null || true
-    kill "$heartbeat_pid" 2>/dev/null || true
+    stop_heartbeat "$heartbeat_pid"
+    stop_progress_parser "$parser_pid"
     [[ -n "$watcher_pid" ]] && wait "$watcher_pid" 2>/dev/null || true
-    wait "$heartbeat_pid" 2>/dev/null || true
 
     # Map SIGTERM (143) to timeout code 124
     if [[ $exit_code -eq 143 ]]; then
@@ -402,14 +376,15 @@ run_one() {
     local feature_title
     feature_title=$(python3 -c "
 import json, sys
-with open('$feature_list') as f:
+feature_list_path, fid = sys.argv[1], sys.argv[2]
+with open(feature_list_path) as f:
     data = json.load(f)
 for feat in data.get('features', []):
-    if feat.get('id') == '$feature_id':
+    if feat.get('id') == fid:
         print(feat.get('title', ''))
         sys.exit(0)
 sys.exit(1)
-" 2>/dev/null) || {
+" "$feature_list" "$feature_id" 2>/dev/null) || {
         log_error "Feature $feature_id not found in $feature_list"
         exit 1
     }
@@ -424,19 +399,20 @@ sys.exit(1)
             local feature_slug
             feature_slug=$(python3 -c "
 import json, re, sys
-with open('$feature_list') as f:
+feature_list_path, fid = sys.argv[1], sys.argv[2]
+with open(feature_list_path) as f:
     data = json.load(f)
 for feat in data.get('features', []):
-    if feat.get('id') == '$feature_id':
-        fid = feat['id'].replace('F-', '').replace('f-', '').zfill(3)
+    if feat.get('id') == fid:
+        fnum = feat['id'].replace('F-', '').replace('f-', '').zfill(3)
         title = feat.get('title', '').lower()
         title = re.sub(r'[^a-z0-9\s-]', '', title)
         title = re.sub(r'[\s]+', '-', title.strip())
         title = re.sub(r'-+', '-', title).strip('-')
-        print(f'{fid}-{title}')
+        print(f'{fnum}-{title}')
         sys.exit(0)
 sys.exit(1)
-" 2>/dev/null) || {
+" "$feature_list" "$feature_id" 2>/dev/null) || {
                 log_warn "Could not determine feature slug for cleanup"
                 feature_slug=""
             }
@@ -741,16 +717,17 @@ for f in data.get('stuck_features', []):
 
         # Update current session tracking
         python3 -c "
-import json, sys
+import json, sys, os
 from datetime import datetime
+feature_id, session_id, state_dir = sys.argv[1], sys.argv[2], sys.argv[3]
 data = {
-    'feature_id': '$feature_id',
-    'session_id': '$session_id',
+    'feature_id': feature_id,
+    'session_id': session_id,
     'started_at': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
 }
-with open('$STATE_DIR/current-session.json', 'w') as f:
+with open(os.path.join(state_dir, 'current-session.json'), 'w') as f:
     json.dump(data, f, indent=2)
-"
+" "$feature_id" "$session_id" "$STATE_DIR"
 
         # Spawn session and wait
         log_info "Spawning AI CLI session: $session_id"
