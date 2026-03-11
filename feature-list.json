@@ -37,7 +37,7 @@
         "未授权用户无法调用高权限命令，且会收到统一拒绝提示",
         "命令路由层与执行层解耦，具备可测试的 handler 接口"
       ],
-      "status": "pending",
+      "status": "completed",
       "session_granularity": "feature",
       "sub_features": []
     },

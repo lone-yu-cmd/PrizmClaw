@@ -3,3 +3,4 @@ CHANGELOG:
 - 2026-03-10 | f001-infra-setup | implement pipeline infra contracts (config/path/errors/runner/service), add TS/lint baseline, and document L2 runtime/pipeline modules
 - 2026-03-12 | f001-complete | F-001 verification complete: 29 tests pass, typecheck/lint clean, REGISTRY.md created
 - 2026-03-12 | runtime/bot | add: F-002 Telegram Pipeline Command Router with parser, registry, validator, handlers for /pipeline, /bugfix, /planner, /status, /logs, /stop
+- 2026-03-12 | runtime/bot | fix: F002-CRIT-001 validator uses parsed.subcommand as first positional when command has no subcommands

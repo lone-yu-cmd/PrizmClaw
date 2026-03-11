@@ -50,14 +50,15 @@ export function validateCommand(parsed, meta) {
   const params = getParamsForSubcommand(meta, parsed.subcommand);
 
   // Validate parameters
-  for (const param of params) {
-    const value = getParamValue(parsed, param.name);
-    const result = validateParam(param, value);
+  for (let i = 0; i < params.length; i++) {
+    const param = params[i];
+    const value = getParamValue(parsed, param.name, meta, i);
+    const validationResult = validateParam(param, value);
 
-    if (!result.valid) {
-      errors.push(result.error);
-    } else if (result.value !== undefined) {
-      normalized[param.name] = result.value;
+    if (!validationResult.valid) {
+      errors.push(validationResult.error);
+    } else if (validationResult.value !== undefined) {
+      normalized[param.name] = validationResult.value;
     }
   }
 
@@ -97,18 +98,32 @@ function getParamsForSubcommand(meta, subcommand) {
  * Get parameter value from parsed command.
  * @param {ParsedCommand} parsed - Parsed command
  * @param {string} paramName - Parameter name
+ * @param {CommandMeta} meta - Command metadata
+ * @param {number} paramIndex - Index of parameter in params array
  * @returns {string|undefined} Parameter value
  */
-function getParamValue(parsed, paramName) {
-  // Check options first
+function getParamValue(parsed, paramName, meta, paramIndex) {
+  // Check options first (explicit --key=value takes precedence)
   if (parsed.options[paramName] !== undefined) {
     return parsed.options[paramName];
   }
 
-  // Check positional args (first arg maps to first positional param)
-  const positionalIndex = 0; // Simplified: first positional param
-  if (parsed.args[positionalIndex] !== undefined) {
-    // We need a smarter mapping - for now, use named params
+  // Build positional args list
+  // If command has no subcommands, parsed.subcommand should be treated as first positional arg
+  const hasSubcommands = meta.subcommands && meta.subcommands.length > 0;
+  const positionalArgs = [];
+
+  if (!hasSubcommands && parsed.subcommand !== undefined) {
+    // F002-CRIT-001: Treat subcommand as first positional param when command has no subcommands
+    positionalArgs.push(parsed.subcommand);
+  }
+
+  // Add remaining args
+  positionalArgs.push(...parsed.args);
+
+  // Map positional arg by index
+  if (paramIndex !== undefined && positionalArgs[paramIndex] !== undefined) {
+    return positionalArgs[paramIndex];
   }
 
   return undefined;

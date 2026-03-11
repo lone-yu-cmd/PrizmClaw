@@ -39,7 +39,9 @@ TRAPS:
 - Large logs (>=4000 chars) sent as files
 - Command parsing normalizes to lowercase
 - Registry stores normalized command names
+- F002-CRIT-001: Parser treats first non-option token as subcommand; validator must check if command has no subcommands and use parsed.subcommand as first positional param
 
 DECISIONS:
 - 2026-03-12 | F-002-bot-commands | Add command routing layer with parser, registry, validator for pipeline commands
 - 2026-03-12 | F-002-alias-mapping | Support command aliases /p, /b, /s, /l
+- 2026-03-12 | F002-CRIT-001 | Fix positional args: validator uses parsed.subcommand as first positional when command has no subcommands

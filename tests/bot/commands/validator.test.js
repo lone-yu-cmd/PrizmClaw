@@ -170,3 +170,83 @@ test('validateCommand handles subcommand-specific params', () => {
   const result = validateCommand(parsed, meta);
   assert.equal(result.valid, true);
 });
+
+// F002-CRIT-001: Parser incorrectly treats positional arguments as subcommands
+// For commands without subcommands, parsed.subcommand should be used as first positional param
+test('validateCommand uses subcommand as positional param when command has no subcommands (bugfix)', () => {
+  // /bugfix session-123 -> parser sets subcommand: "session-123", args: []
+  const parsed = { command: 'bugfix', subcommand: 'session-123', args: [], options: {} };
+  const meta = {
+    name: 'bugfix',
+    params: [{ name: 'target', required: true, description: 'Target ID' }],
+    requiresAuth: true
+    // No subcommands defined
+  };
+
+  const result = validateCommand(parsed, meta);
+  assert.equal(result.valid, true);
+  assert.equal(result.normalized.target, 'session-123');
+});
+
+test('validateCommand uses subcommand as positional param when command has no subcommands (logs)', () => {
+  // /logs my-feature -> parser sets subcommand: "my-feature", args: []
+  const parsed = { command: 'logs', subcommand: 'my-feature', args: [], options: {} };
+  const meta = {
+    name: 'logs',
+    params: [{ name: 'target', required: false, description: 'Target ID' }],
+    requiresAuth: true
+    // No subcommands defined
+  };
+
+  const result = validateCommand(parsed, meta);
+  assert.equal(result.valid, true);
+  assert.equal(result.normalized.target, 'my-feature');
+});
+
+test('validateCommand uses subcommand as positional param when command has no subcommands (stop)', () => {
+  // /stop my-feature -> parser sets subcommand: "my-feature", args: []
+  const parsed = { command: 'stop', subcommand: 'my-feature', args: [], options: {} };
+  const meta = {
+    name: 'stop',
+    params: [{ name: 'target', required: false, description: 'Target ID' }],
+    requiresAuth: true
+    // No subcommands defined
+  };
+
+  const result = validateCommand(parsed, meta);
+  assert.equal(result.valid, true);
+  assert.equal(result.normalized.target, 'my-feature');
+});
+
+test('validateCommand prioritizes explicit options over positional fallback', () => {
+  // /bugfix session-123 --target=other-target
+  const parsed = { command: 'bugfix', subcommand: 'session-123', args: [], options: { target: 'other-target' } };
+  const meta = {
+    name: 'bugfix',
+    params: [{ name: 'target', required: true, description: 'Target ID' }],
+    requiresAuth: true
+  };
+
+  const result = validateCommand(parsed, meta);
+  assert.equal(result.valid, true);
+  // Explicit option should take precedence
+  assert.equal(result.normalized.target, 'other-target');
+});
+
+test('validateCommand handles second positional param from args', () => {
+  // /command first second -> parser sets subcommand: "first", args: ["second"]
+  const parsed = { command: 'test', subcommand: 'first', args: ['second'], options: {} };
+  const meta = {
+    name: 'test',
+    params: [
+      { name: 'param1', required: true, description: 'First param' },
+      { name: 'param2', required: false, description: 'Second param' }
+    ],
+    requiresAuth: true
+  };
+
+  const result = validateCommand(parsed, meta);
+  assert.equal(result.valid, true);
+  assert.equal(result.normalized.param1, 'first');
+  assert.equal(result.normalized.param2, 'second');
+});

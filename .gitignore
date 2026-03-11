@@ -11,3 +11,7 @@ dev-pipeline/bugfix-state/
 
 # PrizmKit
 .prizmkit/
+
+# Plan versions (keep _current.json for tracking)
+plans/feature-list/v*.json
+plans/bug-fix-list/v*.json
