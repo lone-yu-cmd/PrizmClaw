@@ -22,20 +22,24 @@ export const ROLE_HIERARCHY = {
 const COMMAND_MIN_ROLE = {
   status: 'viewer',
   logs: 'viewer',
+  commits: 'viewer',
   pipeline: 'operator',
   bugfix: 'operator',
   planner: 'operator',
   retry: 'operator',
+  commit: 'operator',
   stop: 'admin',
   reset: 'admin',
   'force-unlock': 'admin',
-  exec: 'admin'
+  exec: 'admin',
+  'commit-amend': 'admin',
+  'commit-force': 'admin'
 };
 
 /**
  * High-risk commands that require confirmation
  */
-const HIGH_RISK_COMMANDS = new Set(['stop', 'reset', 'force-unlock']);
+const HIGH_RISK_COMMANDS = new Set(['stop', 'reset', 'force-unlock', 'commit-amend', 'commit-force']);
 
 /**
  * Internal config reference - can be overridden for testing

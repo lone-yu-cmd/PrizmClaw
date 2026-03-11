@@ -11,3 +11,5 @@ CHANGELOG:
 - 2026-03-13 | runtime/services | add: F-005 status-aggregator, log-pager, telegram-pusher for pipeline status aggregation and log streaming
 - 2026-03-13 | runtime/bot | update: F-005 /status and /logs commands enhanced with pagination, type filtering, and aggregated status display
 - 2026-03-12 | runtime/security | add: F-006 permission-guard, param-sanitizer, confirmation-manager, audit-log-service for safety and permission guard
+- 2026-03-15 | runtime/services | add: F-008 git-service and commit-service for commit workflow with pre-commit validation and audit logging
+- 2026-03-15 | runtime/bot | add: F-008 /commit and /commits commands with --amend/--force protection (admin + confirmation)

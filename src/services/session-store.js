@@ -2,6 +2,7 @@ import { config } from '../config.js';
 
 class SessionStore {
   #messagesBySessionKey = new Map();
+  #commitsBySessionKey = new Map();
 
   get(sessionKey) {
     if (!this.#messagesBySessionKey.has(sessionKey)) {
@@ -22,6 +23,7 @@ class SessionStore {
 
   clear(sessionKey) {
     this.#messagesBySessionKey.delete(sessionKey);
+    this.#commitsBySessionKey.delete(sessionKey);
   }
 
   toPrompt(sessionKey, channel = 'unknown') {
@@ -37,6 +39,41 @@ class SessionStore {
       ...messages.map((msg) => `${msg.role === 'user' ? '用户' : '助手'}: ${msg.content}`),
       '请继续回答最后一条用户消息。'
     ].join('\n');
+  }
+
+  /**
+   * Add a commit record to a session.
+   * @param {string} sessionKey - Session identifier
+   * @param {Object} commitInfo - Commit information
+   */
+  addCommit(sessionKey, commitInfo) {
+    if (!this.#commitsBySessionKey.has(sessionKey)) {
+      this.#commitsBySessionKey.set(sessionKey, []);
+    }
+    const commits = this.#commitsBySessionKey.get(sessionKey);
+    commits.push({
+      ...commitInfo,
+      timestamp: commitInfo.timestamp || Date.now()
+    });
+  }
+
+  /**
+   * Get commits for a session.
+   * @param {string} sessionKey - Session identifier
+   * @returns {Object[]} Array of commit records
+   */
+  getCommits(sessionKey) {
+    return this.#commitsBySessionKey.get(sessionKey) || [];
+  }
+
+  /**
+   * Get the last commit for a session.
+   * @param {string} sessionKey - Session identifier
+   * @returns {Object|null} Last commit record or null
+   */
+  getLastCommit(sessionKey) {
+    const commits = this.getCommits(sessionKey);
+    return commits.length > 0 ? commits[commits.length - 1] : null;
   }
 }
 

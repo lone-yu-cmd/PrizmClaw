@@ -21,6 +21,8 @@ import { logsMeta, handleLogs } from './commands/handlers/logs.js';
 import { stopMeta, handleStop } from './commands/handlers/stop.js';
 import { planMeta, handlePlan } from './commands/handlers/plan.js';
 import { auditMeta, handleAudit } from './commands/handlers/audit.js';
+import { commitMeta, handleCommit } from './commands/handlers/commit.js';
+import { commitsMeta, handleCommits } from './commands/handlers/commits.js';
 import { generateHelp } from './commands/help.js';
 
 const TELEGRAM_MSG_CHUNK_SIZE = 3800;
@@ -430,6 +432,8 @@ function registerPipelineCommands() {
   registerCommand(stopMeta, handleStop);
   registerCommand(planMeta, handlePlan);
   registerCommand(auditMeta, handleAudit);
+  registerCommand(commitMeta, handleCommit);
+  registerCommand(commitsMeta, handleCommits);
 }
 
 export function createTelegramBot() {

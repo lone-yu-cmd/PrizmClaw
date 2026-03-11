@@ -37,7 +37,7 @@ SUBDIRS:
 
 INTERFACES:
 - HTTP: /healthz, /api/events(SSE), /api/chat, /api/chat/reset, /api/screenshot, /api/system/exec
-- Telegram: /start, /help, /reset, /screenshot, /exec, /pipeline, /bugfix, /planner, /status, /logs, /stop, /plan, /audit, text message relay
+- Telegram: /start, /help, /reset, /screenshot, /exec, /pipeline, /bugfix, /planner, /status, /logs, /stop, /plan, /audit, /commit, /commits, text message relay
 - Security: PermissionGuard, ParamSanitizer, ConfirmationManager, AuditLogService
 
 TRAPS:
@@ -57,3 +57,4 @@ DECISIONS:
 - 2026-03-12 | runtime-f003 | add plan ingestion service for feature-list/bug-fix-list upload, validation, version management, and /plan command
 - 2026-03-12 | runtime-f006 | add security guard layer with permission tiers, param sanitization, confirmation flow, and audit logging
 - 2026-03-14 | runtime-f007 | add test infrastructure with fixtures, helpers (mock-runner, mock-telegram, test-state, fixture-loader), and layered test execution (npm run test:unit, test:integration)
+- 2026-03-15 | runtime-f008 | add commit workflow with /commit, /commits commands, pre-commit validation, session tracking, and audit logging
