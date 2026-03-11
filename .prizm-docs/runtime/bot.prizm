@@ -1,0 +1,45 @@
+DOC_LEVEL: L2
+MODULE: bot
+PATH: src/bot/**
+DESCRIPTION: Telegram bot handlers and command routing layer
+
+ENTRYPOINT:
+- src/bot/telegram.js -> createTelegramBot() registers all commands and handlers
+
+KEY_FILES:
+- src/bot/telegram.js - Main bot factory, command registration, text handler
+- src/bot/commands/index.js - Router entry point, routeCommand()
+- src/bot/commands/parser.js - Command text parser, parseCommand()
+- src/bot/commands/registry.js - Command registration and lookup
+- src/bot/commands/validator.js - Parameter validation
+- src/bot/commands/formatter.js - Error message formatting
+- src/bot/commands/help.js - Help text generation
+- src/bot/commands/handlers/*.js - Individual command handlers
+
+SUBDIRS:
+- src/bot/commands -> command routing and dispatch
+- src/bot/commands/handlers -> individual command implementations
+
+INTERFACES:
+- Telegram Commands:
+  - /start - Bot startup greeting
+  - /help - Dynamic help text
+  - /reset - Clear chat session
+  - /screenshot - Capture desktop screenshot
+  - /exec <cmd> - Execute system command
+  - /pipeline [action] [target] [--type=] - Pipeline management (alias: /p)
+  - /bugfix <target> - Start bugfix pipeline (alias: /b)
+  - /planner [action] [target] - Planner pipeline management
+  - /status - Show pipeline status (alias: /s)
+  - /logs [target] - View pipeline logs (alias: /l)
+  - /stop [target] - Stop pipeline
+
+TRAPS:
+- Commands require authorization via isAllowedUser()
+- Large logs (>=4000 chars) sent as files
+- Command parsing normalizes to lowercase
+- Registry stores normalized command names
+
+DECISIONS:
+- 2026-03-12 | F-002-bot-commands | Add command routing layer with parser, registry, validator for pipeline commands
+- 2026-03-12 | F-002-alias-mapping | Support command aliases /p, /b, /s, /l

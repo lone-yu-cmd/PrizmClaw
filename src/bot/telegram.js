@@ -9,6 +9,15 @@ import { isAllowedUser } from '../security/guard.js';
 import { chatWithSession, resetSession } from '../services/chat-service.js';
 import { captureScreenshot } from '../services/screenshot-service.js';
 import { executeSystemCommand } from '../services/system-exec-service.js';
+import { registerCommand } from './commands/index.js';
+import { routeCommand } from './commands/index.js';
+import { pipelineMeta, handlePipeline } from './commands/handlers/pipeline.js';
+import { bugfixMeta, handleBugfix } from './commands/handlers/bugfix.js';
+import { plannerMeta, handlePlanner } from './commands/handlers/planner.js';
+import { statusMeta, handleStatus } from './commands/handlers/status.js';
+import { logsMeta, handleLogs } from './commands/handlers/logs.js';
+import { stopMeta, handleStop } from './commands/handlers/stop.js';
+import { generateHelp } from './commands/help.js';
 
 const TELEGRAM_MSG_CHUNK_SIZE = 3800;
 const STREAM_MIN_CHARS = 220;
@@ -405,10 +414,25 @@ function ensureAllowed(ctx) {
   }
 }
 
+/**
+ * Register all pipeline-related commands.
+ */
+function registerPipelineCommands() {
+  registerCommand(pipelineMeta, handlePipeline);
+  registerCommand(bugfixMeta, handleBugfix);
+  registerCommand(plannerMeta, handlePlanner);
+  registerCommand(statusMeta, handleStatus);
+  registerCommand(logsMeta, handleLogs);
+  registerCommand(stopMeta, handleStop);
+}
+
 export function createTelegramBot() {
   const bot = new Telegraf(config.telegramBotToken, {
     handlerTimeout: TELEGRAM_HANDLER_TIMEOUT_MS
   });
+
+  // Register pipeline commands
+  registerPipelineCommands();
 
   bot.catch((error, ctx) => {
     const message = error instanceof Error ? error.message : String(error);
@@ -416,11 +440,12 @@ export function createTelegramBot() {
   });
 
   bot.start(async (ctx) => {
-    await ctx.reply('PrizmClaw 已启动。可直接聊天，也可用 /screenshot 和 /exec。');
+    await ctx.reply('PrizmClaw 已启动。可直接聊天，也可用 /help 查看可用命令。');
   });
 
   bot.help(async (ctx) => {
-    await ctx.reply('命令：\n/reset - 清空会话\n/screenshot - 获取本地截图\n/exec <command> - 执行系统命令');
+    const helpText = generateHelp();
+    await ctx.reply(helpText);
   });
 
   bot.command('reset', async (ctx) => {
@@ -472,6 +497,12 @@ export function createTelegramBot() {
   });
 
   bot.on('text', async (ctx) => {
+    // Check for pipeline commands first
+    const handled = await routeCommand(ctx);
+    if (handled) {
+      return;
+    }
+
     const sessionId = buildSessionId(ctx);
 
     let typingTimer = null;
