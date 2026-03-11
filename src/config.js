@@ -22,7 +22,13 @@ const schema = z.object({
   ENABLE_SYSTEM_EXEC: z.string().optional().default('false'),
   ALLOWED_COMMAND_PREFIXES: z.string().optional().default(''),
   SYSTEM_EXEC_TIMEOUT_MS: z.coerce.number().int().positive().default(60000),
-  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info')
+  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
+  // F-006: Safety and Permission Guard
+  USER_PERMISSIONS: z.string().optional().default(''),
+  ALLOW_ADMIN_SKIP_CONFIRM: z.string().optional().default('true'),
+  AUDIT_LOG_DIR: z.string().optional().default('logs'),
+  AUDIT_LOG_MAX_SIZE_MB: z.coerce.number().int().positive().default(10),
+  AUDIT_LOG_MAX_FILES: z.coerce.number().int().positive().default(5)
 });
 
 const parsed = schema.parse(process.env);
@@ -46,6 +52,31 @@ function parseCsvList(input) {
 function parseBoolean(input) {
   const normalized = (input ?? '').trim().toLowerCase();
   return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
+}
+
+/**
+ * Parse USER_PERMISSIONS env var into a Map of userId -> role
+ * Format: "123456789:admin,987654321:operator"
+ * @param {string} input
+ * @returns {Map<string, string>}
+ */
+function parseUserPermissions(input) {
+  const permissions = new Map();
+  if (!input || !input.trim()) {
+    return permissions;
+  }
+
+  const entries = input.split(',').map((s) => s.trim()).filter(Boolean);
+  for (const entry of entries) {
+    const [userId, role] = entry.split(':').map((s) => s.trim());
+    if (userId && role) {
+      const normalizedRole = role.toLowerCase();
+      if (['admin', 'operator', 'viewer'].includes(normalizedRole)) {
+        permissions.set(userId, normalizedRole);
+      }
+    }
+  }
+  return permissions;
 }
 
 const enableTelegram = parseBoolean(parsed.ENABLE_TELEGRAM);
@@ -80,6 +111,12 @@ export const config = Object.freeze({
   allowedCommandPrefixes: parseCsvList(parsed.ALLOWED_COMMAND_PREFIXES),
   systemExecTimeoutMs: parsed.SYSTEM_EXEC_TIMEOUT_MS,
   logLevel: parsed.LOG_LEVEL,
+  // F-006: Safety and Permission Guard
+  userPermissions: parseUserPermissions(parsed.USER_PERMISSIONS),
+  allowAdminSkipConfirm: parseBoolean(parsed.ALLOW_ADMIN_SKIP_CONFIRM),
+  auditLogDir: parsed.AUDIT_LOG_DIR,
+  auditLogMaxSizeMb: parsed.AUDIT_LOG_MAX_SIZE_MB,
+  auditLogMaxFiles: parsed.AUDIT_LOG_MAX_FILES,
   pipelineInfra: Object.freeze({
     ...pipelineInfra,
     daemonLogPaths

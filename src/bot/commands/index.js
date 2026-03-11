@@ -8,6 +8,8 @@ import { getCommand, getAliasMap, registerCommand } from './registry.js';
 import { validateCommand } from './validator.js';
 import { formatError, formatValidationErrors, ErrorCodes } from './formatter.js';
 import { isAllowedUser } from '../../security/guard.js';
+import { checkCommandPermission, getUserRole } from '../../security/permission-guard.js';
+import { logAuditEntry } from '../../services/audit-log-service.js';
 
 /**
  * @typedef {import('./parser.js').ParsedCommand} ParsedCommand
@@ -53,6 +55,24 @@ export async function routeCommand(ctx) {
 
   const { meta, handler } = entry;
 
+  // T-101: Permission check
+  const commandName = meta.name;
+  const permResult = checkCommandPermission(userId, commandName);
+
+  if (!permResult.allowed) {
+    // Log denied access
+    await logAuditEntry({
+      userId,
+      action: commandName,
+      params: {},
+      result: 'denied',
+      reason: permResult.reason
+    });
+
+    await ctx.reply(`⛔ ${permResult.reason}`);
+    return true;
+  }
+
   // Validate command
   const validation = validateCommand(parsed, meta);
 
@@ -68,6 +88,9 @@ export async function routeCommand(ctx) {
     parsed,
     meta,
     params: validation.normalized || {},
+    userId,
+    userRole: getUserRole(userId),
+    requiresConfirmation: permResult.requiresConfirmation,
     reply: async (text) => ctx.reply(text),
     replyFile: async (content, filename) => {
       // Will be implemented with proper file handling

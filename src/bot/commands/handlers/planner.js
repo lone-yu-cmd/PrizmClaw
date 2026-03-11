@@ -28,6 +28,7 @@ export const plannerMeta = {
     }
   ],
   requiresAuth: true,
+  minRole: 'operator',
   helpText: '/planner <action> [target] - 管理 planner 管道'
 };
 

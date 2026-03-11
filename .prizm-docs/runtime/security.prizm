@@ -1,0 +1,62 @@
+DOC_LEVEL: L2
+MODULE: security
+PATH: src/security/**
+DESCRIPTION: Security guard layer for permission tiers, param sanitization, and confirmation flow
+
+KEY_FILES:
+- src/security/index.js -> module exports
+- src/security/permission-guard.js -> role hierarchy and command authorization
+- src/security/param-sanitizer.js -> parameter sanitization and dangerous pattern detection
+- src/security/confirmation-manager.js -> confirmation flow for high-risk actions
+- src/security/guard.js -> existing user authorization
+- src/security/system-guard.js -> system exec authorization
+
+INTERFACES:
+- getUserRole(userId) -> 'admin' | 'operator' | 'viewer'
+- checkCommandPermission(userId, command) -> { allowed, requiresConfirmation, reason }
+- isAdmin(userId) -> boolean
+- sanitizeParam(input, options) -> { ok, value?, error? }
+- validatePath(path, allowedRoots) -> { ok, resolved?, error? }
+- detectDangerousPatterns(input) -> { safe, patterns }
+- createConfirmation(userId, action, params, timeoutMs) -> { confirmId, message }
+- checkConfirmation(confirmId, userId) -> { status, action?, params? }
+- confirmAction(confirmId, userId) -> { ok, action?, params?, error? }
+- cancelConfirmation(confirmId, userId) -> void
+- logAuditEntry(entry) -> Promise<void>
+- queryAuditLogs(filters) -> Promise<Object[]>
+
+ROLE_HIERARCHY:
+- viewer: 0 -> can view status and logs
+- operator: 1 -> can run pipelines and retry
+- admin: 2 -> can stop, reset, force-unlock, exec
+
+COMMAND_PERMISSIONS:
+- status, logs: viewer
+- pipeline, bugfix, planner, retry: operator
+- stop, reset, force-unlock, exec: admin
+
+HIGH_RISK_COMMANDS:
+- stop, reset, force-unlock -> require confirmation (CONFIRM text)
+- admin can skip confirmation with --force flag
+
+DANGEROUS_PATTERNS:
+- path traversal (..)
+- shell injection (backticks, $(), ${})
+- command chains (||, &&, ;)
+- home directory expansion (~)
+- exec/eval flags
+
+AUDIT_LOG:
+- format: JSON Lines (.jsonl)
+- fields: timestamp, userId, role, action, params, result, reason, sessionId
+- rotation: max 10MB per file, max 5 files
+
+TRAPS:
+- unknown users default to 'operator' role
+- permission denied is logged before returning error
+- confirmation expires after 60 seconds
+- audit log write failures are silent (non-blocking)
+- param sanitizer rejects all dangerous patterns regardless of context
+
+DEPENDS_ON:
+- src/config.js -> USER_PERMISSIONS, ALLOW_ADMIN_SKIP_CONFIRM, AUDIT_LOG_*

@@ -23,6 +23,7 @@ export const bugfixMeta = {
     }
   ],
   requiresAuth: true,
+  minRole: 'operator',
   helpText: '/bugfix <target> - 快捷启动 bugfix 管道'
 };
 

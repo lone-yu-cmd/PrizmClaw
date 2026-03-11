@@ -27,6 +27,7 @@ export const statusMeta = {
     }
   ],
   requiresAuth: true,
+  minRole: 'viewer',
   helpText: '/status [--type=feature|bugfix] - 查看管道状态'
 };
 

@@ -90,6 +90,7 @@ export const planMeta = {
     }
   ],
   requiresAuth: true,
+  minRole: 'operator',
   helpText: '/plan <action> [type] [version] - 管理计划文件'
 };
 

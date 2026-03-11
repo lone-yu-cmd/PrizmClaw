@@ -30,6 +30,8 @@
  * @property {SubcommandMeta[]} [subcommands] - Available subcommands
  * @property {ParamMeta[]} [params] - Command parameters
  * @property {boolean} requiresAuth - Whether authorization is required
+ * @property {string} [minRole] - Minimum required role (viewer, operator, admin)
+ * @property {boolean} [requiresConfirmation] - Whether confirmation is required for high-risk commands
  * @property {string} helpText - Help text for the command
  */
 

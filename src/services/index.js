@@ -28,3 +28,12 @@ export {
   getLogs,
   forceUnlock
 } from './pipeline-controller.js';
+
+// F-006: Safety and Permission Guard - Audit Log Service
+export {
+  initAuditLogService,
+  logAuditEntry,
+  queryAuditLogs,
+  resetAuditLogService,
+  getAuditLogStats
+} from './audit-log-service.js';

@@ -15,3 +15,6 @@ dev-pipeline/bugfix-state/
 # Plan versions (keep _current.json for tracking)
 plans/feature-list/v*.json
 plans/bug-fix-list/v*.json
+
+# Runtime logs
+logs/

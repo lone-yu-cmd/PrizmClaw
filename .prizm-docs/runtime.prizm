@@ -13,11 +13,16 @@ KEY_FILES:
 - src/services/chat-service.js
 - src/services/pipeline-control-service.js
 - src/services/plan-ingestion-service.js
+- src/services/audit-log-service.js
 - src/pipeline-infra/config-loader.js
 - src/pipeline-infra/script-runner.js
 - src/adapters/codebuddy.js
 - src/bot/telegram.js
 - src/bot/commands/handlers/plan.js
+- src/bot/commands/handlers/audit.js
+- src/security/permission-guard.js
+- src/security/param-sanitizer.js
+- src/security/confirmation-manager.js
 - src/services/system-exec-service.js
 
 SUBDIRS:
@@ -32,16 +37,22 @@ SUBDIRS:
 
 INTERFACES:
 - HTTP: /healthz, /api/events(SSE), /api/chat, /api/chat/reset, /api/screenshot, /api/system/exec
-- Telegram: /start, /help, /reset, /screenshot, /exec, /pipeline, /bugfix, /planner, /status, /logs, /stop, /plan, text message relay
+- Telegram: /start, /help, /reset, /screenshot, /exec, /pipeline, /bugfix, /planner, /status, /logs, /stop, /plan, /audit, text message relay
+- Security: PermissionGuard, ParamSanitizer, ConfirmationManager, AuditLogService
 
 TRAPS:
 - ENABLE_TELEGRAM=true requires TELEGRAM_BOT_TOKEN
 - system exec is disabled unless ENABLE_SYSTEM_EXEC=true
 - system exec requires ALLOWED_COMMAND_PREFIXES whitelist
 - chat is serialized per session via chat-queue
+- high-risk commands (stop, reset, force-unlock) require admin role and confirmation
+- permission check happens before command handler execution
+- param sanitizer blocks path traversal and shell injection patterns
+- audit logs are async written, failure does not block execution
 
 DECISIONS:
 - 2026-03-09 | runtime-doc-init | model first-pass runtime map from source + API surface
 - 2026-03-10 | runtime-infra-f001 | expose pipeline infra config in src/config.js and pipeline-control-service API for feature/bugfix run/status/stop/retry/logs/reset
 - 2026-03-12 | runtime-f002 | add command routing layer for pipeline commands (/pipeline, /bugfix, /planner, /status, /logs, /stop)
 - 2026-03-12 | runtime-f003 | add plan ingestion service for feature-list/bug-fix-list upload, validation, version management, and /plan command
+- 2026-03-12 | runtime-f006 | add security guard layer with permission tiers, param sanitization, confirmation flow, and audit logging

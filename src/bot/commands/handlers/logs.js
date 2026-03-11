@@ -57,6 +57,7 @@ export const logsMeta = {
     }
   ],
   requiresAuth: true,
+  minRole: 'viewer',
   helpText: '/logs [--lines=N] [--offset=N] [--type=feature|bugfix] [--file] - 查看管道日志'
 };
 

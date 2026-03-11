@@ -10,3 +10,4 @@ CHANGELOG:
 - 2026-03-12 | runtime/services | add: F-004 pipeline-controller with unified API (start/stop/retry/runSingle/status/logs/forceUnlock)
 - 2026-03-13 | runtime/services | add: F-005 status-aggregator, log-pager, telegram-pusher for pipeline status aggregation and log streaming
 - 2026-03-13 | runtime/bot | update: F-005 /status and /logs commands enhanced with pagination, type filtering, and aggregated status display
+- 2026-03-12 | runtime/security | add: F-006 permission-guard, param-sanitizer, confirmation-manager, audit-log-service for safety and permission guard
