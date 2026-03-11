@@ -30,8 +30,8 @@ INTERFACES:
   - /pipeline [action] [target] [--type=] - Pipeline management (alias: /p)
   - /bugfix <target> - Start bugfix pipeline (alias: /b)
   - /planner [action] [target] - Planner pipeline management
-  - /status - Show pipeline status (alias: /s)
-  - /logs [target] - View pipeline logs (alias: /l)
+  - /status [--type=feature|bugfix] - Show aggregated pipeline status (alias: /s)
+  - /logs [--lines=N] [--offset=N] [--type=feature|bugfix] [--file] - View pipeline logs with pagination (alias: /l)
   - /stop [target] - Stop pipeline
   - /plan [action] [type] [version] - Plan file management (status/versions/use/rollback/validate)
 
@@ -41,9 +41,11 @@ TRAPS:
 - Command parsing normalizes to lowercase
 - Registry stores normalized command names
 - F002-CRIT-001: Parser treats first non-option token as subcommand; validator must check if command has no subcommands and use parsed.subcommand as first positional param
+- F-005: /status uses status-aggregator for aggregated status; /logs uses log-pager for pagination
 
 DECISIONS:
 - 2026-03-12 | F-002-bot-commands | Add command routing layer with parser, registry, validator for pipeline commands
 - 2026-03-12 | F-002-alias-mapping | Support command aliases /p, /b, /s, /l
 - 2026-03-12 | F002-CRIT-001 | Fix positional args: validator uses parsed.subcommand as first positional when command has no subcommands
 - 2026-03-12 | F-003-plan-command | Add /plan command with status/versions/use/rollback/validate subcommands for plan file management
+- 2026-03-13 | F-005-status-logs | Update /status and /logs to use status-aggregator and log-pager with pagination support

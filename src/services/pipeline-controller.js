@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { EventEmitter } from 'node:events';
 import { createLockManager, getDefaultLockManager } from '../pipeline-infra/lock-manager.js';
 import { createStateManager, getDefaultStateManager } from '../pipeline-infra/state-manager.js';
 import { executePipelineCommand, buildPipelineCommand } from '../pipeline-infra/script-runner.js';
@@ -84,6 +85,9 @@ export function createPipelineController(options = {}) {
   const scriptRunner = options.scriptRunner || executePipelineCommand;
   const config = options.config || loadPipelineInfraConfig();
 
+  // F-005: Lifecycle event emitter for heartbeat and notifications
+  const eventEmitter = new EventEmitter();
+
   /**
    * Internal: Acquire lock and return result.
    * @param {string} type - Pipeline type
@@ -116,6 +120,35 @@ export function createPipelineController(options = {}) {
     // Internal methods (exposed for testing)
     _acquireLock,
     _releaseLock,
+
+    // F-005: Lifecycle event emitter
+    eventEmitter,
+
+    // Event names
+    events: {
+      PIPELINE_START: 'pipeline:start',
+      PIPELINE_STOP: 'pipeline:stop',
+      FEATURE_COMPLETE: 'feature:complete',
+      FEATURE_ERROR: 'feature:error'
+    },
+
+    /**
+     * Register a lifecycle hook.
+     * @param {string} event - Event name
+     * @param {Function} callback - Callback function
+     */
+    on(event, callback) {
+      eventEmitter.on(event, callback);
+    },
+
+    /**
+     * Remove a lifecycle hook.
+     * @param {string} event - Event name
+     * @param {Function} callback - Callback function
+     */
+    off(event, callback) {
+      eventEmitter.off(event, callback);
+    },
 
     /**
      * Start a pipeline.
@@ -159,6 +192,15 @@ export function createPipelineController(options = {}) {
             { context: { exitCode: result.exitCode } }
           );
         }
+
+        // F-005: Emit pipeline:start event for heartbeat pusher
+        eventEmitter.emit('pipeline:start', {
+          type,
+          runId,
+          startedAt: new Date().toISOString(),
+          targetId,
+          listPath
+        });
 
         return buildResult(`Pipeline ${type} started successfully`, {
           runId,
@@ -215,6 +257,13 @@ export function createPipelineController(options = {}) {
             { context: { previousPid } }
           );
         }
+
+        // F-005: Emit pipeline:stop event for heartbeat pusher
+        eventEmitter.emit('pipeline:stop', {
+          type,
+          stoppedAt: new Date().toISOString(),
+          previousPid
+        });
 
         return buildResult(`Pipeline ${type} stopped successfully`, {
           previousPid

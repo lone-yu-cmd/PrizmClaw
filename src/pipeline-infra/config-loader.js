@@ -154,6 +154,28 @@ export function loadPipelineInfraConfig(input = {}) {
     hint: 'Set HEARTBEAT_INTERVAL to a positive integer (seconds)'
   });
 
+  // F-005: Heartbeat config options (AC-4.5)
+  const heartbeatEnabled = String(argMap.get('heartbeat-enabled') ?? env.HEARTBEAT_ENABLED ?? 'true').trim().toLowerCase() === 'true';
+
+  const heartbeatChatIdRaw = argMap.get('heartbeat-chat-id') ?? env.HEARTBEAT_CHAT_ID;
+  const heartbeatChatId = heartbeatChatIdRaw ? Number.parseInt(String(heartbeatChatIdRaw), 10) : null;
+
+  const heartbeatIntervalMs = parseInteger({
+    raw: argMap.get('heartbeat-interval-ms') ?? env.HEARTBEAT_INTERVAL_MS ?? heartbeatIntervalSec * 1000,
+    field: 'HEARTBEAT_INTERVAL_MS',
+    min: 1000,
+    hint: 'Set HEARTBEAT_INTERVAL_MS to at least 1000 (milliseconds)'
+  });
+
+  const silentMode = String(argMap.get('silent-mode') ?? env.SILENT_MODE ?? 'false').trim().toLowerCase() === 'true';
+
+  const errorLinesCount = parseInteger({
+    raw: argMap.get('error-lines-count') ?? env.ERROR_LINES_COUNT ?? 10,
+    field: 'ERROR_LINES_COUNT',
+    min: 0,
+    hint: 'Set ERROR_LINES_COUNT to a non-negative integer'
+  });
+
   const aiCli = String(argMap.get('ai-cli') ?? env.AI_CLI ?? env.CODEBUDDY_CLI ?? 'cbc').trim();
   if (!aiCli) {
     throwInfraError({
@@ -188,6 +210,12 @@ export function loadPipelineInfraConfig(input = {}) {
     maxRetries,
     sessionTimeoutSec,
     heartbeatIntervalSec,
+    // F-005: Heartbeat config options (AC-4.5)
+    heartbeatEnabled,
+    heartbeatChatId,
+    heartbeatIntervalMs,
+    silentMode,
+    errorLinesCount,
     aiCli,
     platform: platformRaw
   });
