@@ -11,17 +11,23 @@ KEY_FILES:
 - dev-pipeline/scripts/update-feature-status.py
 - dev-pipeline/scripts/update-bug-status.py
 
+JS_MIRROR: src/pipeline-infra/path-policy.js
+PARITY_TESTS: tests/pipeline-infra/path-policy-python-compat.test.js
+
 PATH_POLICY:
 - feature slug: ###-kebab-case via compute_feature_slug
 - feature session status: dev-pipeline/state/features/{id}/sessions/{sessionId}/session-status.json
 - bug session status: dev-pipeline/bugfix-state/bugs/{id}/sessions/{sessionId}/session-status.json
 - daemon logs: state/pipeline-daemon.log + bugfix-state/pipeline-daemon.log
+- specs dir: .prizmkit/specs/{slug}/
 
 TRAPS:
 - scripts are invoked by shell wrappers; CLI arg compatibility is required
 - avoid introducing implicit relative paths; resolve from project_root
 - cleanup flows in update-* scripts must preserve status.json while clearing session artifacts
+- path_policy.py must maintain exact parity with JS path-policy.js (see PARITY_TESTS)
 
 DECISIONS:
 - 2026-03-10 | f001-shared-python-policy | imported path_policy.py in init/generate/update scripts to remove hardcoded path fragments
 - 2026-03-10 | f001-daemon-log-policy | daemon log locations documented and consumed via unified path policy for US2
+- 2026-03-12 | f001-js-python-parity | JS path-policy.js mirrors Python path_policy.py with identical behavior for cross-language compatibility

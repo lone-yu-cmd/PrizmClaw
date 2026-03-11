@@ -10,6 +10,14 @@ KEY_FILES:
 - src/pipeline-infra/config-loader.js
 - src/pipeline-infra/script-runner.js
 
+PYTHON_MIRROR: dev-pipeline/scripts/path_policy.py
+PARITY_TESTS: tests/pipeline-infra/path-policy-python-compat.test.js
+UNIT_TESTS:
+- tests/pipeline-infra/error-codes.test.js
+- tests/pipeline-infra/config-loader.test.js
+- tests/pipeline-infra/path-policy.test.js
+- tests/pipeline-infra/script-runner.test.js
+
 PUBLIC_APIS:
 - loadPipelineInfraConfig(input?) -> normalized pipeline config + defaults
 - computeFeatureSlug(featureId, title)
@@ -17,6 +25,10 @@ PUBLIC_APIS:
 - resolveBugPaths({ projectRoot, bugId, sessionId })
 - resolveDaemonLogPaths(projectRoot)
 - executePipelineCommand(req)
+- buildPipelineCommand(req, config) -> { command, args }
+
+SERVICE_LAYER: src/services/pipeline-control-service.js
+SERVICE_TESTS: tests/services/pipeline-control-service.test.js
 
 ERROR_MODEL:
 - codes: CONFIG_MISSING, CONFIG_INVALID, PATH_INVALID, SCRIPT_NOT_FOUND, EXEC_TIMEOUT, EXEC_FAILED
@@ -30,3 +42,4 @@ TRAPS:
 DECISIONS:
 - 2026-03-10 | f001-js-path-policy | include explicit daemon log policy resolver for US2 coverage
 - 2026-03-10 | f001-runner-actions | treat logs/reset as first-class runner actions for US3 coverage
+- 2026-03-12 | f001-feature-complete | all US1-US4 acceptance criteria verified via integration tests
