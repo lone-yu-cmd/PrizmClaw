@@ -121,7 +121,7 @@
         "执行中可按固定策略推送心跳进度，失败时自动推送错误摘要",
         "日志读取异常或状态文件缺失时返回可诊断错误而非静默失败"
       ],
-      "status": "pending",
+      "status": "completed",
       "session_granularity": "auto",
       "sub_features": [
         {
@@ -152,7 +152,7 @@
         "命令参数经过净化与规则校验，拒绝非法路径与危险参数组合",
         "每次敏感操作都会写入审计日志并可按会话检索"
       ],
-      "status": "pending",
+      "status": "completed",
       "session_granularity": "feature",
       "sub_features": []
     },

@@ -127,7 +127,7 @@ test('confirmAction fails for already confirmed action', () => {
   const result = confirmAction(confirmId, 'user123');
 
   assert.equal(result.ok, false);
-  assert.ok(result.error.includes('已确认') || result.error.includes('not_found'));
+  assert.ok(result.error.includes('不存在') || result.error.includes('过期'));
 });
 
 test('confirmAction fails for expired action', async () => {
