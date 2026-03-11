@@ -1,4 +1,6 @@
 import { executePipelineCommand } from '../pipeline-infra/script-runner.js';
+import { createPlanIngestionService } from './plan-ingestion-service.js';
+import { loadPipelineInfraConfig } from '../pipeline-infra/config-loader.js';
 
 function buildRequest(params = {}, action) {
   return {
@@ -9,6 +11,33 @@ function buildRequest(params = {}, action) {
     ...(params.envOverrides ? { envOverrides: params.envOverrides } : {}),
     ...(params.timeoutMs ? { timeoutMs: params.timeoutMs } : {})
   };
+}
+
+/**
+ * T-015: Resolve list path for plan type and optional version.
+ * @param {Object} options - Options
+ * @param {string} options.planType - 'feature-list' or 'bug-fix-list'
+ * @param {string} [options.version] - Optional version string
+ * @param {Object} [options.config] - Optional config (will load if not provided)
+ * @param {Object} [options.planService] - Optional plan service instance
+ * @returns {Promise<string|null>} Resolved path or null
+ */
+export async function resolvePlanListPath({ planType, version, config, planService }) {
+  const actualConfig = config ?? loadPipelineInfraConfig();
+  const service = planService ?? createPlanIngestionService({ plansDir: actualConfig.plansDir });
+
+  // If version is specified, get that specific version
+  if (version) {
+    return service.getVersion(planType, version).then(content => {
+      if (!content) return null;
+      // Return the path to the version file
+      const plansDir = actualConfig.plansDir;
+      return `${plansDir}/${planType}/v${version.replace(/^v/, '')}.json`;
+    });
+  }
+
+  // Otherwise, use the active path from registry
+  return service.getActivePath(planType);
 }
 
 export function createPipelineControlService({ runner = executePipelineCommand } = {}) {

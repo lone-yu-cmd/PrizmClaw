@@ -88,3 +88,33 @@ test('loadPipelineInfraConfig should fail when dev-pipeline directory is missing
     }
   );
 });
+
+// T-003: plansDir configuration tests
+test('loadPipelineInfraConfig should include plansDir with default value', () => {
+  const projectRoot = createTempProjectRoot();
+  const config = loadPipelineInfraConfig({ env: {}, cwd: projectRoot, argv: [] });
+
+  assert.equal(config.plansDir, path.join(projectRoot, 'plans'));
+});
+
+test('loadPipelineInfraConfig should support PLANS_DIR env override', () => {
+  const projectRoot = createTempProjectRoot();
+  const config = loadPipelineInfraConfig({
+    cwd: projectRoot,
+    env: { PLANS_DIR: '/custom/plans' },
+    argv: []
+  });
+
+  assert.equal(config.plansDir, '/custom/plans');
+});
+
+test('loadPipelineInfraConfig should support --plans-dir argv override', () => {
+  const projectRoot = createTempProjectRoot();
+  const config = loadPipelineInfraConfig({
+    cwd: projectRoot,
+    env: {},
+    argv: ['--plans-dir', '/argv/plans']
+  });
+
+  assert.equal(config.plansDir, '/argv/plans');
+});

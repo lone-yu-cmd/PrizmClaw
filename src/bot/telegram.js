@@ -9,6 +9,8 @@ import { isAllowedUser } from '../security/guard.js';
 import { chatWithSession, resetSession } from '../services/chat-service.js';
 import { captureScreenshot } from '../services/screenshot-service.js';
 import { executeSystemCommand } from '../services/system-exec-service.js';
+import { createPlanIngestionService } from '../services/plan-ingestion-service.js';
+import { loadPipelineInfraConfig } from '../pipeline-infra/config-loader.js';
 import { registerCommand } from './commands/index.js';
 import { routeCommand } from './commands/index.js';
 import { pipelineMeta, handlePipeline } from './commands/handlers/pipeline.js';
@@ -17,6 +19,7 @@ import { plannerMeta, handlePlanner } from './commands/handlers/planner.js';
 import { statusMeta, handleStatus } from './commands/handlers/status.js';
 import { logsMeta, handleLogs } from './commands/handlers/logs.js';
 import { stopMeta, handleStop } from './commands/handlers/stop.js';
+import { planMeta, handlePlan } from './commands/handlers/plan.js';
 import { generateHelp } from './commands/help.js';
 
 const TELEGRAM_MSG_CHUNK_SIZE = 3800;
@@ -424,6 +427,7 @@ function registerPipelineCommands() {
   registerCommand(statusMeta, handleStatus);
   registerCommand(logsMeta, handleLogs);
   registerCommand(stopMeta, handleStop);
+  registerCommand(planMeta, handlePlan);
 }
 
 export function createTelegramBot() {
@@ -493,6 +497,93 @@ export function createTelegramBot() {
       const message = error instanceof Error ? error.message : String(error);
       logger.error({ err: message }, 'Failed to exec command in telegram');
       await ctx.reply(`执行失败：${message}`);
+    }
+  });
+
+  // T-100: Document upload handler for plan files
+  bot.on('document', async (ctx) => {
+    try {
+      ensureAllowed(ctx);
+
+      const document = ctx.message?.document;
+      if (!document) {
+        return;
+      }
+
+      // Check file extension
+      const fileName = document.file_name || '';
+      const ext = path.extname(fileName).toLowerCase();
+
+      if (ext !== '.json') {
+        // Not a JSON file, ignore silently (other handlers may process it)
+        return;
+      }
+
+      // Check file size
+      const fileSize = document.file_size || 0;
+      if (fileSize > 1024 * 1024) { // 1MB limit
+        await ctx.reply('❌ 文件过大，限制 1MB。');
+        return;
+      }
+
+      await ctx.reply('正在处理上传的计划文件...');
+
+      // Download file content
+      const fileLink = await ctx.telegram.getFileLink(document.file_id);
+      const fileUrl = fileLink.href || fileLink.toString();
+
+      const response = await fetch(fileUrl);
+      if (!response.ok) {
+        throw new Error(`下载文件失败: ${response.status}`);
+      }
+
+      const content = await response.text();
+
+      // Validate and save using plan-ingestion-service
+      const infraConfig = loadPipelineInfraConfig();
+      const planService = createPlanIngestionService({ plansDir: infraConfig.plansDir });
+
+      const validationResult = planService.validate(content);
+
+      if (!validationResult.valid) {
+        const errorMsg = planService.formatValidationErrors(validationResult.errors);
+        await ctx.reply(errorMsg);
+        return;
+      }
+
+      // Save the plan
+      const saveResult = await planService.save(
+        validationResult.type,
+        content,
+        { uploadedBy: ctx.from?.id }
+      );
+
+      if (!saveResult.success) {
+        await ctx.reply('❌ 保存失败，请稍后重试。');
+        return;
+      }
+
+      // Set as current version
+      await planService.setCurrent(validationResult.type, saveResult.version);
+
+      // Format success message
+      const typeDisplay = validationResult.type === 'feature-list' ? '特性列表' : 'Bug修复列表';
+      const summary = validationResult.summary;
+
+      await ctx.reply([
+        `✅ ${typeDisplay}已保存并激活`,
+        `版本: ${saveResult.version}`,
+        `名称: ${summary?.name || '未知'}`,
+        `项目数: ${summary?.itemCount || 0}`,
+        '',
+        summary?.statusBreakdown ? '状态分布:' : '',
+        ...Object.entries(summary?.statusBreakdown || {}).map(([status, count]) => `  ${status}: ${count}`)
+      ].filter(Boolean).join('\n'));
+
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error({ err: message }, 'Failed to process document upload');
+      await ctx.reply(`❌ 处理失败：${message}`);
     }
   });
 

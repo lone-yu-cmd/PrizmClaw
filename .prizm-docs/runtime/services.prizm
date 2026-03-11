@@ -10,11 +10,13 @@ KEY_FILES:
 - src/services/realtime-hub.js
 - src/services/system-exec-service.js
 - src/services/pipeline-control-service.js
+- src/services/plan-ingestion-service.js
 
 PUBLIC_APIS:
 - chatWithSession({ channel, sessionId, message, realtimeHooks })
 - resetSession({ channel, sessionId })
 - pipeline control: startPipeline/getPipelineStatus/stopPipeline/retryTarget/getPipelineLogs/resetTarget
+- plan ingestion: validate/save/listVersions/getVersion/setCurrent/getCurrent/rollback/getActivePath
 
 TRAPS:
 - chat operations are serialized by session key; keep async queue semantics unchanged
@@ -22,3 +24,4 @@ TRAPS:
 
 DECISIONS:
 - 2026-03-10 | f001-pipeline-service | expose logs/reset methods in pipeline-control-service to satisfy US3 reusable control surface
+- 2026-03-12 | f003-plan-ingestion | add plan-ingestion-service for schema validation, version management, and plan registry

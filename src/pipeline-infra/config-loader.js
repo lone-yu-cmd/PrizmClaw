@@ -127,6 +127,12 @@ export function loadPipelineInfraConfig(input = {}) {
     projectRoot
   );
 
+  // T-003: plansDir for versioned plan files
+  const plansDir = toAbsolutePath(
+    argMap.get('plans-dir') ?? env.PLANS_DIR ?? path.join(projectRoot, 'plans'),
+    projectRoot
+  );
+
   const maxRetries = parseInteger({
     raw: argMap.get('max-retries') ?? env.MAX_RETRIES ?? 3,
     field: 'MAX_RETRIES',
@@ -176,6 +182,7 @@ export function loadPipelineInfraConfig(input = {}) {
     pipelineDir,
     featureListPath,
     bugFixListPath,
+    plansDir,
     stateDir: path.join(pipelineDir, 'state'),
     bugfixStateDir: path.join(pipelineDir, 'bugfix-state'),
     maxRetries,

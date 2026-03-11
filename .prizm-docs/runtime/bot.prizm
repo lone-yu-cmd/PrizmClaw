@@ -33,6 +33,7 @@ INTERFACES:
   - /status - Show pipeline status (alias: /s)
   - /logs [target] - View pipeline logs (alias: /l)
   - /stop [target] - Stop pipeline
+  - /plan [action] [type] [version] - Plan file management (status/versions/use/rollback/validate)
 
 TRAPS:
 - Commands require authorization via isAllowedUser()
@@ -45,3 +46,4 @@ DECISIONS:
 - 2026-03-12 | F-002-bot-commands | Add command routing layer with parser, registry, validator for pipeline commands
 - 2026-03-12 | F-002-alias-mapping | Support command aliases /p, /b, /s, /l
 - 2026-03-12 | F002-CRIT-001 | Fix positional args: validator uses parsed.subcommand as first positional when command has no subcommands
+- 2026-03-12 | F-003-plan-command | Add /plan command with status/versions/use/rollback/validate subcommands for plan file management
