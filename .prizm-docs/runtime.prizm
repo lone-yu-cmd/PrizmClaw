@@ -56,3 +56,4 @@ DECISIONS:
 - 2026-03-12 | runtime-f002 | add command routing layer for pipeline commands (/pipeline, /bugfix, /planner, /status, /logs, /stop)
 - 2026-03-12 | runtime-f003 | add plan ingestion service for feature-list/bug-fix-list upload, validation, version management, and /plan command
 - 2026-03-12 | runtime-f006 | add security guard layer with permission tiers, param sanitization, confirmation flow, and audit logging
+- 2026-03-14 | runtime-f007 | add test infrastructure with fixtures, helpers (mock-runner, mock-telegram, test-state, fixture-loader), and layered test execution (npm run test:unit, test:integration)

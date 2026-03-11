@@ -1,0 +1,8 @@
+{
+  "isRunning": false,
+  "pid": null,
+  "currentFeature": null,
+  "startedAt": null,
+  "completed": [],
+  "failed": []
+}

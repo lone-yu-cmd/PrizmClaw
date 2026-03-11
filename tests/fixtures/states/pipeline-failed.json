@@ -1,0 +1,14 @@
+{
+  "isRunning": false,
+  "pid": null,
+  "runId": "run-test-failed",
+  "currentFeature": null,
+  "startedAt": "2026-03-14T10:00:00Z",
+  "completedAt": "2026-03-14T10:15:00Z",
+  "completed": ["F-TEST-001"],
+  "failed": ["F-TEST-002"],
+  "featuresTotal": 2,
+  "featuresCompleted": 1,
+  "lastResult": "failed",
+  "lastError": "Feature F-TEST-002 failed: Test error"
+}

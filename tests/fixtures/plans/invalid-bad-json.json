@@ -1,0 +1,6 @@
+{
+  "$schema": "dev-pipeline-feature-list-v1",
+  "app_name": "BadFormatApp"
+  "missing_comma": true,
+  "features": []
+}

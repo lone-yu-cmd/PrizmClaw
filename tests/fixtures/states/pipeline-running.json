@@ -1,0 +1,11 @@
+{
+  "isRunning": true,
+  "pid": 12345,
+  "runId": "run-test-001",
+  "currentFeature": "F-TEST-001",
+  "startedAt": "2026-03-14T10:00:00Z",
+  "completed": [],
+  "failed": [],
+  "featuresTotal": 2,
+  "featuresCompleted": 0
+}
