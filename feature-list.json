@@ -58,7 +58,7 @@
         "当输入文件不合法时，不会污染当前可运行配置且会保留原有稳定版本",
         "保存成功后可被 pipeline 控制层直接读取并启动执行"
       ],
-      "status": "pending",
+      "status": "completed",
       "session_granularity": "auto",
       "sub_features": [
         {
@@ -90,7 +90,7 @@
         "后台守护运行时可查询 PID、运行状态与最近一次执行结果",
         "控制层接口可被 Telegram handler 复用而不依赖终端交互"
       ],
-      "status": "pending",
+      "status": "completed",
       "session_granularity": "auto",
       "sub_features": [
         {
