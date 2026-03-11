@@ -10,18 +10,23 @@ KEY_FILES:
 - src/services/realtime-hub.js
 - src/services/system-exec-service.js
 - src/services/pipeline-control-service.js
+- src/services/pipeline-controller.js
 - src/services/plan-ingestion-service.js
 
 PUBLIC_APIS:
 - chatWithSession({ channel, sessionId, message, realtimeHooks })
 - resetSession({ channel, sessionId })
 - pipeline control: startPipeline/getPipelineStatus/stopPipeline/retryTarget/getPipelineLogs/resetTarget
+- pipeline controller (F-004): createPipelineController -> startPipeline/stopPipeline/retryTarget/runSingle/getStatus/getLogs/forceUnlock
 - plan ingestion: validate/save/listVersions/getVersion/setCurrent/getCurrent/rollback/getActivePath
 
 TRAPS:
 - chat operations are serialized by session key; keep async queue semantics unchanged
 - pipeline-control-service must delegate to script-runner instead of shell string concatenation
+- pipeline-controller must use lock-manager for concurrency protection (F-004)
+- runSingle must NOT acquire lock (independent execution, D5)
 
 DECISIONS:
 - 2026-03-10 | f001-pipeline-service | expose logs/reset methods in pipeline-control-service to satisfy US3 reusable control surface
 - 2026-03-12 | f003-plan-ingestion | add plan-ingestion-service for schema validation, version management, and plan registry
+- 2026-03-12 | f004-pipeline-controller | new module for unified pipeline control with lock management (D4)

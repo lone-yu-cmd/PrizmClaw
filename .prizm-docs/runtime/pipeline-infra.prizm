@@ -9,6 +9,8 @@ KEY_FILES:
 - src/pipeline-infra/path-policy.js
 - src/pipeline-infra/config-loader.js
 - src/pipeline-infra/script-runner.js
+- src/pipeline-infra/lock-manager.js
+- src/pipeline-infra/state-manager.js
 
 PYTHON_MIRROR: dev-pipeline/scripts/path_policy.py
 PARITY_TESTS: tests/pipeline-infra/path-policy-python-compat.test.js
@@ -17,6 +19,8 @@ UNIT_TESTS:
 - tests/pipeline-infra/config-loader.test.js
 - tests/pipeline-infra/path-policy.test.js
 - tests/pipeline-infra/script-runner.test.js
+- tests/pipeline-infra/lock-manager.test.js
+- tests/pipeline-infra/state-manager.test.js
 
 PUBLIC_APIS:
 - loadPipelineInfraConfig(input?) -> normalized pipeline config + defaults
@@ -24,22 +28,35 @@ PUBLIC_APIS:
 - resolveFeaturePaths({ projectRoot, featureId, title, sessionId })
 - resolveBugPaths({ projectRoot, bugId, sessionId })
 - resolveDaemonLogPaths(projectRoot)
+- resolveLockPaths(projectRoot) -> F-004 lock file paths
+- resolveLastResultPaths(projectRoot) -> F-004 last result paths
+- resolveDaemonMetaPaths(projectRoot) -> F-004 daemon meta paths
+- resolvePipelineStatePaths(projectRoot) -> F-004 pipeline state paths
+- resolveCurrentSessionPaths(projectRoot) -> F-004 current session paths
+- getStatePaths(projectRoot, type) -> F-004 all state paths for type
 - executePipelineCommand(req)
 - buildPipelineCommand(req, config) -> { command, args }
+- createLockManager(options?) -> F-004 lock manager instance
+- createStateManager(options?) -> F-004 state manager instance
 
 SERVICE_LAYER: src/services/pipeline-control-service.js
 SERVICE_TESTS: tests/services/pipeline-control-service.test.js
 
 ERROR_MODEL:
 - codes: CONFIG_MISSING, CONFIG_INVALID, PATH_INVALID, SCRIPT_NOT_FOUND, EXEC_TIMEOUT, EXEC_FAILED
+- F-004 codes: LOCK_ACQUISITION_FAILED, ALREADY_STOPPED, PIPELINE_NOT_RUNNING, INVALID_TARGET, TARGET_NOT_RETRYABLE, DAEMON_START_FAILED
 - createInfraError(code, message, { hint, context }) -> serializable infra error payload
 
 TRAPS:
 - keep path_policy.py and path-policy.js behavior aligned (slug + session paths + daemon logs)
 - avoid breaking existing run.sh/run-bugfix.sh CLI contracts
 - request validation must reject unknown pipelineType/action and missing targetId for retry/reset
+- lock files must use atomic write (temp file + rename) to prevent corruption
+- PID validation must check process alive with process.kill(pid, 0) + ESRCH catch
 
 DECISIONS:
 - 2026-03-10 | f001-js-path-policy | include explicit daemon log policy resolver for US2 coverage
 - 2026-03-10 | f001-runner-actions | treat logs/reset as first-class runner actions for US3 coverage
 - 2026-03-12 | f001-feature-complete | all US1-US4 acceptance criteria verified via integration tests
+- 2026-03-12 | f004-lock-manager | file lock + PID validation for concurrency protection (D1)
+- 2026-03-12 | f004-state-manager | separate module for state file management (D2)

@@ -5,10 +5,10 @@
 
 import {
   startPipeline,
-  getPipelineStatus,
   stopPipeline,
-  getPipelineLogs
-} from '../../../services/pipeline-control-service.js';
+  getStatus,
+  getLogs
+} from '../../../services/pipeline-controller.js';
 import { formatValidationErrors, formatError, ErrorCodes } from '../formatter.js';
 
 /**
@@ -89,14 +89,18 @@ async function handleRun({ params, reply, parsed }) {
 
   try {
     const result = await startPipeline({
-      pipelineType,
-      targetId: target
+      type: pipelineType,
+      targetId: target,
+      daemon: true
     });
 
     if (result.ok) {
-      await reply(`✅ 已启动 ${pipelineType} 管道${target ? `: ${target}` : ''}`);
+      const pidInfo = result.pid ? ` (PID: ${result.pid})` : '';
+      await reply(`✅ 已启动 ${pipelineType} 管道${target ? `: ${target}` : ''}${pidInfo}`);
     } else {
-      await reply(`❌ 启动失败: ${result.stderr || result.error || '未知错误'}`);
+      const errorMsg = result.message || result.stderr || '未知错误';
+      const hint = result.hint ? `\n💡 提示: ${result.hint}` : '';
+      await reply(`❌ 启动失败: ${errorMsg}${hint}`);
     }
   } catch (error) {
     await reply(`❌ 启动失败: ${error.message}`);
@@ -107,14 +111,17 @@ async function handleRun({ params, reply, parsed }) {
  * Handle status subcommand.
  */
 async function handleStatus({ params, reply }) {
+  const pipelineType = params.type || 'feature';
+
   try {
-    const result = await getPipelineStatus({});
+    const result = await getStatus({ type: pipelineType });
 
     if (result.ok) {
       const status = formatStatusOutput(result);
       await reply(status);
     } else {
-      await reply(`❌ 查询失败: ${result.stderr || result.error || '未知错误'}`);
+      const errorMsg = result.message || result.stderr || '未知错误';
+      await reply(`❌ 查询失败: ${errorMsg}`);
     }
   } catch (error) {
     await reply(`❌ 查询失败: ${error.message}`);
@@ -126,12 +133,13 @@ async function handleStatus({ params, reply }) {
  */
 async function handleLogs({ params, reply, replyFile, parsed }) {
   const target = params._args?.[0] || params.target;
+  const pipelineType = params.type || 'feature';
 
   try {
-    const result = await getPipelineLogs({ targetId: target });
+    const result = await getLogs({ type: pipelineType, lines: 100 });
 
     if (result.ok) {
-      const logs = result.stdout || result.logs || '';
+      const logs = result.logs || '';
 
       if (logs.length >= 4000) {
         await replyFile(logs, `pipeline-logs-${target || 'latest'}.txt`);
@@ -139,7 +147,8 @@ async function handleLogs({ params, reply, replyFile, parsed }) {
         await reply(logs || '暂无日志');
       }
     } else {
-      await reply(`❌ 获取日志失败: ${result.stderr || result.error || '未知错误'}`);
+      const errorMsg = result.message || '未知错误';
+      await reply(`❌ 获取日志失败: ${errorMsg}`);
     }
   } catch (error) {
     await reply(`❌ 获取日志失败: ${error.message}`);
@@ -151,14 +160,21 @@ async function handleLogs({ params, reply, replyFile, parsed }) {
  */
 async function handleStop({ params, reply, parsed }) {
   const target = params._args?.[0] || params.target;
+  const pipelineType = params.type || 'feature';
 
   try {
-    const result = await stopPipeline({ targetId: target });
+    const result = await stopPipeline({ type: pipelineType });
 
     if (result.ok) {
-      await reply(`✅ 已停止管道${target ? `: ${target}` : ''}`);
+      if (result.errorCode === 'ALREADY_STOPPED') {
+        await reply(`⚠️ ${pipelineType} 管道未在运行。`);
+      } else {
+        const pidInfo = result.previousPid ? ` (原 PID: ${result.previousPid})` : '';
+        await reply(`✅ 已停止 ${pipelineType} 管道${pidInfo}`);
+      }
     } else {
-      await reply(`❌ 停止失败: ${result.stderr || result.error || '未知错误'}`);
+      const errorMsg = result.message || '未知错误';
+      await reply(`❌ 停止失败: ${errorMsg}`);
     }
   } catch (error) {
     await reply(`❌ 停止失败: ${error.message}`);
@@ -171,19 +187,29 @@ async function handleStop({ params, reply, parsed }) {
  * @returns {string} Formatted status
  */
 function formatStatusOutput(result) {
-  if (!result.pipelines || result.pipelines.length === 0) {
-    return '当前没有运行中的管道。';
+  if (!result.isRunning) {
+    const lastResultInfo = result.lastResult
+      ? `\n最后一次运行: ${result.lastResult.status} (${result.lastResult.featuresCompleted}/${result.lastResult.featuresTotal})`
+      : '';
+    return `✅ ${result.message}${lastResultInfo}`;
   }
 
-  const lines = ['运行中的管道：', ''];
+  const lines = [`🔄 ${result.message}`, ''];
 
-  for (const p of result.pipelines) {
-    lines.push(`• ${p.type || 'pipeline'}: ${p.target || 'unknown'}`);
-    lines.push(`  状态: ${p.status || 'running'}`);
-    if (p.startTime) {
-      lines.push(`  开始: ${p.startTime}`);
-    }
-    lines.push('');
+  if (result.pid) {
+    lines.push(`• PID: ${result.pid}`);
+  }
+
+  if (result.currentFeature) {
+    lines.push(`• 当前目标: ${result.currentFeature}`);
+  }
+
+  if (result.startedAt) {
+    lines.push(`• 开始时间: ${result.startedAt}`);
+  }
+
+  if (result.lockInfo) {
+    lines.push(`• 锁持有者 PID: ${result.lockInfo.pid}`);
   }
 
   return lines.join('\n');

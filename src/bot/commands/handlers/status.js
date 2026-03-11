@@ -3,7 +3,7 @@
  * Handles /status command to show all running pipelines.
  */
 
-import { getPipelineStatus } from '../../../services/pipeline-control-service.js';
+import { getStatus } from '../../../services/pipeline-controller.js';
 
 /**
  * Status command metadata.
@@ -24,16 +24,17 @@ export const statusMeta = {
  * @param {Object} handlerCtx - Handler context
  */
 export async function handleStatus(handlerCtx) {
-  const { reply } = handlerCtx;
+  const { reply, params } = handlerCtx;
+  const pipelineType = params.type || 'feature';
 
   try {
-    const result = await getPipelineStatus({});
+    const result = await getStatus({ type: pipelineType });
 
     if (result.ok) {
       const status = formatStatusOutput(result);
       await reply(status);
     } else {
-      await reply(`❌ 查询失败: ${result.stderr || result.error || '未知错误'}`);
+      await reply(`❌ 查询失败: ${result.message || '未知错误'}`);
     }
   } catch (error) {
     await reply(`❌ 查询失败: ${error.message}`);
@@ -46,26 +47,30 @@ export async function handleStatus(handlerCtx) {
  * @returns {string} Formatted status
  */
 function formatStatusOutput(result) {
-  // Check if there are any pipelines
-  const pipelines = result.pipelines || [];
-
-  if (pipelines.length === 0) {
-    return '✅ 当前没有运行中的管道。';
+  if (!result.isRunning) {
+    const lastResultInfo = result.lastResult
+      ? `\n\n最后一次运行:\n• 状态: ${result.lastResult.status}\n• 完成: ${result.lastResult.featuresCompleted}/${result.lastResult.featuresTotal}`
+      : '';
+    return `✅ ${result.message}${lastResultInfo}`;
   }
 
-  const lines = ['📊 运行中的管道：', ''];
+  const lines = [`📊 ${result.message}`, ''];
 
-  for (const p of pipelines) {
-    const icon = getStatusIcon(p.status);
-    lines.push(`${icon} ${p.type || 'pipeline'}: ${p.target || 'unknown'}`);
-    lines.push(`   状态: ${p.status || 'running'}`);
-    if (p.startTime) {
-      lines.push(`   开始: ${p.startTime}`);
-    }
-    lines.push('');
+  if (result.pid) {
+    lines.push(`• PID: ${result.pid}`);
   }
 
-  lines.push(`共 ${pipelines.length} 个管道运行中。`);
+  if (result.currentFeature) {
+    lines.push(`• 当前目标: ${result.currentFeature}`);
+  }
+
+  if (result.startedAt) {
+    lines.push(`• 开始时间: ${result.startedAt}`);
+  }
+
+  if (result.lockInfo) {
+    lines.push(`• 锁持有者 PID: ${result.lockInfo.pid}`);
+  }
 
   return lines.join('\n');
 }

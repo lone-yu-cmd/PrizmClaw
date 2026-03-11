@@ -3,7 +3,7 @@
  * Handles /logs command to retrieve pipeline logs.
  */
 
-import { getPipelineLogs } from '../../../services/pipeline-control-service.js';
+import { getLogs } from '../../../services/pipeline-controller.js';
 
 /**
  * Logs command metadata.
@@ -38,12 +38,13 @@ export async function handleLogs(handlerCtx) {
 
   // Get target from positional args or params
   const target = params._args?.[0] || params.target;
+  const pipelineType = params.type || 'feature';
 
   try {
-    const result = await getPipelineLogs({ targetId: target });
+    const result = await getLogs({ type: pipelineType, lines: 100 });
 
     if (result.ok) {
-      const logs = result.stdout || result.logs || '';
+      const logs = result.logs || '';
 
       if (!logs.trim()) {
         await reply('📭 暂无日志。');
@@ -60,7 +61,7 @@ export async function handleLogs(handlerCtx) {
         await sendLogsInChunks(reply, logs);
       }
     } else {
-      await reply(`❌ 获取日志失败: ${result.stderr || result.error || '未知错误'}`);
+      await reply(`❌ 获取日志失败: ${result.message || '未知错误'}`);
     }
   } catch (error) {
     await reply(`❌ 获取日志失败: ${error.message}`);

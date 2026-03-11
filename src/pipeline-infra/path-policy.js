@@ -68,3 +68,99 @@ export function resolveDaemonLogPaths(projectRoot) {
     bugfixDaemonLog: path.join(resolvedRoot, 'dev-pipeline/bugfix-state/pipeline-daemon.log')
   };
 }
+
+/**
+ * F-004: Resolve lock file paths for pipeline types.
+ * @param {string} projectRoot - Project root directory
+ * @returns {Object} Lock file paths for each pipeline type
+ */
+export function resolveLockPaths(projectRoot) {
+  const resolvedRoot = path.resolve(String(projectRoot ?? ''));
+
+  return {
+    featureLock: path.join(resolvedRoot, 'dev-pipeline/state/.pipeline.lock'),
+    bugfixLock: path.join(resolvedRoot, 'dev-pipeline/bugfix-state/.pipeline.lock')
+  };
+}
+
+/**
+ * F-004: Resolve last result file paths for pipeline types.
+ * @param {string} projectRoot - Project root directory
+ * @returns {Object} Last result file paths for each pipeline type
+ */
+export function resolveLastResultPaths(projectRoot) {
+  const resolvedRoot = path.resolve(String(projectRoot ?? ''));
+
+  return {
+    featureLastResult: path.join(resolvedRoot, 'dev-pipeline/state/.last-result.json'),
+    bugfixLastResult: path.join(resolvedRoot, 'dev-pipeline/bugfix-state/.last-result.json')
+  };
+}
+
+/**
+ * F-004: Resolve daemon meta file paths for pipeline types.
+ * @param {string} projectRoot - Project root directory
+ * @returns {Object} Daemon meta file paths for each pipeline type
+ */
+export function resolveDaemonMetaPaths(projectRoot) {
+  const resolvedRoot = path.resolve(String(projectRoot ?? ''));
+
+  return {
+    featureDaemonMeta: path.join(resolvedRoot, 'dev-pipeline/state/.pipeline-meta.json'),
+    bugfixDaemonMeta: path.join(resolvedRoot, 'dev-pipeline/bugfix-state/.pipeline-meta.json')
+  };
+}
+
+/**
+ * F-004: Resolve pipeline state file paths for pipeline types.
+ * @param {string} projectRoot - Project root directory
+ * @returns {Object} Pipeline state file paths for each pipeline type
+ */
+export function resolvePipelineStatePaths(projectRoot) {
+  const resolvedRoot = path.resolve(String(projectRoot ?? ''));
+
+  return {
+    featurePipelineState: path.join(resolvedRoot, 'dev-pipeline/state/pipeline.json'),
+    bugfixPipelineState: path.join(resolvedRoot, 'dev-pipeline/bugfix-state/pipeline.json')
+  };
+}
+
+/**
+ * F-004: Resolve current session file paths for pipeline types.
+ * @param {string} projectRoot - Project root directory
+ * @returns {Object} Current session file paths for each pipeline type
+ */
+export function resolveCurrentSessionPaths(projectRoot) {
+  const resolvedRoot = path.resolve(String(projectRoot ?? ''));
+
+  return {
+    featureCurrentSession: path.join(resolvedRoot, 'dev-pipeline/state/current-session.json'),
+    bugfixCurrentSession: path.join(resolvedRoot, 'dev-pipeline/bugfix-state/current-session.json')
+  };
+}
+
+/**
+ * F-004: Get all state file paths for a pipeline type.
+ * @param {string} projectRoot - Project root directory
+ * @param {'feature' | 'bugfix'} type - Pipeline type
+ * @returns {Object} All state file paths for the pipeline type
+ */
+export function getStatePaths(projectRoot, type) {
+  const lockPaths = resolveLockPaths(projectRoot);
+  const lastResultPaths = resolveLastResultPaths(projectRoot);
+  const daemonMetaPaths = resolveDaemonMetaPaths(projectRoot);
+  const pipelineStatePaths = resolvePipelineStatePaths(projectRoot);
+  const currentSessionPaths = resolveCurrentSessionPaths(projectRoot);
+  const daemonLogPaths = resolveDaemonLogPaths(projectRoot);
+
+  const prefix = type === 'feature' ? 'feature' : 'bugfix';
+
+  return {
+    lockFile: lockPaths[`${prefix}Lock`],
+    lastResultFile: lastResultPaths[`${prefix}LastResult`],
+    daemonMetaFile: daemonMetaPaths[`${prefix}DaemonMeta`],
+    pipelineStateFile: pipelineStatePaths[`${prefix}PipelineState`],
+    currentSessionFile: currentSessionPaths[`${prefix}CurrentSession`],
+    daemonLogFile: daemonLogPaths[`${prefix}DaemonLog`]
+  };
+}

@@ -6,3 +6,5 @@ CHANGELOG:
 - 2026-03-12 | runtime/bot | fix: F002-CRIT-001 validator uses parsed.subcommand as first positional when command has no subcommands
 - 2026-03-12 | runtime/services | add: F-003 plan-ingestion-service for schema validation, version management, plan registry
 - 2026-03-12 | runtime/bot | add: F-003 /plan command with status/versions/use/rollback/validate subcommands
+- 2026-03-12 | runtime/pipeline-infra | add: F-004 lock-manager and state-manager for concurrency protection and state file management
+- 2026-03-12 | runtime/services | add: F-004 pipeline-controller with unified API (start/stop/retry/runSingle/status/logs/forceUnlock)

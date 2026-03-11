@@ -3,7 +3,7 @@
  * Handles /stop command to stop running pipelines.
  */
 
-import { stopPipeline } from '../../../services/pipeline-control-service.js';
+import { stopPipeline } from '../../../services/pipeline-controller.js';
 
 /**
  * Stop command metadata.
@@ -35,29 +35,20 @@ export async function handleStop(handlerCtx) {
 
   // Get target from positional args or params
   const target = params._args?.[0] || params.target;
+  const pipelineType = params.type || 'feature';
 
   try {
-    const result = await stopPipeline({ targetId: target });
+    const result = await stopPipeline({ type: pipelineType });
 
     if (result.ok) {
-      if (target) {
-        await reply(`✅ 已停止管道: ${target}`);
+      if (result.errorCode === 'ALREADY_STOPPED') {
+        await reply('⚠️ 没有运行中的管道。');
       } else {
-        await reply('✅ 已停止当前管道。');
-      }
-
-      // Show additional info if available
-      if (result.stoppedCount !== undefined) {
-        await reply(`共停止 ${result.stoppedCount} 个管道。`);
+        const pidInfo = result.previousPid ? ` (原 PID: ${result.previousPid})` : '';
+        await reply(`✅ 已停止管道${pidInfo}。`);
       }
     } else {
-      // Check if it's a "not found" type error
-      const error = result.stderr || result.error || '';
-      if (error.includes('not found') || error.includes('没有') || error.includes('no pipeline')) {
-        await reply('⚠️ 没有找到运行中的管道。');
-      } else {
-        await reply(`❌ 停止失败: ${error || '未知错误'}`);
-      }
+      await reply(`❌ 停止失败: ${result.message || '未知错误'}`);
     }
   } catch (error) {
     await reply(`❌ 停止失败: ${error.message}`);
