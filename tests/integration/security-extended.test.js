@@ -11,8 +11,8 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, readFile, writeFile } from 'node:fs/promises';
-import { join, dirname } from 'node:path';
+import { mkdtemp, rm, readFile, writeFile as _writeFile } from 'node:fs/promises';
+import { join, dirname as _dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import {
   checkCommandPermission,
@@ -31,7 +31,7 @@ import {
 import {
   sanitizeParam,
   validatePath,
-  detectDangerousPatterns
+  detectDangerousPatterns as _detectDangerousPatterns
 } from '../../src/security/param-sanitizer.js';
 import {
   initAuditLogService,

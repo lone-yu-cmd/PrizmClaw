@@ -10,6 +10,41 @@
  * - D5: Design for mockability in tests
  */
 
+/**
+ * @typedef {Object} GitStatus
+ * @property {boolean} [clean]
+ * @property {string[]} [staged]
+ * @property {string[]} [modified]
+ * @property {string[]} [untracked]
+ * @property {string[]} [conflicts]
+ * @property {number} [ahead]
+ * @property {number} [behind]
+ * @property {string} [currentBranch]
+ */
+
+/**
+ * @typedef {Object} CommitResult
+ * @property {boolean} [success]
+ * @property {string} [hash]
+ * @property {string} [shortHash]
+ * @property {string} [message]
+ * @property {*} [error]
+ * @property {string} [code]
+ * @property {string} [suggestion]
+ * @property {string[]} [conflicts]
+ * @property {number} [filesChanged]
+ */
+
+/**
+ * @typedef {Object} CommitInfo
+ * @property {string} [hash]
+ * @property {string} [shortHash]
+ * @property {string} [message]
+ * @property {string} [author]
+ * @property {string} [date]
+ */
+
+// @ts-ignore — simple-git default export is callable at runtime
 import simpleGit from 'simple-git';
 
 /**
@@ -47,6 +82,7 @@ export const GIT_ERRORS = {
  */
 export function createGitService(options = {}) {
   const baseDir = options.baseDir || process.cwd();
+  // @ts-ignore — simple-git default export is callable at runtime
   const git = options.git || simpleGit(baseDir);
 
   /**

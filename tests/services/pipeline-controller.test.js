@@ -50,7 +50,7 @@ function createMockConfig(stateDir, bugfixStateDir) {
  * Helper to create a mock script runner
  */
 function createMockScriptRunner() {
-  return async (req) => ({
+  return async (_req) => ({
     ok: true,
     exitCode: 0,
     stdout: 'Mock output',

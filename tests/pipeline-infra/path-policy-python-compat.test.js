@@ -7,7 +7,9 @@ import {
   computeFeatureSlug,
   resolveFeaturePaths,
   resolveBugPaths,
-  resolveDaemonLogPaths
+  resolveDaemonLogPaths,
+  DIRECTORY_CONVENTION,
+  resolvePlansPaths
 } from '../../src/pipeline-infra/path-policy.js';
 
 const PROJECT_ROOT = '/tmp/prizmclaw-compat';
@@ -68,4 +70,22 @@ test('Python and JS should resolve identical bug and daemon log paths', () => {
     featureDaemonLog: jsDaemon.featureDaemonLog,
     bugfixDaemonLog: jsDaemon.bugfixDaemonLog
   });
+});
+
+// F-001 T-012: DIRECTORY_CONVENTION parity tests
+test('Python and JS should have identical DIRECTORY_CONVENTION keys and values', () => {
+  const py = runPython(
+    "import json; from path_policy import DIRECTORY_CONVENTION; print(json.dumps(DIRECTORY_CONVENTION))"
+  );
+
+  assert.deepEqual(py, { ...DIRECTORY_CONVENTION });
+});
+
+test('Python and JS should resolve identical plans paths', () => {
+  const js = resolvePlansPaths(PROJECT_ROOT);
+  const py = runPython(
+    "import json; from path_policy import resolve_plans_paths; print(json.dumps(resolve_plans_paths('/tmp/prizmclaw-compat')))"
+  );
+
+  assert.deepEqual(py, js);
 });

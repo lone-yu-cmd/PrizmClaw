@@ -9,12 +9,12 @@ export { createLogPager } from './log-pager.js';
 export { createTelegramPusher } from './telegram-pusher.js';
 
 // Existing services
-export { createChatQueue, getDefaultChatQueue } from './chat-queue.js';
-export { createChatService } from './chat-service.js';
-export { createScreenshotService } from './screenshot-service.js';
-export { createSystemExecService } from './system-exec-service.js';
-export { createRealtimeHub } from './realtime-hub.js';
-export { createSessionStore } from './session-store.js';
+export { chatQueue } from './chat-queue.js';
+export { chatWithSession, buildSessionContext, resetSession } from './chat-service.js';
+export { captureScreenshot } from './screenshot-service.js';
+export { executeSystemCommand } from './system-exec-service.js';
+export { realtimeHub } from './realtime-hub.js';
+export { sessionStore } from './session-store.js';
 export { createPipelineControlService } from './pipeline-control-service.js';
 export { createPlanIngestionService } from './plan-ingestion-service.js';
 export {

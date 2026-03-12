@@ -6,7 +6,9 @@ import {
   computeFeatureSlug,
   resolveFeaturePaths,
   resolveBugPaths,
-  resolveDaemonLogPaths
+  resolveDaemonLogPaths,
+  DIRECTORY_CONVENTION,
+  resolvePlansPaths
 } from '../../src/pipeline-infra/path-policy.js';
 
 test('computeFeatureSlug should normalize id and title', () => {
@@ -74,4 +76,59 @@ test('path resolvers should reject unsafe path segments', () => {
       sessionId: '../../escape'
     });
   }, /invalid path segment/i);
+});
+
+// F-001 T-011: DIRECTORY_CONVENTION tests
+test('DIRECTORY_CONVENTION should be a frozen object', () => {
+  assert.ok(Object.isFrozen(DIRECTORY_CONVENTION));
+});
+
+test('DIRECTORY_CONVENTION should contain all required keys', () => {
+  const requiredKeys = [
+    'pipelineDir',
+    'featureStateDir',
+    'bugfixStateDir',
+    'featureListFile',
+    'bugFixListFile',
+    'plansDir',
+    'specsDir',
+    'logsDir',
+    'sessionLogsDir',
+    'daemonLogFile',
+  ];
+  for (const key of requiredKeys) {
+    assert.ok(key in DIRECTORY_CONVENTION, `Missing key: ${key}`);
+    assert.equal(typeof DIRECTORY_CONVENTION[key], 'string', `${key} should be a string`);
+  }
+});
+
+test('DIRECTORY_CONVENTION should have correct values', () => {
+  assert.equal(DIRECTORY_CONVENTION.pipelineDir, 'dev-pipeline');
+  assert.equal(DIRECTORY_CONVENTION.featureStateDir, 'dev-pipeline/state');
+  assert.equal(DIRECTORY_CONVENTION.bugfixStateDir, 'dev-pipeline/bugfix-state');
+  assert.equal(DIRECTORY_CONVENTION.featureListFile, 'feature-list.json');
+  assert.equal(DIRECTORY_CONVENTION.bugFixListFile, 'bug-fix-list.json');
+  assert.equal(DIRECTORY_CONVENTION.plansDir, 'plans');
+  assert.equal(DIRECTORY_CONVENTION.specsDir, '.prizmkit/specs');
+  assert.equal(DIRECTORY_CONVENTION.logsDir, 'logs');
+  assert.equal(DIRECTORY_CONVENTION.daemonLogFile, 'dev-pipeline/state/pipeline-daemon.log');
+});
+
+test('DIRECTORY_CONVENTION values should all be non-empty strings', () => {
+  for (const [key, value] of Object.entries(DIRECTORY_CONVENTION)) {
+    assert.equal(typeof value, 'string', `${key} should be a string`);
+    assert.ok(value.length > 0, `${key} should be non-empty`);
+  }
+});
+
+// F-001 T-011: resolvePlansPaths tests
+test('resolvePlansPaths should return plansDir based on projectRoot', () => {
+  const result = resolvePlansPaths('/tmp/prizmclaw');
+  assert.equal(result.plansDir, path.join('/tmp/prizmclaw', 'plans'));
+});
+
+test('resolvePlansPaths should resolve relative projectRoot', () => {
+  const result = resolvePlansPaths('.');
+  assert.equal(typeof result.plansDir, 'string');
+  assert.ok(path.isAbsolute(result.plansDir));
 });

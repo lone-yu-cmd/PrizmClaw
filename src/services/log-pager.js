@@ -12,7 +12,7 @@
 
 import fs from 'node:fs';
 import readline from 'node:readline';
-import { once } from 'node:events';
+import { once as _once } from 'node:events';
 
 import { loadPipelineInfraConfig } from '../pipeline-infra/config-loader.js';
 import { getStatePaths } from '../pipeline-infra/path-policy.js';
@@ -47,7 +47,7 @@ export function createLogPager(options = {}) {
    * @param {string} filePath - File path
    * @returns {Promise<number>} Total line count
    */
-  async function countLines(filePath) {
+  async function _countLines(filePath) {
     try {
       const content = fs.readFileSync(filePath, 'utf8');
       return content.split('\n').filter(l => l.trim()).length;
@@ -65,7 +65,7 @@ export function createLogPager(options = {}) {
    */
   async function streamReadLastLines(filePath, lineCount, offset = 0) {
     return new Promise((resolve, reject) => {
-      const lines = [];
+      const _lines = [];
       let totalLines = 0;
 
       const stream = fs.createReadStream(filePath, { encoding: 'utf8' });
@@ -74,7 +74,7 @@ export function createLogPager(options = {}) {
         crlfDelay: Infinity
       });
 
-      rl.on('line', (line) => {
+      rl.on('line', (_line) => {
         totalLines++;
         // We'll collect all lines then slice at the end
       });

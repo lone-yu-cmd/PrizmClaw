@@ -7,7 +7,7 @@
  */
 
 import { createCommitService } from '../../../services/commit-service.js';
-import { createGitService } from '../../../services/git-service.js';
+import { createGitService as _createGitService } from '../../../services/git-service.js';
 import { sessionStore } from '../../../services/session-store.js';
 import { isAdmin } from '../../../security/permission-guard.js';
 import {
@@ -74,7 +74,7 @@ export const commitMeta = {
  * @param {Object} handlerCtx - Handler context
  */
 export async function handleCommit(handlerCtx) {
-  const { ctx, parsed, params, reply, userId, userRole, requiresConfirmation } = handlerCtx;
+  const { ctx: _ctx, parsed, params, reply, userId, userRole, requiresConfirmation } = handlerCtx;
 
   // Parse parameters
   const message = params.message || params.m || getDefaultCommitMessage();

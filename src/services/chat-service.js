@@ -22,6 +22,13 @@ export function buildSessionContext(channel, sessionId) {
   };
 }
 
+/**
+ * @param {Object} params
+ * @param {string} params.channel
+ * @param {string} params.sessionId
+ * @param {string} params.message
+ * @param {{ onStatus?: Function, onAssistantChunk?: Function, onAssistantDone?: Function }} [params.realtimeHooks]
+ */
 export async function chatWithSession({ channel, sessionId, message, realtimeHooks = {} }) {
   const session = buildSessionContext(channel, sessionId);
 

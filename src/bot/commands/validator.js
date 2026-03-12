@@ -32,6 +32,7 @@
  */
 export function validateCommand(parsed, meta) {
   const errors = [];
+  /** @type {Record<string, *>} */
   const normalized = { ...parsed.options };
 
   // Validate subcommand if command has subcommands

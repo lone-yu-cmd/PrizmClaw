@@ -158,7 +158,7 @@ export function createLockManager(options = {}) {
     try {
       writeLockFile(type, lockInfo);
       return { ok: true, lockPath };
-    } catch (error) {
+    } catch (_error) {
       return {
         ok: false,
         lockPath,

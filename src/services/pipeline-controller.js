@@ -1,8 +1,8 @@
 import fs from 'node:fs';
 import { EventEmitter } from 'node:events';
-import { createLockManager, getDefaultLockManager } from '../pipeline-infra/lock-manager.js';
-import { createStateManager, getDefaultStateManager } from '../pipeline-infra/state-manager.js';
-import { executePipelineCommand, buildPipelineCommand } from '../pipeline-infra/script-runner.js';
+import { createLockManager as _createLockManager, getDefaultLockManager } from '../pipeline-infra/lock-manager.js';
+import { createStateManager as _createStateManager, getDefaultStateManager } from '../pipeline-infra/state-manager.js';
+import { executePipelineCommand, buildPipelineCommand as _buildPipelineCommand } from '../pipeline-infra/script-runner.js';
 import { loadPipelineInfraConfig } from '../pipeline-infra/config-loader.js';
 import { resolveDaemonLogPaths } from '../pipeline-infra/path-policy.js';
 import { INFRA_ERROR_CODES } from '../pipeline-infra/error-codes.js';
@@ -135,7 +135,7 @@ export function createPipelineController(options = {}) {
     /**
      * Register a lifecycle hook.
      * @param {string} event - Event name
-     * @param {Function} callback - Callback function
+     * @param {(...args: any[]) => void} callback - Callback function
      */
     on(event, callback) {
       eventEmitter.on(event, callback);
@@ -144,7 +144,7 @@ export function createPipelineController(options = {}) {
     /**
      * Remove a lifecycle hook.
      * @param {string} event - Event name
-     * @param {Function} callback - Callback function
+     * @param {(...args: any[]) => void} callback - Callback function
      */
     off(event, callback) {
       eventEmitter.off(event, callback);
@@ -411,7 +411,7 @@ export function createPipelineController(options = {}) {
 
       const isRunning = await stateManager.isDaemonRunning(type);
       const pid = await stateManager.getDaemonPid(type);
-      const pipelineState = await stateManager.readPipelineState(type);
+      const _pipelineState = await stateManager.readPipelineState(type);
       const currentSession = await stateManager.readCurrentSession(type);
       const lastResult = await stateManager.getLastResult(type);
       const lockInfo = await lockManager.getLockInfo(type);

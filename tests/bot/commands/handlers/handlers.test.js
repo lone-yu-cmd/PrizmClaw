@@ -52,7 +52,7 @@ test('pipelineMeta has correct metadata', () => {
 });
 
 test('handlePipeline with run subcommand calls startPipeline', async () => {
-  const mock = createMockService();
+  const _mock = createMockService();
   const mockCtx = createMockContext();
 
   await handlePipeline({
@@ -68,7 +68,7 @@ test('handlePipeline with run subcommand calls startPipeline', async () => {
 });
 
 test('handlePipeline with status subcommand shows status', async () => {
-  const mock = createMockService();
+  const _mock = createMockService();
   const mockCtx = createMockContext();
 
   await handlePipeline({

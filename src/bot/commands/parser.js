@@ -51,6 +51,7 @@ export function parseCommand(text, aliasMap = {}) {
   }
 
   const args = [];
+  /** @type {Record<string, string>} */
   const options = {};
   let subcommand = undefined;
 

@@ -13,7 +13,7 @@
 
 import { randomUUID } from 'node:crypto';
 
-import { loadPipelineInfraConfig } from '../pipeline-infra/config-loader.js';
+import { loadPipelineInfraConfig as _loadPipelineInfraConfig } from '../pipeline-infra/config-loader.js';
 
 const DEFAULT_THROTTLE_INTERVAL = 30 * 1000; // 30 seconds
 const DEFAULT_SEGMENT_INTERVAL = 500; // 500ms between segments
@@ -35,11 +35,12 @@ const MAX_RETRIES = 3;
  * @param {Object} [options.heartbeatConfig] - Heartbeat configuration
  * @returns {Object} Telegram pusher interface
  */
+// @ts-ignore — options validated at runtime; default {} for destructuring convenience
 export function createTelegramPusher(options = {}) {
   const bot = options.bot;
   const targetChatId = options.targetChatId;
   const heartbeatInterval = options.heartbeatInterval || options.heartbeatConfig?.intervalMs || 30000;
-  const heartbeatFeatureCount = options.heartbeatFeatureCount || 1;
+  const _heartbeatFeatureCount = options.heartbeatFeatureCount || 1;
   const errorLinesCount = options.errorLinesCount || options.heartbeatConfig?.errorLinesCount || DEFAULT_ERROR_LINES_COUNT;
   const throttleInterval = options.throttleInterval || DEFAULT_THROTTLE_INTERVAL;
   const segmentInterval = options.segmentInterval || DEFAULT_SEGMENT_INTERVAL;
@@ -158,12 +159,13 @@ export function createTelegramPusher(options = {}) {
     try {
       const { Input } = await import('telegraf');
       const buffer = Buffer.from(content, 'utf-8');
+      // @ts-ignore — Telegraf Input constructor works at runtime
       const document = new Input(buffer, filename);
 
       return await bot.telegram.sendDocument(chatId, document, {
         filename
       });
-    } catch (error) {
+    } catch (_error) {
       // Fallback to chunked message if file send fails
       return sendMessageChunked(chatId, content);
     }
@@ -192,7 +194,7 @@ export function createTelegramPusher(options = {}) {
         await bot.telegram.sendMessage(message.chatId, message.text, {
           parse_mode: 'Markdown'
         });
-      } catch (error) {
+      } catch (_error) {
         // Retry with exponential backoff
         if (message.retryCount < maxRetries) {
           message.retryCount++;

@@ -14,7 +14,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(__dirname, '../..');
 
 // We'll import dynamically after setup
-let createPlanIngestionService;
+let _createPlanIngestionService;
 
 function createTempPlansDir() {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'prizmclaw-plans-'));

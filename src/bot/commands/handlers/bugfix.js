@@ -3,7 +3,7 @@
  * Handles /bugfix shortcut command.
  */
 
-import { handlePipeline, pipelineMeta } from './pipeline.js';
+import { handlePipeline } from './pipeline.js';
 
 /**
  * Bugfix command metadata.

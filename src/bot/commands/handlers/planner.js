@@ -3,7 +3,7 @@
  * Handles /planner command for planner-type pipelines.
  */
 
-import { handlePipeline, pipelineMeta } from './pipeline.js';
+import { handlePipeline } from './pipeline.js';
 
 /**
  * Planner command metadata.
@@ -41,7 +41,7 @@ export async function handlePlanner(handlerCtx) {
   const { parsed, params } = handlerCtx;
 
   // Determine action
-  const action = parsed.subcommand || 'status';
+  const _action = parsed.subcommand || 'status';
 
   // For non-run actions, just use pipeline handler with planner type
   const modifiedCtx = {

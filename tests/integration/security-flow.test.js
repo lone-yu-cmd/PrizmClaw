@@ -22,7 +22,7 @@ import {
   cancelConfirmation,
   clearExpiredConfirmations
 } from '../../src/security/confirmation-manager.js';
-import { sanitizeParam, validatePath, detectDangerousPatterns } from '../../src/security/param-sanitizer.js';
+import { sanitizeParam, validatePath, detectDangerousPatterns as _detectDangerousPatterns } from '../../src/security/param-sanitizer.js';
 import {
   initAuditLogService,
   logAuditEntry,

@@ -9,7 +9,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { createMockRunner, createStatefulMockRunner } from '../helpers/mock-runner.js';
-import { createMockContext, createAdminContext } from '../helpers/mock-telegram.js';
+import { createMockContext as _createMockContext, createAdminContext as _createAdminContext } from '../helpers/mock-telegram.js';
 import { createTestPipelineDirs } from '../helpers/test-state.js';
 
 // ============================================================
@@ -17,7 +17,7 @@ import { createTestPipelineDirs } from '../helpers/test-state.js';
 // ============================================================
 
 test('T-121: E2E start → status → stop main chain works correctly', async () => {
-  const { cleanup, tempDir, stateDir, bugfixStateDir } = await createTestPipelineDirs();
+  const { cleanup, tempDir: _tempDir, stateDir: _stateDir, bugfixStateDir: _bugfixStateDir } = await createTestPipelineDirs();
 
   try {
     // Create stateful mock runner

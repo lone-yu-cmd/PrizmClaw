@@ -241,7 +241,7 @@ test('Error path: Permission denied on state directory', async () => {
   await withTempDir(async (tempDir) => {
     const config = createTestConfig(tempDir);
 
-    const stateManager = createStateManager({ config });
+    const _stateManager = createStateManager({ config });
 
     // Create read-only directory
     const readOnlyDir = path.join(tempDir, 'readonly');

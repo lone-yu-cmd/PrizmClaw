@@ -132,7 +132,7 @@ test('sendMessageChunked should respect segment interval delay', async () => {
   const text = 'x'.repeat(10000);
   const start = Date.now();
   await pusher.sendMessageChunked(123456, text);
-  const elapsed = Date.now() - start;
+  const _elapsed = Date.now() - start;
 
   // Should have some delay between segments (at least 10ms per segment)
   assert.ok(bot._sentMessages.length >= 2);

@@ -11,6 +11,32 @@
  * - AC-5.3: All commit operations are logged to audit log
  */
 
+/**
+ * @typedef {Object} ValidationResult
+ * @property {boolean} valid
+ * @property {Array<*>} [errors]
+ * @property {string[]} [warnings]
+ * @property {*} [gitStatus]
+ */
+
+/**
+ * @typedef {Object} CommitRecord
+ * @property {string} hash
+ * @property {string} message
+ * @property {string} timestamp
+ * @property {string} [sessionId]
+ */
+
+/**
+ * @typedef {Object} CommitResult
+ * @property {boolean} success
+ * @property {string} [hash]
+ * @property {string} [message]
+ * @property {*} [error]
+ * @property {*} [errors]
+ * @property {*} [gitStatus]
+ */
+
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -269,87 +295,184 @@ export function createCommitService(options = {}) {
    * @returns {Promise<CommitResult>}
    */
   async function commit(params) {
-    const {
-      sessionId,
-      userId,
-      message = 'chore: commit',
-      amend = false,
-      force = false,
-      featureId,
-      bugfixId,
-      userRole = 'operator'
-    } = params;
+    try {
+      const {
+        sessionId,
+        userId,
+        message = 'chore: commit',
+        amend = false,
+        force = false,
+        featureId,
+        bugfixId,
+        userRole = 'operator'
+      } = params;
 
-    // Validate pre-conditions (unless force is true)
-    if (!force) {
-      const validation = await validatePreConditions({});
+      // Validate pre-conditions (unless force is true)
+      if (!force) {
+        let validation;
+        try {
+          validation = await validatePreConditions({});
+        } catch (validationErr) {
+          // Log validation error to audit trail
+          try {
+            await logAuditEntry({
+              userId,
+              role: userRole,
+              action: amend ? 'commit:amend' : 'commit',
+              params: { message, featureId, bugfixId, force },
+              result: 'error',
+              reason: `Validation error: ${validationErr.message}`,
+              sessionId
+            });
+          } catch (auditErr) {
+            // Audit log failure should not block the error response
+          }
 
-      if (!validation.valid) {
-        // Log failed commit attempt (AC-5.3)
-        await logAuditEntry({
-          userId,
-          role: userRole,
-          action: amend ? 'commit:amend' : 'commit',
-          params: { message, featureId, bugfixId, force },
-          result: 'denied',
-          reason: validation.errors.map(e => e.code).join(', '),
-          sessionId
-        });
+          return {
+            success: false,
+            error: validationErr.message,
+            errors: [{
+              code: 'VALIDATION_FAILED',
+              message: 'Pre-commit validation failed',
+              originalError: validationErr.message
+            }]
+          };
+        }
+
+        if (!validation.valid) {
+          // Log failed commit attempt (AC-5.3)
+          try {
+            await logAuditEntry({
+              userId,
+              role: userRole,
+              action: amend ? 'commit:amend' : 'commit',
+              params: { message, featureId, bugfixId, force },
+              result: 'denied',
+              reason: validation.errors.map(e => e.code).join(', '),
+              sessionId
+            });
+          } catch (auditErr) {
+            // Audit log failure should not block the validation error response
+          }
+
+          return {
+            success: false,
+            errors: validation.errors,
+            gitStatus: validation.gitStatus
+          };
+        }
+      }
+
+      // Build full commit message
+      const fullMessage = buildCommitMessage(message, { featureId, bugfixId });
+
+      // Execute commit
+      let result;
+      try {
+        if (amend) {
+          result = await gitService.amendCommit(fullMessage);
+        } else {
+          result = await gitService.commit(fullMessage);
+        }
+      } catch (gitErr) {
+        // Log git operation error to audit trail
+        try {
+          await logAuditEntry({
+            userId,
+            role: userRole,
+            action: amend ? 'commit:amend' : 'commit',
+            params: { message: fullMessage, featureId, bugfixId, force },
+            result: 'error',
+            reason: `Git error: ${gitErr.message}`,
+            sessionId
+          });
+        } catch (auditErr) {
+          // Audit log failure should not block the error response
+        }
 
         return {
           success: false,
-          errors: validation.errors,
-          gitStatus: validation.gitStatus
+          error: gitErr.message,
+          errors: [{
+            code: 'GIT_ERROR',
+            message: 'Git operation failed',
+            originalError: gitErr.message
+          }]
         };
       }
+
+      // Record commit to session (if successful)
+      if (result.success) {
+        try {
+          await recordCommit(sessionId, {
+            hash: result.hash,
+            shortHash: result.shortHash,
+            message: fullMessage,
+            author: userId,
+            featureId,
+            bugfixId,
+            filesChanged: result.filesChanged
+          });
+        } catch (recordErr) {
+          // Log recording error but don't fail the commit result
+          try {
+            await logAuditEntry({
+              userId,
+              role: userRole,
+              action: amend ? 'commit:amend' : 'commit',
+              params: { message: fullMessage, featureId, bugfixId, force },
+              result: 'warning',
+              reason: `Commit succeeded but session recording failed: ${recordErr.message}`,
+              sessionId
+            });
+          } catch (auditErr) {
+            // Audit log failure should not block the response
+          }
+        }
+
+        // Log successful commit (AC-5.3)
+        try {
+          await logAuditEntry({
+            userId,
+            role: userRole,
+            action: amend ? 'commit:amend' : 'commit',
+            params: { message: fullMessage, featureId, bugfixId, force },
+            result: 'success',
+            sessionId
+          });
+        } catch (auditErr) {
+          // Audit log failure should not block the successful commit response
+        }
+      } else {
+        // Log failed commit (AC-5.3)
+        try {
+          await logAuditEntry({
+            userId,
+            role: userRole,
+            action: amend ? 'commit:amend' : 'commit',
+            params: { message: fullMessage, featureId, bugfixId, force },
+            result: 'failed',
+            reason: result.error,
+            sessionId
+          });
+        } catch (auditErr) {
+          // Audit log failure should not block the error response
+        }
+      }
+
+      return result;
+    } catch (err) {
+      // Catch-all for unexpected errors
+      return {
+        success: false,
+        error: err.message,
+        errors: [{
+          code: 'INTERNAL_ERROR',
+          message: 'Unexpected error during commit operation',
+          originalError: err.message
+        }]
+      };
     }
-
-    // Build full commit message
-    const fullMessage = buildCommitMessage(message, { featureId, bugfixId });
-
-    // Execute commit
-    let result;
-    if (amend) {
-      result = await gitService.amendCommit(fullMessage);
-    } else {
-      result = await gitService.commit(fullMessage);
-    }
-
-    // Record commit to session (if successful)
-    if (result.success) {
-      await recordCommit(sessionId, {
-        hash: result.hash,
-        shortHash: result.shortHash,
-        message: fullMessage,
-        author: userId,
-        featureId,
-        bugfixId,
-        filesChanged: result.filesChanged
-      });
-
-      // Log successful commit (AC-5.3)
-      await logAuditEntry({
-        userId,
-        role: userRole,
-        action: amend ? 'commit:amend' : 'commit',
-        params: { message: fullMessage, featureId, bugfixId, force },
-        result: 'success',
-        sessionId
-      });
-    } else {
-      // Log failed commit (AC-5.3)
-      await logAuditEntry({
-        userId,
-        role: userRole,
-        action: amend ? 'commit:amend' : 'commit',
-        params: { message: fullMessage, featureId, bugfixId, force },
-        result: 'failed',
-        reason: result.error,
-        sessionId
-      });
-    }
-
-    return result;
   }
 
   return {

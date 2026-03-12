@@ -89,3 +89,29 @@ test('createInfraError should create INVALID_TARGET error with hint', () => {
   assert.equal(err.hint, 'Check the target ID in the feature list');
   assert.deepEqual(err.context, { targetId: 'F-999' });
 });
+
+// F-001 T-010: EXIT_CODES tests
+import { EXIT_CODES } from '../../src/pipeline-infra/error-codes.js';
+
+test('EXIT_CODES should define standard process exit codes', () => {
+  assert.equal(EXIT_CODES.SUCCESS, 0);
+  assert.equal(EXIT_CODES.RUNTIME_ERROR, 1);
+  assert.equal(EXIT_CODES.USAGE_ERROR, 2);
+  assert.equal(EXIT_CODES.TIMEOUT, 124);
+});
+
+test('EXIT_CODES should be frozen (immutable)', () => {
+  assert.ok(Object.isFrozen(EXIT_CODES));
+});
+
+test('EXIT_CODES should have exactly 4 keys', () => {
+  const keys = Object.keys(EXIT_CODES);
+  assert.equal(keys.length, 4);
+  assert.deepEqual(keys.sort(), ['RUNTIME_ERROR', 'SUCCESS', 'TIMEOUT', 'USAGE_ERROR']);
+});
+
+test('EXIT_CODES values should all be numbers', () => {
+  for (const [key, value] of Object.entries(EXIT_CODES)) {
+    assert.equal(typeof value, 'number', `EXIT_CODES.${key} should be a number`);
+  }
+});
