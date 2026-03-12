@@ -131,14 +131,32 @@ This is a **resume** from Phase {{RESUME_PHASE}}. After completing the team setu
 
 {{IF_MODE_STANDARD}}
 #### Phase 1-3: Specify + Plan + Tasks (combined, one PM session)
-- Spawn PM agent (Task tool, subagent_type="prizm-dev-team-pm", run_in_background=false)
-  Prompt: "Read {{PM_SUBAGENT_PATH}}. For feature {{FEATURE_ID}} (slug: {{FEATURE_SLUG}}), complete all three planning steps in this single session:
-  1. Run prizmkit-specify → generate `.prizmkit/specs/{{FEATURE_SLUG}}/spec.md` (concise, under 150 lines)
-  2. Run prizmkit-plan → generate `.prizmkit/specs/{{FEATURE_SLUG}}/plan.md` (architecture, components, interface design, data model, testing strategy — all in one file)
-  3. Run prizmkit-tasks → generate `.prizmkit/specs/{{FEATURE_SLUG}}/tasks.md` with `[ ]` checkboxes
-  All three files go under `.prizmkit/specs/{{FEATURE_SLUG}}/`."
-- **Wait for PM to return**
-- **CP-1**: spec.md, plan.md, and tasks.md all exist
+
+**BEFORE spawning PM**, check which artifacts already exist:
+```bash
+ls .prizmkit/specs/{{FEATURE_SLUG}}/spec.md 2>/dev/null && echo "HAS_SPEC=true" || echo "HAS_SPEC=false"
+ls .prizmkit/specs/{{FEATURE_SLUG}}/plan.md 2>/dev/null && echo "HAS_PLAN=true" || echo "HAS_PLAN=false"
+ls .prizmkit/specs/{{FEATURE_SLUG}}/tasks.md 2>/dev/null && echo "HAS_TASKS=true" || echo "HAS_TASKS=false"
+```
+
+- If all three files already exist → **SKIP Phase 1-3**, proceed directly to CP-1 check
+- If none exist → spawn PM for full planning
+- If some exist → spawn PM with explicit instructions to **only generate the missing files**
+
+Spawn PM agent (Task tool, subagent_type="prizm-dev-team-pm", run_in_background=false).
+
+**Construct the prompt dynamically based on what is missing:**
+- If spec.md missing: include step "1. Run prizmkit-specify → generate spec.md (concise, under 150 lines). Do NOT use interactive clarification — resolve any ambiguity using the feature description provided."
+- If plan.md missing: include step "2. Run prizmkit-plan → generate plan.md (architecture, components, interface design, data model, testing strategy — all in one file)"
+- If tasks.md missing: include step "3. Run prizmkit-tasks → generate tasks.md with `[ ]` checkboxes"
+
+Always prefix the PM prompt with:
+> "Read {{PM_SUBAGENT_PATH}}. For feature {{FEATURE_ID}} (slug: {{FEATURE_SLUG}}), complete the following planning steps IN THIS SINGLE SESSION — do NOT exit until ALL listed steps are done and files are written to disk:
+> [list only the steps for missing files]
+> All files go under `.prizmkit/specs/{{FEATURE_SLUG}}/`. After writing each file, confirm it exists with `ls`."
+
+- **Wait for PM to return** (run_in_background=false — do not proceed until PM exits)
+- **CP-1**: Verify all three files exist. If any still missing after PM returns, re-read PM output to diagnose — do NOT spawn a third PM session blindly. Fix the issue (e.g. wrong path) and write the missing file yourself if it is a path error.
 
 #### Phase 4: Analyze (cross-check)
 - Spawn Reviewer agent (Task tool, subagent_type="prizm-dev-team-reviewer", run_in_background=false)
@@ -150,14 +168,32 @@ This is a **resume** from Phase {{RESUME_PHASE}}. After completing the team setu
 
 {{IF_MODE_FULL}}
 #### Phase 1-3: Specify + Plan + Tasks (combined, one PM session)
-- Spawn PM agent (Task tool, subagent_type="prizm-dev-team-pm", run_in_background=false)
-  Prompt: "Read {{PM_SUBAGENT_PATH}}. For feature {{FEATURE_ID}} (slug: {{FEATURE_SLUG}}), complete all three planning steps in this single session:
-  1. Run prizmkit-specify → generate `.prizmkit/specs/{{FEATURE_SLUG}}/spec.md`. If there are `[NEEDS CLARIFICATION]` markers, run prizmkit-clarify to resolve them.
-  2. Run prizmkit-plan → generate `.prizmkit/specs/{{FEATURE_SLUG}}/plan.md` (architecture, components, interface design, data model, testing strategy, risk assessment — all in one file)
-  3. Run prizmkit-tasks → generate `.prizmkit/specs/{{FEATURE_SLUG}}/tasks.md` with `[ ]` checkboxes
-  All three files go under `.prizmkit/specs/{{FEATURE_SLUG}}/`."
-- **Wait for PM to return**
-- **CP-1**: spec.md, plan.md, and tasks.md all exist
+
+**BEFORE spawning PM**, check which artifacts already exist:
+```bash
+ls .prizmkit/specs/{{FEATURE_SLUG}}/spec.md 2>/dev/null && echo "HAS_SPEC=true" || echo "HAS_SPEC=false"
+ls .prizmkit/specs/{{FEATURE_SLUG}}/plan.md 2>/dev/null && echo "HAS_PLAN=true" || echo "HAS_PLAN=false"
+ls .prizmkit/specs/{{FEATURE_SLUG}}/tasks.md 2>/dev/null && echo "HAS_TASKS=true" || echo "HAS_TASKS=false"
+```
+
+- If all three files already exist → **SKIP Phase 1-3**, proceed directly to CP-1 check
+- If none exist → spawn PM for full planning
+- If some exist → spawn PM with explicit instructions to **only generate the missing files**
+
+Spawn PM agent (Task tool, subagent_type="prizm-dev-team-pm", run_in_background=false).
+
+**Construct the prompt dynamically based on what is missing:**
+- If spec.md missing: include step "1. Run prizmkit-specify → generate spec.md. If there are `[NEEDS CLARIFICATION]` markers, resolve them using the feature description — do NOT pause for interactive input."
+- If plan.md missing: include step "2. Run prizmkit-plan → generate plan.md (architecture, components, interface design, data model, testing strategy, risk assessment — all in one file)"
+- If tasks.md missing: include step "3. Run prizmkit-tasks → generate tasks.md with `[ ]` checkboxes"
+
+Always prefix the PM prompt with:
+> "Read {{PM_SUBAGENT_PATH}}. For feature {{FEATURE_ID}} (slug: {{FEATURE_SLUG}}), complete the following planning steps IN THIS SINGLE SESSION — do NOT exit until ALL listed steps are done and files are written to disk:
+> [list only the steps for missing files]
+> All files go under `.prizmkit/specs/{{FEATURE_SLUG}}/`. After writing each file, confirm it exists with `ls`."
+
+- **Wait for PM to return** (run_in_background=false — do not proceed until PM exits)
+- **CP-1**: Verify all three files exist. If any still missing after PM returns, re-read PM output to diagnose — do NOT spawn a third PM session blindly. Fix path errors yourself if needed.
 
 #### Phase 4: Analyze (cross-check)
 - Spawn Reviewer agent (Task tool, subagent_type="prizm-dev-team-reviewer", run_in_background=false)
@@ -191,7 +227,17 @@ This is a **resume** from Phase {{RESUME_PHASE}}. After completing the team setu
 
 **7a.** Run `prizmkit.summarize` (invoke the prizmkit-summarize skill) → archive to REGISTRY.md
 
-**7b.** Run `prizmkit.committer` (invoke the prizmkit-committer skill) → `feat({{FEATURE_ID}}): {{FEATURE_TITLE}}`, do NOT push
+**7b.** BEFORE commit, mark current feature as completed in feature-list:
+```bash
+python3 {{VALIDATOR_SCRIPTS_DIR}}/update-feature-status.py \
+  --feature-list "{{FEATURE_LIST_PATH}}" \
+  --state-dir "{{PROJECT_ROOT}}/dev-pipeline/state" \
+  --feature-id "{{FEATURE_ID}}" \
+  --session-id "{{SESSION_ID}}" \
+  --action complete
+```
+
+**7c.** Run `prizmkit.committer` (invoke the prizmkit-committer skill) → `feat({{FEATURE_ID}}): {{FEATURE_TITLE}}`, do NOT push
 
 ### Step 3: Report Session Status
 
@@ -248,6 +294,7 @@ TeamDelete
 | Reviewer Agent Def | {{REVIEWER_SUBAGENT_PATH}} |
 | Session Status Output | {{SESSION_STATUS_PATH}} |
 | Project Root | {{PROJECT_ROOT}} |
+| Feature List Path | {{FEATURE_LIST_PATH}} |
 
 ## Reminders
 
