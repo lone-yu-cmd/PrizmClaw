@@ -56,11 +56,14 @@ When creating a new team, use these files as reference for team member names, ro
 **ALWAYS** use per-feature subdirectory `.prizmkit/specs/{{FEATURE_SLUG}}/`:
 
 ```
+.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md  ← Knowledge base (PM writes, all agents read)
 .prizmkit/specs/{{FEATURE_SLUG}}/spec.md
 .prizmkit/specs/{{FEATURE_SLUG}}/plan.md
 .prizmkit/specs/{{FEATURE_SLUG}}/tasks.md
 .prizmkit/specs/REGISTRY.md
 ```
+
+**`context-snapshot.md` is the single source of truth for all project context in this session.** PM writes it once after scanning the codebase. Dev and Reviewer read it instead of re-reading individual source files. This eliminates redundant I/O across all agents.
 
 ## Execution Instructions
 
@@ -100,9 +103,35 @@ python3 {{INIT_SCRIPT_PATH}} --project-root {{PROJECT_ROOT}} --feature-id {{FEAT
 #### Resume Context
 
 This is a **resume** from Phase {{RESUME_PHASE}}. After completing the team setup above:
-1. Read artifacts in `.prizmkit/specs/{{FEATURE_SLUG}}/` (spec.md, plan.md, tasks.md)
-2. Resume the pipeline from Phase {{RESUME_PHASE}} below
+1. Check if `.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md` exists — if so, all agents MUST use it (do not re-scan source files)
+2. Read artifacts in `.prizmkit/specs/{{FEATURE_SLUG}}/` (spec.md, plan.md, tasks.md)
+3. Resume the pipeline from Phase {{RESUME_PHASE}} below
 {{END_IF_RESUME}}
+
+### Subagent Timeout Recovery Protocol
+
+**This protocol applies to ALL subagent spawns (PM, Dev, Reviewer). Apply it whenever a spawned agent times out or returns with no output.**
+
+1. **Check what was already completed**:
+   ```bash
+   ls .prizmkit/specs/{{FEATURE_SLUG}}/
+   ```
+   Check which files exist. If `context-snapshot.md` already exists, it contains the full codebase context — no need to re-scan source files.
+
+2. **Do NOT re-spawn with the same prompt** — it will likely timeout again for the same reason.
+
+3. **Re-spawn with a focused recovery prompt** using these rules:
+   - Open with: `"Read .prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md for full project context. Do NOT re-read individual source files — all relevant content is already in the snapshot."`
+   - List **only the remaining tasks** (skip anything already completed based on the `ls` check)
+   - Prefer `model: "lite"` for faster first-token response on the retry
+
+4. **Max 2 retries per agent phase**: If still failing after 2 retries, the orchestrator completes the remaining work directly (orchestrator has context from the bootstrap prompt and any existing snapshot content).
+
+5. **After recovery**: If the orchestrator had to write artifacts directly, append a note to `context-snapshot.md`:
+   ```
+   ## Recovery Note
+   [Agent role] timed out at [phase]. Orchestrator completed: [list of files written].
+   ```
 
 ### Step 2: Pipeline Phases
 
@@ -118,11 +147,30 @@ This is a **resume** from Phase {{RESUME_PHASE}}. After completing the team setu
 
 {{IF_MODE_LITE}}
 #### Phase 1-3: Lightweight Planning (combined)
-- Spawn PM agent (Task tool, subagent_type="prizm-dev-team-pm", run_in_background=false)
-  Prompt: "Read {{PM_SUBAGENT_PATH}}. For feature {{FEATURE_ID}} (slug: {{FEATURE_SLUG}}), create a CONCISE implementation plan. Write:
-  1. `.prizmkit/specs/{{FEATURE_SLUG}}/plan.md` — brief architecture (under 100 lines): key components, data flow, file structure
-  2. `.prizmkit/specs/{{FEATURE_SLUG}}/tasks.md` — task checklist with `[ ]` checkboxes, each task = one implementable unit
-  Do NOT generate spec.md. Keep it minimal."
+
+**BEFORE spawning PM**, check which artifacts already exist:
+```bash
+ls .prizmkit/specs/{{FEATURE_SLUG}}/ 2>/dev/null
+```
+- If `context-snapshot.md` exists → PM must read it instead of re-scanning source files
+- If `plan.md` and `tasks.md` exist → **SKIP Phase 1-3**, proceed to CP-1 check
+
+Spawn PM agent (Task tool, subagent_type="prizm-dev-team-pm", run_in_background=false).
+
+Construct the PM prompt:
+> "Read {{PM_SUBAGENT_PATH}}. For feature {{FEATURE_ID}} (slug: {{FEATURE_SLUG}}), complete the following IN THIS SINGLE SESSION — do NOT exit until ALL steps are done and files are written to disk:
+>
+> **Step A — Build Context Snapshot** (SKIP if `.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md` already exists):
+> 1. Read `.prizm-docs/root.prizm` and any relevant L1 prizm docs
+> 2. Scan `src/` for files related to this feature
+> 3. Write `.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md` with sections: Feature Brief, Project Structure, Prizm Context, Existing Source Files (full content inline), Existing Tests (full content inline). This file is the knowledge base for all team agents.
+>
+> **Step B — Create Planning Artifacts**:
+> 1. `.prizmkit/specs/{{FEATURE_SLUG}}/plan.md` — brief architecture (under 100 lines): key components, data flow, file structure
+> 2. `.prizmkit/specs/{{FEATURE_SLUG}}/tasks.md` — task checklist with `[ ]` checkboxes, each task = one implementable unit
+> Do NOT generate spec.md. Keep it minimal.
+> After writing each file, confirm it exists with `ls`."
+
 - **Wait for PM to return**
 - **CP-1**: plan.md and tasks.md exist
 
@@ -134,35 +182,51 @@ This is a **resume** from Phase {{RESUME_PHASE}}. After completing the team setu
 
 **BEFORE spawning PM**, check which artifacts already exist:
 ```bash
-ls .prizmkit/specs/{{FEATURE_SLUG}}/spec.md 2>/dev/null && echo "HAS_SPEC=true" || echo "HAS_SPEC=false"
-ls .prizmkit/specs/{{FEATURE_SLUG}}/plan.md 2>/dev/null && echo "HAS_PLAN=true" || echo "HAS_PLAN=false"
-ls .prizmkit/specs/{{FEATURE_SLUG}}/tasks.md 2>/dev/null && echo "HAS_TASKS=true" || echo "HAS_TASKS=false"
+ls .prizmkit/specs/{{FEATURE_SLUG}}/ 2>/dev/null
 ```
 
-- If all three files already exist → **SKIP Phase 1-3**, proceed directly to CP-1 check
+- If all three files (spec.md, plan.md, tasks.md) already exist → **SKIP Phase 1-3**, proceed directly to CP-1 check
+- If `context-snapshot.md` exists → PM must read it instead of re-scanning source files
 - If none exist → spawn PM for full planning
-- If some exist → spawn PM with explicit instructions to **only generate the missing files**
+- If some exist → spawn PM with instructions to only generate the missing files
 
 Spawn PM agent (Task tool, subagent_type="prizm-dev-team-pm", run_in_background=false).
 
-**Construct the prompt dynamically based on what is missing:**
-- If spec.md missing: include step "1. Run prizmkit-specify → generate spec.md (concise, under 150 lines). Do NOT use interactive clarification — resolve any ambiguity using the feature description provided."
-- If plan.md missing: include step "2. Run prizmkit-plan → generate plan.md (architecture, components, interface design, data model, testing strategy — all in one file)"
-- If tasks.md missing: include step "3. Run prizmkit-tasks → generate tasks.md with `[ ]` checkboxes"
+**Construct the prompt dynamically:**
 
 Always prefix the PM prompt with:
-> "Read {{PM_SUBAGENT_PATH}}. For feature {{FEATURE_ID}} (slug: {{FEATURE_SLUG}}), complete the following planning steps IN THIS SINGLE SESSION — do NOT exit until ALL listed steps are done and files are written to disk:
-> [list only the steps for missing files]
-> All files go under `.prizmkit/specs/{{FEATURE_SLUG}}/`. After writing each file, confirm it exists with `ls`."
+> "Read {{PM_SUBAGENT_PATH}}. For feature {{FEATURE_ID}} (slug: {{FEATURE_SLUG}}), complete the following steps IN THIS SINGLE SESSION — do NOT exit until ALL listed steps are done and files are written to disk:"
+
+Then append:
+
+**Step A — Build Context Snapshot** (include this step only if `context-snapshot.md` does NOT already exist):
+> "Step A: Read all project context and write `.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md`. This is the knowledge base for the entire team — it must be complete before doing anything else. Include:
+> - Section 1 'Feature Brief': Copy the feature description and acceptance criteria from the bootstrap prompt
+> - Section 2 'Project Structure': Output of `ls src/` and any relevant subdirectory listings
+> - Section 3 'Prizm Context': Full content of `.prizm-docs/root.prizm` and any relevant L1/L2 prizm docs
+> - Section 4 'Existing Source Files': Read every source file related to this feature and embed its full content as a code block. Include files that already implement similar functionality.
+> - Section 5 'Existing Tests': Read every test file related to this feature and embed its full content as a code block.
+> After writing, confirm with `ls .prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md`."
+
+**Step B — Create Planning Artifacts** (include only the steps for missing files):
+- If spec.md missing: "Run prizmkit-specify → generate spec.md (concise, under 150 lines). Do NOT use interactive clarification — resolve any ambiguity using the feature description provided."
+- If plan.md missing: "Run prizmkit-plan → generate plan.md (architecture, components, interface design, data model, testing strategy — all in one file)"
+- If tasks.md missing: "Run prizmkit-tasks → generate tasks.md with `[ ]` checkboxes"
+
+> "All files go under `.prizmkit/specs/{{FEATURE_SLUG}}/`. After writing each file, confirm it exists with `ls`."
 
 - **Wait for PM to return** (run_in_background=false — do not proceed until PM exits)
-- **CP-1**: Verify all three files exist. If any still missing after PM returns, re-read PM output to diagnose — do NOT spawn a third PM session blindly. Fix the issue (e.g. wrong path) and write the missing file yourself if it is a path error.
+- **CP-1**: Verify all three files exist. If any still missing after PM returns, check if `context-snapshot.md` was written (it contains all context needed). If it's a path error, fix it yourself — do NOT spawn another PM session blindly.
 
 #### Phase 4: Analyze (cross-check)
 - Spawn Reviewer agent (Task tool, subagent_type="prizm-dev-team-reviewer", run_in_background=false)
-  Prompt: "Read {{REVIEWER_SUBAGENT_PATH}}. Run prizmkit-analyze for feature {{FEATURE_ID}} (slug: {{FEATURE_SLUG}}). Cross-check `.prizmkit/specs/{{FEATURE_SLUG}}/spec.md`, `plan.md`, and `tasks.md` for consistency. Report any CRITICAL or HIGH issues."
+  Prompt: "Read {{REVIEWER_SUBAGENT_PATH}}. For feature {{FEATURE_ID}} (slug: {{FEATURE_SLUG}}):
+  1. Read `.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md` FIRST — this contains all source file content and project context. Do NOT re-read individual source files.
+  2. Run prizmkit-analyze: cross-check `spec.md`, `plan.md`, and `tasks.md` for consistency. All spec files are in `.prizmkit/specs/{{FEATURE_SLUG}}/`.
+  3. When flagging CRITICAL or HIGH issues, verify each issue against the actual source code content in context-snapshot.md Section 4 before reporting. Do NOT report issues based on incomplete information.
+  Report: list of CRITICAL, HIGH, MEDIUM issues found (or 'No issues found')."
 - **Wait for Reviewer to return**
-- If CRITICAL issues found: spawn PM to fix, then re-run analyze (max 1 round)
+- If CRITICAL issues found: spawn PM to fix (PM reads context-snapshot.md for context), then re-run analyze (max 1 round)
 - **CP-2**: No CRITICAL issues
 {{END_IF_MODE_STANDARD}}
 
@@ -171,35 +235,51 @@ Always prefix the PM prompt with:
 
 **BEFORE spawning PM**, check which artifacts already exist:
 ```bash
-ls .prizmkit/specs/{{FEATURE_SLUG}}/spec.md 2>/dev/null && echo "HAS_SPEC=true" || echo "HAS_SPEC=false"
-ls .prizmkit/specs/{{FEATURE_SLUG}}/plan.md 2>/dev/null && echo "HAS_PLAN=true" || echo "HAS_PLAN=false"
-ls .prizmkit/specs/{{FEATURE_SLUG}}/tasks.md 2>/dev/null && echo "HAS_TASKS=true" || echo "HAS_TASKS=false"
+ls .prizmkit/specs/{{FEATURE_SLUG}}/ 2>/dev/null
 ```
 
-- If all three files already exist → **SKIP Phase 1-3**, proceed directly to CP-1 check
+- If all three files (spec.md, plan.md, tasks.md) already exist → **SKIP Phase 1-3**, proceed directly to CP-1 check
+- If `context-snapshot.md` exists → PM must read it instead of re-scanning source files
 - If none exist → spawn PM for full planning
-- If some exist → spawn PM with explicit instructions to **only generate the missing files**
+- If some exist → spawn PM with instructions to only generate the missing files
 
 Spawn PM agent (Task tool, subagent_type="prizm-dev-team-pm", run_in_background=false).
 
-**Construct the prompt dynamically based on what is missing:**
-- If spec.md missing: include step "1. Run prizmkit-specify → generate spec.md. If there are `[NEEDS CLARIFICATION]` markers, resolve them using the feature description — do NOT pause for interactive input."
-- If plan.md missing: include step "2. Run prizmkit-plan → generate plan.md (architecture, components, interface design, data model, testing strategy, risk assessment — all in one file)"
-- If tasks.md missing: include step "3. Run prizmkit-tasks → generate tasks.md with `[ ]` checkboxes"
+**Construct the prompt dynamically:**
 
 Always prefix the PM prompt with:
-> "Read {{PM_SUBAGENT_PATH}}. For feature {{FEATURE_ID}} (slug: {{FEATURE_SLUG}}), complete the following planning steps IN THIS SINGLE SESSION — do NOT exit until ALL listed steps are done and files are written to disk:
-> [list only the steps for missing files]
-> All files go under `.prizmkit/specs/{{FEATURE_SLUG}}/`. After writing each file, confirm it exists with `ls`."
+> "Read {{PM_SUBAGENT_PATH}}. For feature {{FEATURE_ID}} (slug: {{FEATURE_SLUG}}), complete the following steps IN THIS SINGLE SESSION — do NOT exit until ALL listed steps are done and files are written to disk:"
+
+Then append:
+
+**Step A — Build Context Snapshot** (include this step only if `context-snapshot.md` does NOT already exist):
+> "Step A: Read all project context and write `.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md`. This is the knowledge base for the entire team — it must be complete before doing anything else. Include:
+> - Section 1 'Feature Brief': Copy the feature description and acceptance criteria from the bootstrap prompt
+> - Section 2 'Project Structure': Output of `ls src/` and any relevant subdirectory listings
+> - Section 3 'Prizm Context': Full content of `.prizm-docs/root.prizm` and any relevant L1/L2 prizm docs
+> - Section 4 'Existing Source Files': Read every source file related to this feature and embed its full content as a code block. Include files that already implement similar functionality.
+> - Section 5 'Existing Tests': Read every test file related to this feature and embed its full content as a code block.
+> After writing, confirm with `ls .prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md`."
+
+**Step B — Create Planning Artifacts** (include only the steps for missing files):
+- If spec.md missing: "Run prizmkit-specify → generate spec.md. If there are `[NEEDS CLARIFICATION]` markers, resolve them using the feature description — do NOT pause for interactive input."
+- If plan.md missing: "Run prizmkit-plan → generate plan.md (architecture, components, interface design, data model, testing strategy, risk assessment — all in one file)"
+- If tasks.md missing: "Run prizmkit-tasks → generate tasks.md with `[ ]` checkboxes"
+
+> "All files go under `.prizmkit/specs/{{FEATURE_SLUG}}/`. After writing each file, confirm it exists with `ls`."
 
 - **Wait for PM to return** (run_in_background=false — do not proceed until PM exits)
-- **CP-1**: Verify all three files exist. If any still missing after PM returns, re-read PM output to diagnose — do NOT spawn a third PM session blindly. Fix path errors yourself if needed.
+- **CP-1**: Verify all three files exist. If any still missing after PM returns, check if `context-snapshot.md` was written. Fix path errors yourself if needed — do NOT spawn another PM session blindly.
 
 #### Phase 4: Analyze (cross-check)
 - Spawn Reviewer agent (Task tool, subagent_type="prizm-dev-team-reviewer", run_in_background=false)
-  Prompt: "Read {{REVIEWER_SUBAGENT_PATH}}. Run prizmkit-analyze for feature {{FEATURE_ID}} (slug: {{FEATURE_SLUG}}). Cross-check `.prizmkit/specs/{{FEATURE_SLUG}}/spec.md`, `plan.md`, and `tasks.md` for consistency. Report any CRITICAL or HIGH issues."
+  Prompt: "Read {{REVIEWER_SUBAGENT_PATH}}. For feature {{FEATURE_ID}} (slug: {{FEATURE_SLUG}}):
+  1. Read `.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md` FIRST — this contains all source file content and project context. Do NOT re-read individual source files.
+  2. Run prizmkit-analyze: cross-check `spec.md`, `plan.md`, and `tasks.md` for consistency. All spec files are in `.prizmkit/specs/{{FEATURE_SLUG}}/`.
+  3. When flagging CRITICAL or HIGH issues, verify each issue against the actual source code content in context-snapshot.md Section 4 before reporting. Do NOT report issues based on incomplete information.
+  Report: list of CRITICAL, HIGH, MEDIUM issues found (or 'No issues found')."
 - **Wait for Reviewer to return**
-- If CRITICAL issues found: spawn PM to fix, then re-run analyze (max 1 round)
+- If CRITICAL issues found: spawn PM to fix (PM reads context-snapshot.md for context), then re-run analyze (max 1 round)
 - **CP-2**: No CRITICAL issues
 {{END_IF_MODE_FULL}}
 
@@ -207,18 +287,24 @@ Always prefix the PM prompt with:
 - Read tasks from `.prizmkit/specs/{{FEATURE_SLUG}}/tasks.md`
 - Create TaskList entries and assign to Dev agents
 - Spawn Dev agent (Task tool, subagent_type="prizm-dev-team-dev", run_in_background=false)
-  Prompt: "Read {{DEV_SUBAGENT_PATH}}. Implement all tasks for feature {{FEATURE_ID}} (slug: {{FEATURE_SLUG}}) using prizmkit-implement with TDD. Read the plan from `.prizmkit/specs/{{FEATURE_SLUG}}/plan.md` and tasks from `tasks.md`. Mark completed tasks [x] in tasks.md."
+  Prompt: "Read {{DEV_SUBAGENT_PATH}}. Implement all tasks for feature {{FEATURE_ID}} (slug: {{FEATURE_SLUG}}) using prizmkit-implement with TDD.
+  1. Read `.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md` FIRST — this contains all relevant source files, tests, and project context. Do NOT re-read individual source files listed there.
+  2. Read plan from `.prizmkit/specs/{{FEATURE_SLUG}}/plan.md` and tasks from `tasks.md`.
+  3. Implement task-by-task. Mark completed tasks [x] in tasks.md.
+  4. After ALL tasks are complete, append an 'Implementation Log' section to `context-snapshot.md` with: list of files changed/created, key decisions made, any deviations from the plan."
 - **Wait for Dev to return**
 - All tasks marked `[x]`, tests pass
 
 #### Phase 6: Review
 - Spawn Reviewer agent (Task tool, subagent_type="prizm-dev-team-reviewer", run_in_background=false)
   Prompt: "Read {{REVIEWER_SUBAGENT_PATH}}. For feature {{FEATURE_ID}} (slug: {{FEATURE_SLUG}}):
-  1. Run prizmkit-code-review for spec compliance and code quality
-  2. Write and execute integration tests covering all user stories from spec.md
+  1. Read `.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md` FIRST — Section 4 has original source files, Section 6 (Implementation Log) has what Dev changed. Do NOT re-read files that haven't changed.
+  2. Run prizmkit-code-review: check spec compliance (against spec.md), code quality, and correctness of changes described in the Implementation Log.
+  3. Write and execute integration tests covering all user stories from spec.md.
+  4. Append a 'Review Notes' section to `context-snapshot.md` with: issues found (severity + description), test results, final verdict.
   Report verdict: PASS, PASS_WITH_WARNINGS, or NEEDS_FIXES."
 - **Wait for Reviewer to return**
-- If NEEDS_FIXES: spawn Dev to fix, then re-run Review (max 3 rounds)
+- If NEEDS_FIXES: spawn Dev to fix (Dev reads updated context-snapshot.md for context), then re-run Review (max 3 rounds)
 - **CP-3**: Integration tests pass, review verdict is not NEEDS_FIXES
 
 #### Phase 7: Summarize & Commit — DO NOT SKIP
@@ -260,6 +346,7 @@ Write to: `{{SESSION_STATUS_PATH}}`
   "can_resume": false,
   "resume_from_phase": null,
   "artifacts": {
+    "context_snapshot_path": ".prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md",
     "spec_path": ".prizmkit/specs/{{FEATURE_SLUG}}/spec.md",
     "plan_path": ".prizmkit/specs/{{FEATURE_SLUG}}/plan.md",
     "tasks_path": ".prizmkit/specs/{{FEATURE_SLUG}}/tasks.md"
@@ -289,6 +376,7 @@ TeamDelete
 | Team Definition (source of truth) | `core/team/prizm-dev-team.json` |
 | Team Config (installed) | `{{TEAM_CONFIG_PATH}}` |
 | Feature Artifacts Dir | `.prizmkit/specs/{{FEATURE_SLUG}}/` |
+| **Context Snapshot (knowledge base)** | `.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md` |
 | PM Agent Def | {{PM_SUBAGENT_PATH}} |
 | Dev Agent Def | {{DEV_SUBAGENT_PATH}} |
 | Reviewer Agent Def | {{REVIEWER_SUBAGENT_PATH}} |
@@ -300,10 +388,12 @@ TeamDelete
 
 - **MANDATORY**: You MUST use `prizm-dev-team` (reuse existing or create new) — single-agent execution is FORBIDDEN
 - **Team definition source**: `core/team/prizm-dev-team.json`; installed at `{{TEAM_CONFIG_PATH}}`
-- **All artifacts go under `.prizmkit/specs/{{FEATURE_SLUG}}/`** — only 3 files: spec.md, plan.md, tasks.md
+- **context-snapshot.md is the team's shared knowledge base**: PM writes it once; Dev and Reviewer read it instead of re-reading source files. Always check if it exists before spawning any agent.
+- **All artifacts go under `.prizmkit/specs/{{FEATURE_SLUG}}/`** — 4 files: context-snapshot.md, spec.md, plan.md, tasks.md
 - Dev agents use TDD approach
 - Phase 7 (summarize + commit) is MANDATORY
 - ALWAYS write session-status.json before exiting
 - **NEVER exit the session early** — wait for all spawned agents to complete
 - Do NOT use `run_in_background=true` when spawning agents
 - Only call `TeamDelete` if you created the team; do NOT delete a reused team
+- **On timeout**: follow the Subagent Timeout Recovery Protocol — always check what's in the snapshot before re-spawning
