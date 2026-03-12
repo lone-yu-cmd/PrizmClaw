@@ -1,0 +1,30 @@
+{
+  "session_id": "F-004-20260312033516",
+  "feature_id": "F-004",
+  "feature_slug": "004-pipeline-process-controller",
+  "status": "success",
+  "completed_phases": [0, 1, 2, 3, 4, 5, 6, 7],
+  "current_phase": 7,
+  "checkpoint_reached": "CP-3",
+  "tasks_completed": 128,
+  "tasks_total": 143,
+  "errors": [],
+  "can_resume": false,
+  "resume_from_phase": null,
+  "artifacts": {
+    "spec_path": ".prizmkit/specs/004-pipeline-process-controller/spec.md",
+    "plan_path": ".prizmkit/specs/004-pipeline-process-controller/plan.md",
+    "tasks_path": ".prizmkit/specs/004-pipeline-process-controller/tasks.md"
+  },
+  "git_commit": "bf5160e781f4e16eb7f1324627bb438a8052dc0a",
+  "timestamp": "2026-03-12T04:00:16+08:00",
+  "review_verdict": "PASS_WITH_WARNINGS",
+  "review_findings": {
+    "critical": 0,
+    "high": 1,
+    "medium": 3,
+    "low": 2
+  },
+  "team_reused": true,
+  "team_name": "prizm-dev-team"
+}

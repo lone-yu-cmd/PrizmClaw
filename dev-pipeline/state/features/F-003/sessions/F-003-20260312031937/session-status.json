@@ -1,0 +1,21 @@
+{
+  "session_id": "F-003-20260312031937",
+  "feature_id": "F-003",
+  "feature_slug": "003-feature-and-bug-plan-ingestion",
+  "status": "success",
+  "completed_phases": [0, 1, 2, 3, 4, 5, 6, 7],
+  "current_phase": 7,
+  "checkpoint_reached": "CP-3",
+  "tasks_completed": 18,
+  "tasks_total": 18,
+  "errors": [],
+  "can_resume": false,
+  "resume_from_phase": null,
+  "artifacts": {
+    "spec_path": ".prizmkit/specs/003-feature-and-bug-plan-ingestion/spec.md",
+    "plan_path": ".prizmkit/specs/003-feature-and-bug-plan-ingestion/plan.md",
+    "tasks_path": ".prizmkit/specs/003-feature-and-bug-plan-ingestion/tasks.md"
+  },
+  "git_commit": "f2362b67dc252a98aa8b8f8597288ec02353bf0d",
+  "timestamp": "2026-03-12T03:34:19+08:00"
+}

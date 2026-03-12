@@ -1,0 +1,14 @@
+{
+  "feature_id": "F-005",
+  "status": "completed",
+  "retry_count": 0,
+  "max_retries": 3,
+  "sessions": [
+    "F-005-20260312040211",
+    "F-005-20260312040050"
+  ],
+  "last_session_id": "F-005-20260312040050",
+  "resume_from_phase": null,
+  "created_at": "2026-03-11T17:53:07Z",
+  "updated_at": "2026-03-11T20:26:59Z"
+}

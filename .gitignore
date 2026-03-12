@@ -5,7 +5,6 @@ node_modules
 *.png
 
 # Pipeline runtime state
-dev-pipeline/state/
 dev-pipeline/lib/
 dev-pipeline/bugfix-state/
 

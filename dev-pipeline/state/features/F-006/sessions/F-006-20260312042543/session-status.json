@@ -1,0 +1,21 @@
+{
+  "session_id": "F-006-20260312042543",
+  "feature_id": "F-006",
+  "feature_slug": "006-safety-and-permission-guard",
+  "status": "success",
+  "completed_phases": [0, 1, 2, 3, 4, 5, 6, 7],
+  "current_phase": 7,
+  "checkpoint_reached": "CP-3",
+  "tasks_completed": 22,
+  "tasks_total": 22,
+  "errors": [],
+  "can_resume": false,
+  "resume_from_phase": null,
+  "artifacts": {
+    "spec_path": ".prizmkit/specs/006-safety-and-permission-guard/spec.md",
+    "plan_path": ".prizmkit/specs/006-safety-and-permission-guard/plan.md",
+    "tasks_path": ".prizmkit/specs/006-safety-and-permission-guard/tasks.md"
+  },
+  "git_commit": "f6d39ef78d4dff4ce53ce44e8ef729b7eb47a8ba",
+  "timestamp": "2026-03-12T04:55:16+08:00"
+}
