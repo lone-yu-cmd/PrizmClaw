@@ -13,8 +13,7 @@
     "types": ["node"]
   },
   "include": [
-    "src/pipeline-infra/**/*.js",
-    "src/services/pipeline-control-service.js"
+    "src/**/*.js"
   ],
   "exclude": [
     "node_modules",

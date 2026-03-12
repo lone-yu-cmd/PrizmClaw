@@ -8,6 +8,7 @@ KEY_FILES:
 - src/pipeline-infra/error-codes.js
 - src/pipeline-infra/path-policy.js
 - src/pipeline-infra/config-loader.js
+- src/pipeline-infra/cli-entry.js
 - src/pipeline-infra/script-runner.js
 - src/pipeline-infra/lock-manager.js
 - src/pipeline-infra/state-manager.js
@@ -18,12 +19,20 @@ UNIT_TESTS:
 - tests/pipeline-infra/error-codes.test.js
 - tests/pipeline-infra/config-loader.test.js
 - tests/pipeline-infra/path-policy.test.js
+- tests/pipeline-infra/cli-entry.test.js
 - tests/pipeline-infra/script-runner.test.js
 - tests/pipeline-infra/lock-manager.test.js
 - tests/pipeline-infra/state-manager.test.js
+INTEGRATION_TESTS:
+- tests/integration/f001-infrastructure.integration.test.js
 
 PUBLIC_APIS:
 - loadPipelineInfraConfig(input?) -> normalized pipeline config + defaults
+- loadAndValidateConfig(input?) -> { ok, config?, errors? } batch validation
+- EXIT_CODES -> { SUCCESS: 0, RUNTIME_ERROR: 1, USAGE_ERROR: 2, TIMEOUT: 124 }
+- DIRECTORY_CONVENTION -> frozen canonical directory layout object
+- resolvePlansPaths(projectRoot) -> { plansDir }
+- createCliEntry(options) -> { run, config, logger, flags, positionalArgs }
 - computeFeatureSlug(featureId, title)
 - resolveFeaturePaths({ projectRoot, featureId, title, sessionId })
 - resolveBugPaths({ projectRoot, bugId, sessionId })
@@ -43,7 +52,7 @@ SERVICE_LAYER: src/services/pipeline-control-service.js
 SERVICE_TESTS: tests/services/pipeline-control-service.test.js
 
 ERROR_MODEL:
-- codes: CONFIG_MISSING, CONFIG_INVALID, PATH_INVALID, SCRIPT_NOT_FOUND, EXEC_TIMEOUT, EXEC_FAILED
+- codes: CONFIG_MISSING, CONFIG_INVALID, PATH_INVALID, SCRIPT_NOT_FOUND, EXEC_TIMEOUT, EXEC_FAILED, CLI_USAGE_ERROR, CLI_UNKNOWN_ARG
 - F-004 codes: LOCK_ACQUISITION_FAILED, ALREADY_STOPPED, PIPELINE_NOT_RUNNING, INVALID_TARGET, TARGET_NOT_RETRYABLE, DAEMON_START_FAILED
 - createInfraError(code, message, { hint, context }) -> serializable infra error payload
 
@@ -60,3 +69,7 @@ DECISIONS:
 - 2026-03-12 | f001-feature-complete | all US1-US4 acceptance criteria verified via integration tests
 - 2026-03-12 | f004-lock-manager | file lock + PID validation for concurrency protection (D1)
 - 2026-03-12 | f004-state-manager | separate module for state file management (D2)
+- 2026-03-12 | f001-v2-batch-config | add loadAndValidateConfig for batch error collection (US-1)
+- 2026-03-12 | f001-v2-directory-convention | add DIRECTORY_CONVENTION constant and resolvePlansPaths (US-2)
+- 2026-03-12 | f001-v2-cli-entry | add createCliEntry reusable wrapper with EXIT_CODES (US-3)
+- 2026-03-12 | f001-v2-tooling-baseline | expand tsconfig to src/**/*.js, add eslint rules baseline (US-4)

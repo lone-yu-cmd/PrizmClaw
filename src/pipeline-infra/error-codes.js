@@ -1,3 +1,14 @@
+/**
+ * Standard process exit codes.
+ * @type {Readonly<{SUCCESS: 0, RUNTIME_ERROR: 1, USAGE_ERROR: 2, TIMEOUT: 124}>}
+ */
+export const EXIT_CODES = Object.freeze({
+  SUCCESS: 0,
+  RUNTIME_ERROR: 1,
+  USAGE_ERROR: 2,
+  TIMEOUT: 124,
+});
+
 export const INFRA_ERROR_CODES = Object.freeze({
   // Existing codes
   CONFIG_MISSING: 'CONFIG_MISSING',

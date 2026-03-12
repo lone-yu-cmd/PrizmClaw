@@ -1,7 +1,7 @@
 {
   "$schema": "dev-pipeline-feature-list-v1",
   "app_name": "PrizmClaw",
-  "app_description": "面向 Telegram 的研发流水线控制台。用户可在 Telegram 内完成规划、开发、测试、提交的自动化编排与监控，不包含部署上线。",
+  "app_description": "通过 Telegram 远程操控电脑的全能助手。支持通用命令执行、文件管理、AI CLI 代理、系统监控、会话管理与定时任务，同时保留研发流水线编排能力。用户可在手机端完成对电脑的全方位远程控制。",
   "created_at": "2026-03-09T16:27:33Z",
   "created_by": "app-planner",
   "features": [
@@ -194,6 +194,159 @@
         "提交前会校验测试结果与 pipeline 状态，不满足条件则拒绝提交",
         "提交失败时返回明确失败原因与建议操作",
         "提交记录可在会话中追踪并与对应 feature/bugfix 关联"
+      ],
+      "status": "completed",
+      "session_granularity": "feature",
+      "sub_features": []
+    },
+    {
+      "id": "F-009",
+      "title": "General Command Executor",
+      "description": "通用命令执行引擎，将 PrizmClaw 从纯 pipeline 控制工具升级为通用远程 CLI 助手。用户在 Telegram 中发送任意 shell 命令（如 ls、git status、npm run build 等），Bot 在电脑端执行并将 stdout/stderr 回传。\n\n核心能力：基于现有 ENABLE_SYSTEM_EXEC 与 ALLOWED_COMMAND_PREFIXES 配置扩展，支持可配置的命令白名单/黑名单安全策略；命令执行有超时保护（SYSTEM_EXEC_TIMEOUT_MS），超时后自动 SIGTERM → SIGKILL 并通知用户；长输出自动截断至 Telegram 消息长度限制并支持 /more 分页查看剩余内容；支持通过 /cd 命令切换工作目录且目录状态在用户会话内保持。\n\n命令入口格式：直接发送文本即当作 shell 命令执行（当 ENABLE_SYSTEM_EXEC=true），或使用 /exec <cmd> 前缀显式调用。需要与 F-006 的权限系统集成，高风险命令（rm -rf、sudo 等）需要二次确认。",
+      "priority": 9,
+      "estimated_complexity": "medium",
+      "dependencies": [
+        "F-001",
+        "F-006"
+      ],
+      "acceptance_criteria": [
+        "用户发送 shell 命令，Bot 在电脑端执行并返回 stdout/stderr 结果",
+        "支持可配置的命令白名单/黑名单安全策略，黑名单命令直接拒绝并提示原因",
+        "命令执行有超时保护，超时后自动终止进程并向用户返回超时提示",
+        "长输出（超过 Telegram 4096 字符限制）自动截断并支持 /more 分页查看",
+        "支持通过 /cd 切换工作目录，目录状态在用户会话内保持",
+        "高风险命令（含 rm -rf、sudo、kill 等关键词）执行前需用户二次确认"
+      ],
+      "status": "pending",
+      "session_granularity": "feature",
+      "sub_features": []
+    },
+    {
+      "id": "F-010",
+      "title": "File Manager",
+      "description": "文件系统操作能力，让用户通过 Telegram 完成文件浏览、查看、上传、下载和搜索。所有操作受安全沙箱限制（TELEGRAM_FILE_ALLOWED_ROOTS 配置），禁止访问配置外的敏感路径。\n\n目录浏览：/ls [path] 列出目录内容，支持 /tree [path] 树形展示（限制深度和文件数）。文件查看：/cat <file> 查看文件内容，长文件自动分页，支持 /head 和 /tail。文件传输：用户可从 Telegram 上传文件到电脑指定路径（/upload <path>），也可通过 /download <file> 将电脑文件发送到 Telegram（受 Telegram 50MB 文件大小限制）。文件搜索：/find <pattern> 按文件名/扩展名/glob 模式搜索。\n\n与现有 TELEGRAM_FILE_ALLOWED_ROOTS 和 TELEGRAM_FILE_CANDIDATE_DIRS 配置集成，所有路径操作需经过 path_policy 安全校验。",
+      "priority": 10,
+      "estimated_complexity": "high",
+      "dependencies": [
+        "F-009",
+        "F-006"
+      ],
+      "acceptance_criteria": [
+        "/ls 或 /dir 可浏览指定目录内容，默认为当前工作目录",
+        "/tree 支持树形展示目录结构，限制最大深度（默认 3 层）和文件数",
+        "/cat 可查看文件内容，长文件自动分页并支持 /head N 和 /tail N",
+        "用户可从 Telegram 上传文件到电脑指定路径，路径不存在时自动创建目录",
+        "/download 可将电脑上的文件发送到 Telegram，超过 50MB 限制时提示",
+        "/find 支持按文件名、扩展名或 glob 模式搜索，结果分页展示",
+        "所有文件操作受安全沙箱限制，访问 TELEGRAM_FILE_ALLOWED_ROOTS 外路径时拒绝并提示"
+      ],
+      "status": "pending",
+      "session_granularity": "auto",
+      "sub_features": [
+        {
+          "id": "F-010-A",
+          "title": "Directory Browsing and File Viewing",
+          "description": "实现 /ls、/tree、/cat、/head、/tail 等目录浏览与文件查看命令，包含输出格式化与分页能力。"
+        },
+        {
+          "id": "F-010-B",
+          "title": "File Transfer and Search",
+          "description": "实现文件上传（Telegram → 电脑）、下载（电脑 → Telegram）和 /find 搜索能力，集成安全沙箱校验。"
+        }
+      ]
+    },
+    {
+      "id": "F-011",
+      "title": "AI CLI Proxy",
+      "description": "将 AI CLI（cbc/codebuddy）作为智能代理层，用户用自然语言描述意图，Bot 调用 AI CLI 来理解并执行复杂任务。这是 PrizmClaw 区别于普通远程 shell 工具的核心差异化能力。\n\n交互模式：用户发送自然语言消息（如'帮我重构 src/utils.js 里的 parseDate 函数'），Bot 将消息作为 prompt 传给 AI CLI，AI CLI 执行后将结果流式回传到 Telegram。支持多轮会话上下文保持（基于现有 CODEBUDDY_ECHO_STDIO 和会话管理机制），用户可以连续追问或补充指令。\n\n长任务支持：AI CLI 执行可能耗时较长，需要心跳进度推送（CODEBUDDY_HEARTBEAT_MS 配置），用户可通过 /stop 中断正在执行的 AI CLI 任务。输出格式化：AI CLI 的 Markdown 输出需适配 Telegram MarkdownV2 格式，代码块、链接等元素正确渲染。\n\n与现有 CodeBuddy CLI 配置集成：CODEBUDDY_BIN、CODEBUDDY_PERMISSION_FLAG 等。",
+      "priority": 11,
+      "estimated_complexity": "high",
+      "dependencies": [
+        "F-009"
+      ],
+      "acceptance_criteria": [
+        "用户发送自然语言指令，Bot 调用 AI CLI 执行并将结果回传到 Telegram",
+        "AI CLI 会话上下文在多轮对话中保持，用户可连续追问",
+        "支持通过 /stop 中断正在执行的 AI CLI 任务",
+        "长时间运行的 AI CLI 任务有心跳进度推送，用户不会感觉卡住",
+        "AI CLI 的 Markdown 输出正确适配 Telegram MarkdownV2 格式",
+        "AI CLI 进程异常退出或超时时返回可理解的错误信息与建议操作"
+      ],
+      "status": "pending",
+      "session_granularity": "auto",
+      "sub_features": [
+        {
+          "id": "F-011-A",
+          "title": "AI CLI Invocation and Output Relay",
+          "description": "实现 AI CLI 的调用封装、参数构造、输出捕获与格式化回传，包含超时与异常处理。"
+        },
+        {
+          "id": "F-011-B",
+          "title": "Session Context and Streaming",
+          "description": "实现 AI CLI 多轮会话上下文管理、流式输出实时推送、心跳进度与任务中断能力。"
+        }
+      ]
+    },
+    {
+      "id": "F-012",
+      "title": "System Monitor",
+      "description": "系统信息查看与监控能力，让用户随时了解电脑的运行状态。通过 Telegram 命令获取 CPU、内存、磁盘、网络等系统指标，查看进程列表，管理进程生命周期。\n\n命令设计：/sysinfo 返回系统概览（CPU 使用率、内存占用、磁盘空间、系统运行时间、网络状态）；/ps 返回进程列表支持按 CPU/内存排序和过滤；/kill <pid> 终止进程（需权限确认，集成 F-006）。\n\n告警能力：支持通过 /monitor set cpu>80 等语法设置阈值告警，超过阈值时自动推送通知到 Telegram。告警规则持久化存储。\n\n实现方式：使用 Node.js 原生 os 模块和 child_process 获取系统信息，避免引入重量级系统监控依赖。系统信息以格式化表格或 Markdown 展示，保证可读性。",
+      "priority": 12,
+      "estimated_complexity": "medium",
+      "dependencies": [
+        "F-009"
+      ],
+      "acceptance_criteria": [
+        "/sysinfo 返回 CPU、内存、磁盘、网络的当前状态摘要，格式化为可读表格",
+        "/ps 返回进程列表，支持按 CPU/内存排序，支持过滤关键词",
+        "/kill 可终止指定进程，执行前需权限确认（集成 F-006 权限系统）",
+        "支持设置监控阈值（如 CPU>80%），超过阈值时自动推送告警到 Telegram",
+        "告警规则持久化存储，Bot 重启后自动恢复监控",
+        "系统信息展示适配 Telegram 消息格式，信息密度高且可读性好"
+      ],
+      "status": "pending",
+      "session_granularity": "feature",
+      "sub_features": []
+    },
+    {
+      "id": "F-013",
+      "title": "Session and Context Manager",
+      "description": "会话管理与上下文保持系统，为多用户场景提供独立的会话隔离和状态管理。每个 Telegram 用户有独立的工作上下文（当前工作目录、环境变量覆盖、命令历史），会话超时后自动清理。\n\n核心能力：多用户会话隔离——每个用户的工作目录、环境变量互不干扰；命令历史——/history 查看近期执行的命令，支持 /history N 指定条数；命令别名——/alias name=command 定义常用命令快捷方式，/alias 查看所有别名，别名持久化存储；会话超时——配置 SESSION_TIMEOUT 后不活跃会话自动清理并通知用户；管理员能力——admin 用户可通过 /sessions 查看所有活跃会话。\n\n与 F-009 的工作目录切换、F-006 的权限系统、现有 MAX_HISTORY_TURNS 配置集成。",
+      "priority": 13,
+      "estimated_complexity": "medium",
+      "dependencies": [
+        "F-009",
+        "F-006"
+      ],
+      "acceptance_criteria": [
+        "每个用户有独立的会话上下文，工作目录和环境变量互不干扰",
+        "/history 可查看近期命令历史，支持指定条数",
+        "/alias 支持定义、查看和删除命令别名，别名持久化存储",
+        "会话超时后自动清理临时状态并通知用户",
+        "管理员可通过 /sessions 查看所有活跃会话的概要信息",
+        "会话状态在 Bot 重启后可从持久化存储恢复"
+      ],
+      "status": "pending",
+      "session_granularity": "feature",
+      "sub_features": []
+    },
+    {
+      "id": "F-014",
+      "title": "Notification and Scheduled Tasks",
+      "description": "定时任务与通知能力，让用户可以设置自动化任务调度。支持 cron 表达式定义的周期性任务和一次性延迟任务，任务执行后自动推送结果到 Telegram。\n\n定时任务：/cron add \"*/5 * * * *\" <command> 添加周期任务；/cron add --once \"2026-03-15 10:00\" <command> 添加一次性任务；/jobs 查看所有定时任务列表；/jobs pause|resume|delete <id> 管理任务。\n\n文件监听：/watch <path> 监听文件或目录变更，有变化时推送通知（使用 fs.watch）；/unwatch <path> 取消监听。\n\n持久化：任务列表和监听规则持久化到 JSON 文件，Bot 重启后自动恢复所有任务和监听。使用 node-cron 或类似轻量级库实现调度。",
+      "priority": 14,
+      "estimated_complexity": "medium",
+      "dependencies": [
+        "F-009",
+        "F-013"
+      ],
+      "acceptance_criteria": [
+        "用户可通过 /cron 创建周期性定时任务，指定 cron 表达式和要执行的命令",
+        "支持一次性延迟任务，指定执行时间",
+        "定时任务执行后自动推送执行结果（stdout/stderr/退出码）到 Telegram",
+        "/jobs 可查看、暂停、恢复、删除定时任务",
+        "支持 /watch 监听文件或目录变更，有变化时推送通知",
+        "定时任务和监听规则持久化存储，Bot 重启后自动恢复"
       ],
       "status": "pending",
       "session_granularity": "feature",

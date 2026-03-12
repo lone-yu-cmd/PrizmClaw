@@ -9,7 +9,7 @@ import { parseCommand } from '../../src/bot/commands/parser.js';
 import { registerCommand, getCommand, clearRegistry, getAliasMap } from '../../src/bot/commands/registry.js';
 import { validateCommand } from '../../src/bot/commands/validator.js';
 import { formatError, ErrorCodes } from '../../src/bot/commands/formatter.js';
-import { routeCommand } from '../../src/bot/commands/index.js';
+import { routeCommand as _routeCommand } from '../../src/bot/commands/index.js';
 import { pipelineMeta, handlePipeline } from '../../src/bot/commands/handlers/pipeline.js';
 import { bugfixMeta, handleBugfix } from '../../src/bot/commands/handlers/bugfix.js';
 import { plannerMeta, handlePlanner } from '../../src/bot/commands/handlers/planner.js';
@@ -349,7 +349,7 @@ test('NFR-1.2: Registry supports alias registration', () => {
 
 test('NFR-2.1: Handler interface is mockable', async () => {
   // This test demonstrates that handlers accept injected dependencies
-  const mockService = {
+  const _mockService = {
     startPipeline: async () => ({ ok: true }),
     getPipelineStatus: async () => ({ ok: true, pipelines: [] }),
     stopPipeline: async () => ({ ok: true }),

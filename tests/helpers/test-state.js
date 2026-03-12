@@ -93,7 +93,7 @@ export async function readTestState(filePath) {
  * @param {string} [type='feature'] - Pipeline type
  * @returns {Promise<string>} Path to the state file
  */
-export async function createPipelineState(stateDir, state, type = 'feature') {
+export async function createPipelineState(stateDir, state, _type = 'feature') {
   const stateFile = join(stateDir, 'pipeline-state.json');
   await writeTestState(stateFile, state);
   return stateFile;
@@ -106,7 +106,7 @@ export async function createPipelineState(stateDir, state, type = 'feature') {
  * @param {string} [type='feature'] - Pipeline type
  * @returns {Promise<string>} Path to the meta file
  */
-export async function createDaemonMeta(stateDir, meta, type = 'feature') {
+export async function createDaemonMeta(stateDir, meta, _type = 'feature') {
   const metaFile = join(stateDir, 'daemon-meta.json');
   await writeTestState(metaFile, meta);
   return metaFile;
@@ -119,7 +119,7 @@ export async function createDaemonMeta(stateDir, meta, type = 'feature') {
  * @param {string} [type='feature'] - Pipeline type
  * @returns {Promise<string>} Path to the lock file
  */
-export async function createLockFile(stateDir, pid, type = 'feature') {
+export async function createLockFile(stateDir, pid, _type = 'feature') {
   const lockFile = join(stateDir, 'pipeline.lock');
   await writeTestState(lockFile, {
     pid,

@@ -54,7 +54,7 @@ export const auditMeta = {
  * @param {Object} handlerCtx - Handler context
  */
 export async function handleAudit(handlerCtx) {
-  const { reply, params, userId, requiresConfirmation } = handlerCtx;
+  const { reply, params, userId, requiresConfirmation: _requiresConfirmation } = handlerCtx;
 
   // Double-check admin permission (defense in depth)
   if (!isAdmin(userId)) {

@@ -9,7 +9,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { createMockRunner } from '../helpers/mock-runner.js';
-import { createTestPipelineDirs } from '../helpers/test-state.js';
+import { createTestPipelineDirs as _createTestPipelineDirs } from '../helpers/test-state.js';
 
 // ============================================================
 // Pipeline Control Service Error Paths
@@ -92,7 +92,7 @@ test('T-114: getStatus handles corrupted state', async () => {
 // ============================================================
 
 test('T-114: plan validation handles missing schema', async () => {
-  const runner = createMockRunner();
+  const _runner = createMockRunner();
 
   // Simulate validation error
   const invalidPlan = JSON.stringify({ app_name: 'Test' }); // Missing $schema

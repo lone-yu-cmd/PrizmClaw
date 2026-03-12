@@ -195,7 +195,7 @@ test('T-136: handle empty version list', async () => {
 });
 
 test('T-136: version name validation', async () => {
-  const { plansDir, cleanup } = await createTestPipelineDirs();
+  const { plansDir: _plansDir, cleanup } = await createTestPipelineDirs();
 
   try {
     // Valid version format

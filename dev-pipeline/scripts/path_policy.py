@@ -134,3 +134,33 @@ def resolve_daemon_log_paths(project_root):
         'featureDaemonLog': os.path.join(resolved_root, 'dev-pipeline', 'state', 'pipeline-daemon.log'),
         'bugfixDaemonLog': os.path.join(resolved_root, 'dev-pipeline', 'bugfix-state', 'pipeline-daemon.log')
     }
+
+
+# F-001 T-012: Canonical directory layout convention (mirrors JS DIRECTORY_CONVENTION)
+DIRECTORY_CONVENTION = {
+    'pipelineDir':      'dev-pipeline',
+    'featureStateDir':  'dev-pipeline/state',
+    'bugfixStateDir':   'dev-pipeline/bugfix-state',
+    'featureListFile':  'feature-list.json',
+    'bugFixListFile':   'bug-fix-list.json',
+    'plansDir':         'plans',
+    'specsDir':         '.prizmkit/specs',
+    'logsDir':          'logs',
+    'sessionLogsDir':   'dev-pipeline/state/features/{featureId}/sessions/{sessionId}/logs',
+    'daemonLogFile':    'dev-pipeline/state/pipeline-daemon.log',
+}
+
+
+def resolve_plans_paths(project_root):
+    """Resolve plans directory path.
+
+    Args:
+        project_root: Project root directory
+
+    Returns:
+        Dict with plansDir
+    """
+    resolved_root = os.path.abspath(str(project_root or ''))
+    return {
+        'plansDir': os.path.join(resolved_root, DIRECTORY_CONVENTION['plansDir']),
+    }

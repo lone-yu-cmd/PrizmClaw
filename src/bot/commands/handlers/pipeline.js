@@ -11,13 +11,13 @@ import {
   getLogs,
   forceUnlock
 } from '../../../services/pipeline-controller.js';
-import { formatValidationErrors, formatError, ErrorCodes } from '../formatter.js';
+import { formatValidationErrors as _formatValidationErrors, formatError as _formatError, ErrorCodes as _ErrorCodes } from '../formatter.js';
 import { logAuditEntry } from '../../../services/audit-log-service.js';
 import { sanitizeParam } from '../../../security/param-sanitizer.js';
 import { isAdmin } from '../../../security/permission-guard.js';
 import {
   createConfirmation,
-  checkConfirmation,
+  checkConfirmation as _checkConfirmation,
   confirmAction,
   cancelConfirmation
 } from '../../../security/confirmation-manager.js';
@@ -79,17 +79,20 @@ export const pipelineMeta = {
  * @param {Function} handlerCtx.reply - Reply function
  */
 export async function handlePipeline(handlerCtx) {
-  const { ctx, parsed, params, reply } = handlerCtx;
+  const { ctx: _ctx, parsed, params: _params, reply } = handlerCtx;
 
   // Determine action from subcommand or default to status
   const action = parsed.subcommand || 'status';
 
   switch (action) {
     case 'run':
+      // @ts-ignore — handlerCtx shape is validated at runtime
       return handleRun(handlerCtx);
     case 'status':
+      // @ts-ignore — handlerCtx shape is validated at runtime
       return handleStatus(handlerCtx);
     case 'logs':
+      // @ts-ignore — handlerCtx shape is validated at runtime
       return handleLogs(handlerCtx);
     case 'stop':
       return handlePipelineStop(handlerCtx);
@@ -104,7 +107,7 @@ export async function handlePipeline(handlerCtx) {
  * Handle run subcommand.
  * T-103: Added parameter sanitization and audit logging
  */
-async function handleRun({ params, reply, parsed, userId, userRole }) {
+async function handleRun({ params, reply, parsed: _parsed, userId, userRole }) {
   const target = params._args?.[0] || params.target;
   const pipelineType = params.type || 'feature';
 
@@ -195,7 +198,7 @@ async function handleStatus({ params, reply }) {
 /**
  * Handle logs subcommand.
  */
-async function handleLogs({ params, reply, replyFile, parsed }) {
+async function handleLogs({ params, reply, replyFile, parsed: _parsed }) {
   const target = params._args?.[0] || params.target;
   const pipelineType = params.type || 'feature';
 

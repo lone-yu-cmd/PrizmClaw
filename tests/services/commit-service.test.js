@@ -7,8 +7,8 @@
 
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert';
-import { createCommitService, VALIDATION_ERRORS, getErrorSuggestion } from '../../src/services/commit-service.js';
-import { createGitService } from '../../src/services/git-service.js';
+import { createCommitService, VALIDATION_ERRORS as _VALIDATION_ERRORS, getErrorSuggestion } from '../../src/services/commit-service.js';
+import { createGitService as _createGitService } from '../../src/services/git-service.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';

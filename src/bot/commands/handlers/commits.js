@@ -105,6 +105,7 @@ function formatTimestamp(timestamp) {
 
   const date = new Date(timestamp);
   const now = new Date();
+  // @ts-ignore — Date arithmetic is valid at runtime
   const diffMs = now - date;
   const diffMins = Math.floor(diffMs / 60000);
   const diffHours = Math.floor(diffMs / 3600000);

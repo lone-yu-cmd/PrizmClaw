@@ -34,3 +34,4 @@ DECISIONS:
 - 2026-03-09 | pipeline-doc-init | treat shell+python pipeline as independent module
 - 2026-03-10 | f001-path-policy-shared | centralize feature/bug/session/session-status/daemon-log paths via scripts/path_policy.py and JS mirror module
 - 2026-03-10 | f001-us3-scope | include logs/reset in runner+service API surface using daemon wrappers and clean reset commands
+- 2026-03-12 | f001-v2-python-parity | add DIRECTORY_CONVENTION dict and resolve_plans_paths() to path_policy.py for JS/Python parity

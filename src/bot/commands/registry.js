@@ -211,6 +211,7 @@ export function clearRegistry() {
  * @returns {Record<string, string>} Alias to command name mapping
  */
 export function getAliasMap() {
+  /** @type {Record<string, string>} */
   const map = {};
   for (const [alias, command] of aliasToCommand) {
     map[alias] = command;

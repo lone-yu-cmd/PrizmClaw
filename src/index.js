@@ -8,10 +8,13 @@ const server = app.listen(config.webPort, config.webHost, () => {
   logger.info(`Web server running at http://${config.webHost}:${config.webPort}`);
   logger.info(
     {
+      enableTelegram: config.enableTelegram,
+      webPort: config.webPort,
       pipelineDir: config.pipelineInfra.pipelineDir,
-      platform: config.pipelineInfra.platform
+      platform: config.pipelineInfra.platform,
+      logLevel: config.logLevel,
     },
-    'Pipeline infra config loaded'
+    'Config loaded successfully'
   );
 });
 

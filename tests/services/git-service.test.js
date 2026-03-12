@@ -5,7 +5,7 @@
  * Tests for GitService module
  */
 
-import { describe, it, beforeEach, afterEach } from 'node:test';
+import { describe, it, beforeEach, afterEach as _afterEach } from 'node:test';
 import assert from 'node:assert';
 import { createGitService } from '../../src/services/git-service.js';
 
@@ -331,7 +331,7 @@ describe('GitService', () => {
 
   describe('getCommitLog()', () => {
     it('should return array of commit info', async () => {
-      mockGit.log = async (opts) => ({
+      mockGit.log = async (_opts) => ({
         all: [
           { hash: 'commit1', message: 'msg1', author_name: 'author1', date: '2024-01-01' },
           { hash: 'commit2', message: 'msg2', author_name: 'author2', date: '2024-01-02' }

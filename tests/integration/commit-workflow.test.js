@@ -11,7 +11,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 
-import { createGitService } from '../../src/services/git-service.js';
+import { createGitService as _createGitService } from '../../src/services/git-service.js';
 import { createCommitService, VALIDATION_ERRORS } from '../../src/services/commit-service.js';
 import { handleCommit, commitMeta } from '../../src/bot/commands/handlers/commit.js';
 import { handleCommits, commitsMeta } from '../../src/bot/commands/handlers/commits.js';
@@ -66,7 +66,7 @@ function createMockGitService(overrides = {}) {
       author: 'Test User',
       date: new Date().toISOString()
     }),
-    getCommitLog: async (count) => [],
+    getCommitLog: async (_count) => [],
     getShortHash: (hash) => hash?.substring(0, 7) || '',
     getCallLog: () => callLog
   };
@@ -619,7 +619,7 @@ describe('US-5: High-Risk Commit Protection', () => {
   describe('AC-5.3: Audit logging for commit operations', () => {
     it('should log successful commits', async () => {
       const mockGit = createMockGitService();
-      const auditLog = [];
+      const _auditLog = [];
       
       const cs = createCommitService({
         gitService: mockGit,

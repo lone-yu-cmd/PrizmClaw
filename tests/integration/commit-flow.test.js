@@ -16,9 +16,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 
-import { createGitService } from '../../src/services/git-service.js';
-import { createCommitService, VALIDATION_ERRORS } from '../../src/services/commit-service.js';
-import { sessionStore } from '../../src/services/session-store.js';
+import { createGitService as _createGitService } from '../../src/services/git-service.js';
+import { createCommitService, VALIDATION_ERRORS as _VALIDATION_ERRORS } from '../../src/services/commit-service.js';
+import { sessionStore as _sessionStore } from '../../src/services/session-store.js';
 
 // Mock factories
 function createMockGitService(overrides = {}) {

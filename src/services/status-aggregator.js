@@ -11,7 +11,7 @@
  */
 
 import fs from 'node:fs';
-import path from 'node:path';
+import _path from 'node:path';
 
 import { loadPipelineInfraConfig } from '../pipeline-infra/config-loader.js';
 import { getStatePaths } from '../pipeline-infra/path-policy.js';
@@ -55,7 +55,7 @@ function readJsonFileSafe(filePath) {
  */
 export function createStatusAggregator(options = {}) {
   const config = options.config || loadPipelineInfraConfig();
-  const stateManager = options.stateManager || getDefaultStateManager();
+  const _stateManager = options.stateManager || getDefaultStateManager();
 
   /**
    * Read daemon meta for a pipeline type.

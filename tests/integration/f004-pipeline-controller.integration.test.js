@@ -7,7 +7,7 @@ import os from 'node:os';
 import { createPipelineController } from '../../src/services/pipeline-controller.js';
 import { createLockManager } from '../../src/pipeline-infra/lock-manager.js';
 import { createStateManager } from '../../src/pipeline-infra/state-manager.js';
-import { loadPipelineInfraConfig } from '../../src/pipeline-infra/config-loader.js';
+import { loadPipelineInfraConfig as _loadPipelineInfraConfig } from '../../src/pipeline-infra/config-loader.js';
 
 async function withTempDir(fn) {
   const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'f004-integration-test-'));
@@ -54,7 +54,7 @@ test('US-1: Full lifecycle startPipeline with daemon mode', async () => {
 
     // Mock script runner for daemon start
     let runnerCalled = false;
-    const mockRunner = async (req) => {
+    const mockRunner = async (_req) => {
       runnerCalled = true;
       return { ok: true, exitCode: 0, stdout: 'Daemon started', stderr: '' };
     };
@@ -81,7 +81,7 @@ test('US-1: startPipeline with foreground mode', async () => {
     const lockManager = createLockManager({ config });
     const stateManager = createStateManager({ config });
 
-    const mockRunner = async (req) => ({
+    const mockRunner = async (_req) => ({
       ok: true,
       exitCode: 0,
       stdout: 'Foreground run completed',
@@ -116,7 +116,7 @@ test('US-2: stopPipeline should stop running daemon', async () => {
       started_at: new Date().toISOString()
     });
 
-    const mockRunner = async (req) => ({
+    const mockRunner = async (_req) => ({
       ok: true,
       exitCode: 0,
       stdout: 'Daemon stopped',
@@ -165,7 +165,7 @@ test('US-3: retryTarget should retry a failed target', async () => {
     const lockManager = createLockManager({ config });
     const stateManager = createStateManager({ config });
 
-    const mockRunner = async (req) => ({
+    const mockRunner = async (_req) => ({
       ok: true,
       exitCode: 0,
       stdout: 'Retry successful',
@@ -194,7 +194,7 @@ test('US-4: runSingle should execute single target without lock', async () => {
     const lockManager = createLockManager({ config });
     const stateManager = createStateManager({ config });
 
-    const mockRunner = async (req) => ({
+    const mockRunner = async (_req) => ({
       ok: true,
       exitCode: 0,
       stdout: 'Single run completed',

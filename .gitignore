@@ -6,7 +6,6 @@ node_modules
 
 # Pipeline runtime state
 dev-pipeline/lib/
-dev-pipeline/bugfix-state/
 
 # PrizmKit
 .prizmkit/

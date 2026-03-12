@@ -11,9 +11,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 
-import { createGitService } from '../../src/services/git-service.js';
+import { createGitService as _createGitService } from '../../src/services/git-service.js';
 import { createCommitService } from '../../src/services/commit-service.js';
-import { handleCommit, commitMeta } from '../../src/bot/commands/handlers/commit.js';
+import { handleCommit, commitMeta as _commitMeta } from '../../src/bot/commands/handlers/commit.js';
 import { createMockContext } from '../helpers/mock-telegram.js';
 import { setConfigForTesting, resetConfig } from '../../src/security/permission-guard.js';
 

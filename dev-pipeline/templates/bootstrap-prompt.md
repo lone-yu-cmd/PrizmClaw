@@ -19,22 +19,6 @@ You are the **session orchestrator**. Implement Feature {{FEATURE_ID}}: "{{FEATU
 
 **CRITICAL SESSION LIFECYCLE RULE**: You are the main session process. You MUST NOT exit until ALL work is complete and session-status.json is written. When you spawn subagents, you MUST **wait for each to finish** (run_in_background=false) before proceeding. Do NOT spawn an agent in the background and exit — that kills the session.
 
-**MANDATORY TEAM REQUIREMENT**: You MUST use the `prizm-dev-team` multi-agent team to complete this feature. This is NON-NEGOTIABLE. You are FORBIDDEN from implementing the feature as a single agent — all work MUST be distributed through the prizm-dev-team members (PM, Dev, Reviewer). Specifically:
-1. You MUST ensure a prizm-dev-team is available before starting any phase (see Step 1 below for reuse-or-create logic)
-2. You MUST spawn PM, Dev, and Reviewer agents using the `Task` tool with `team_name` and `subagent_type` parameters
-3. Every implementation, planning, and review phase MUST be executed by the appropriate team agent — NOT by you directly
-4. If you attempt to do the work yourself without spawning team agents, the session is considered FAILED
-
-### Team Definition Reference
-
-The prizm-dev-team definition is maintained in the project at:
-- **Source of truth**: `core/team/prizm-dev-team.json`
-- **Installed team config (current platform)**: `{{TEAM_CONFIG_PATH}}`
-  - CodeBuddy: `~/.codebuddy/teams/prizm-dev-team/config.json` — full team config with members, may support reuse
-  - Claude Code: `.claude/team-info.json` — reference only (no native team system; agents are in `.claude/agents/`)
-
-When creating a new team, use these files as reference for team member names, roles, agentTypes, and prompts.
-
 ### Feature Description
 
 {{FEATURE_DESCRIPTION}}
@@ -51,58 +35,128 @@ When creating a new team, use these files as reference for team member names, ro
 
 {{GLOBAL_CONTEXT}}
 
+## Execution Tier Model
+
+This pipeline uses **adaptive execution**: the number of agents used scales with task complexity. You MUST follow the tier assigned in Step 1 (after dynamic evaluation).
+
+| Tier | When | Agents | Team Required |
+|------|------|--------|---------------|
+| **Tier 1 — Single Agent** | Simple: config, docs, small utilities | Orchestrator only | No |
+| **Tier 2 — Dual Agent** | Standard: feature with clear scope | Orchestrator + Dev + Reviewer subagents | No |
+| **Tier 3 — Full Team** | Complex: multi-module, data model, security | PM + Dev + Reviewer via TeamCreate | Yes |
+
+**Initial tier** is determined by `estimated_complexity` (low → Tier 1, medium → Tier 2, high → Tier 3), then **dynamically upgraded** in Step 1 based on runtime checks. Tiers only go UP, never down.
+
 ## PrizmKit Directory Convention
 
 **ALWAYS** use per-feature subdirectory `.prizmkit/specs/{{FEATURE_SLUG}}/`:
 
 ```
-.prizmkit/specs/{{FEATURE_SLUG}}/spec.md
+.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md  ← Shared knowledge base (written first, read by all)
 .prizmkit/specs/{{FEATURE_SLUG}}/plan.md
 .prizmkit/specs/{{FEATURE_SLUG}}/tasks.md
+.prizmkit/specs/{{FEATURE_SLUG}}/spec.md              ← Tier 3 only
 .prizmkit/specs/REGISTRY.md
 ```
 
+**`context-snapshot.md` is the single source of truth for all project context.** It is written once (by PM in Tier 3, or by Orchestrator in Tier 1/2) and read by every subsequent agent. This eliminates redundant file I/O across all agents.
+
+---
+
 ## Execution Instructions
 
-**YOU are the orchestrator. Do NOT delegate to a Coordinator agent. Execute each phase yourself by spawning the appropriate team agent with run_in_background=false and waiting for its result.**
+### Step 1: Determine Execution Tier
 
-**TEAM ENFORCEMENT**: Every phase below that mentions spawning a PM/Dev/Reviewer agent MUST use the `Task` tool with the active team's `team_name`. You MUST NOT skip the team setup step or attempt to perform PM/Dev/Reviewer work yourself. Violation of this rule constitutes a session failure.
+#### 1a. Start with initial tier from complexity
 
-### Step 1: Initialize
+```
+{{COMPLEXITY}} → initial tier:
+  low    → Tier 1 (single agent)
+  medium → Tier 2 (dual agent)
+  high   → Tier 3 (full team)
+```
 
-#### Team Setup: Reuse or Create
+Set `EXEC_TIER = <1|2|3>`.
 
-Different AI CLI platforms have different team lifecycle behaviors. Some support reusing an existing team across sessions; others require creating a new team every time.
+#### 1b. Dynamic upgrade evaluation
 
-**Follow this logic to determine team availability:**
+Read the feature description, acceptance criteria, and dependencies above. Then run:
+
+```bash
+# Count related source files (fast scan)
+find src/ -type f -name "*.js" -o -name "*.ts" 2>/dev/null | head -5
+ls src/ 2>/dev/null
+```
+
+Apply these upgrade rules (only upgrade, never downgrade):
+
+| Condition | Upgrade to |
+|-----------|-----------|
+| Acceptance criteria count > 5 | at least Tier 2 |
+| Description mentions: database schema, data model, migration | at least Tier 2 |
+| Description mentions: authentication, authorization, security, permissions | Tier 3 |
+| Description mentions: API contract change, breaking change | Tier 3 |
+| `completed_dependencies` list has > 2 entries | at least Tier 2 |
+| Related source files in `src/` > 3 (from scan above) | at least Tier 2 |
+| Related source files > 6 OR spans > 3 distinct modules | Tier 3 |
+
+After applying all rules, set final `EXEC_TIER`.
+
+#### 1c. Team setup (Tier 3 only)
+
+**Skip this section entirely if EXEC_TIER is 1 or 2.**
+
+For Tier 3, set up `prizm-dev-team`:
 
 1. **Check if a team already exists and can be reused**:
-   - Read the team config file at `{{TEAM_CONFIG_PATH}}`
-   - If it exists and is valid (has members with correct agentTypes like `prizm-dev-team-pm`, `prizm-dev-team-dev`, `prizm-dev-team-reviewer`), try to reuse it
-   - Set `TEAM_REUSED=true` and record the `team_name` from the config
+   - Read the team config at `{{TEAM_CONFIG_PATH}}`
+   - If valid (has members with agentTypes `prizm-dev-team-pm`, `prizm-dev-team-dev`, `prizm-dev-team-reviewer`) → set `TEAM_REUSED=true`
 
-2. **If no reusable team exists, create a new one**:
-   - Reference the team definition at `core/team/prizm-dev-team.json` (source of truth for member roles and prompts)
+2. **If no reusable team exists**:
+   - Reference `core/team/prizm-dev-team.json` for member definitions
    - Call `TeamCreate` with `team_name="prizm-dev-team-{{FEATURE_ID}}"` and `description="Implementing {{FEATURE_TITLE}}"`
    - Set `TEAM_REUSED=false`
 
-3. **Record which path was taken** — this determines whether `TeamDelete` is needed at the end (only delete if you created; do NOT delete a reused team)
+3. Record the path taken — needed for Step 4 cleanup decision.
+
+#### 1d. Initialize directories
 
 {{IF_FRESH_START}}
-#### Initialize dev-team directories
-
 ```bash
 python3 {{INIT_SCRIPT_PATH}} --project-root {{PROJECT_ROOT}} --feature-id {{FEATURE_ID}} --feature-slug {{FEATURE_SLUG}}
 ```
 {{END_IF_FRESH_START}}
 
 {{IF_RESUME}}
-#### Resume Context
-
-This is a **resume** from Phase {{RESUME_PHASE}}. After completing the team setup above:
-1. Read artifacts in `.prizmkit/specs/{{FEATURE_SLUG}}/` (spec.md, plan.md, tasks.md)
-2. Resume the pipeline from Phase {{RESUME_PHASE}} below
+**Resume from Phase {{RESUME_PHASE}}**:
+1. Check if `.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md` exists — if so, all agents MUST use it (skip re-scanning source files)
+2. Read existing artifacts in `.prizmkit/specs/{{FEATURE_SLUG}}/`
+3. Skip to Phase {{RESUME_PHASE}} in Step 2 below
 {{END_IF_RESUME}}
+
+---
+
+### Subagent Timeout Recovery Protocol
+
+**Apply whenever any spawned agent times out or returns no output.**
+
+1. Check existing artifacts:
+   ```bash
+   ls .prizmkit/specs/{{FEATURE_SLUG}}/
+   ```
+2. **Do NOT re-spawn with the same prompt** — diagnose what's missing first.
+3. Recovery spawn rules:
+   - If `context-snapshot.md` exists → open prompt with: `"Read .prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md for full context. Do NOT re-read individual source files."`
+   - List **only the remaining steps** (skip completed ones)
+   - Use `model: "lite"` for faster first-token response
+4. **Max 2 retries per agent phase**. After 2 failures, the orchestrator completes the work directly.
+5. If orchestrator writes artifacts directly, append to `context-snapshot.md`:
+   ```
+   ## Recovery Note
+   [agent role] timed out. Orchestrator completed: [files written].
+   ```
+
+---
 
 ### Step 2: Pipeline Phases
 
@@ -116,86 +170,285 @@ This is a **resume** from Phase {{RESUME_PHASE}}. After completing the team setu
 #### Phase 0: SKIP (already initialized)
 {{END_IF_INIT_DONE}}
 
-{{IF_MODE_LITE}}
-#### Phase 1-3: Lightweight Planning (combined)
-- Spawn PM agent (Task tool, subagent_type="prizm-dev-team-pm", run_in_background=false)
-  Prompt: "Read {{PM_SUBAGENT_PATH}}. For feature {{FEATURE_ID}} (slug: {{FEATURE_SLUG}}), create a CONCISE implementation plan. Write:
-  1. `.prizmkit/specs/{{FEATURE_SLUG}}/plan.md` — brief architecture (under 100 lines): key components, data flow, file structure
-  2. `.prizmkit/specs/{{FEATURE_SLUG}}/tasks.md` — task checklist with `[ ]` checkboxes, each task = one implementable unit
-  Do NOT generate spec.md. Keep it minimal."
-- **Wait for PM to return**
-- **CP-1**: plan.md and tasks.md exist
+---
 
-#### Phase 4: SKIP (lite mode)
+{{IF_MODE_LITE}}
+## Tier 1 Execution Path — Single Agent
+
+> EXEC_TIER=1. You (the orchestrator) do ALL work directly. No subagents. No TeamCreate.
+
+#### Phase 1: Build Context Snapshot
+
+Check if snapshot exists first:
+```bash
+ls .prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md 2>/dev/null && echo "EXISTS" || echo "MISSING"
+```
+
+If MISSING — build it now (you are reading the files yourself):
+1. Read `.prizm-docs/root.prizm` and relevant L1 prizm docs
+2. Scan `src/` for files related to this feature; read each one
+3. Write `.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md` with:
+   - **Section 1 — Feature Brief**: feature description + acceptance criteria (copy from above)
+   - **Section 2 — Project Structure**: output of relevant `ls src/` calls
+   - **Section 3 — Prizm Context**: content of root.prizm and relevant L1/L2 docs
+   - **Section 4 — Existing Source Files**: full content of each related file as code block
+   - **Section 5 — Existing Tests**: full content of related test files as code block
+
+#### Phase 2: Plan & Tasks
+
+Check if plan.md and tasks.md exist:
+```bash
+ls .prizmkit/specs/{{FEATURE_SLUG}}/ 2>/dev/null
+```
+
+If missing, write them yourself (no PM agent needed for Tier 1):
+- `plan.md`: brief architecture — key components, data flow, files to create/modify (under 80 lines)
+- `tasks.md`: checklist with `[ ]` checkboxes, each task = one implementable unit
+
+#### Phase 3: Implement
+
+Implement all tasks directly. For each task in tasks.md:
+1. Read the relevant section from `context-snapshot.md` (no need to re-read individual files)
+2. Write/edit the code
+3. Run tests after each task
+4. Mark task `[x]` in tasks.md
+
+After all tasks complete, append to `context-snapshot.md`:
+```
+## Implementation Log
+Files changed/created: [list]
+Key decisions: [list]
+```
+
+#### Phase 4: Self-Review
+
+Review your own implementation against the acceptance criteria:
+1. Re-read acceptance criteria from Section 1 of context-snapshot.md
+2. Run the full test suite
+3. Check for obvious issues (error handling, edge cases)
+4. If issues found, fix them now
+
+**CP-1**: All acceptance criteria met, tests pass.
+
+#### Phase 5: Commit
+- Run `prizmkit.summarize` → archive to REGISTRY.md
+- Mark feature complete:
+  ```bash
+  python3 {{VALIDATOR_SCRIPTS_DIR}}/update-feature-status.py \
+    --feature-list "{{FEATURE_LIST_PATH}}" \
+    --state-dir "{{PROJECT_ROOT}}/dev-pipeline/state" \
+    --feature-id "{{FEATURE_ID}}" --session-id "{{SESSION_ID}}" --action complete
+  ```
+- Run `prizmkit.committer` → `feat({{FEATURE_ID}}): {{FEATURE_TITLE}}`, do NOT push
+
 {{END_IF_MODE_LITE}}
 
-{{IF_MODE_STANDARD}}
-#### Phase 1-3: Specify + Plan + Tasks (combined, one PM session)
-- Spawn PM agent (Task tool, subagent_type="prizm-dev-team-pm", run_in_background=false)
-  Prompt: "Read {{PM_SUBAGENT_PATH}}. For feature {{FEATURE_ID}} (slug: {{FEATURE_SLUG}}), complete all three planning steps in this single session:
-  1. Run prizmkit-specify → generate `.prizmkit/specs/{{FEATURE_SLUG}}/spec.md` (concise, under 150 lines)
-  2. Run prizmkit-plan → generate `.prizmkit/specs/{{FEATURE_SLUG}}/plan.md` (architecture, components, interface design, data model, testing strategy — all in one file)
-  3. Run prizmkit-tasks → generate `.prizmkit/specs/{{FEATURE_SLUG}}/tasks.md` with `[ ]` checkboxes
-  All three files go under `.prizmkit/specs/{{FEATURE_SLUG}}/`."
-- **Wait for PM to return**
-- **CP-1**: spec.md, plan.md, and tasks.md all exist
+---
 
-#### Phase 4: Analyze (cross-check)
-- Spawn Reviewer agent (Task tool, subagent_type="prizm-dev-team-reviewer", run_in_background=false)
-  Prompt: "Read {{REVIEWER_SUBAGENT_PATH}}. Run prizmkit-analyze for feature {{FEATURE_ID}} (slug: {{FEATURE_SLUG}}). Cross-check `.prizmkit/specs/{{FEATURE_SLUG}}/spec.md`, `plan.md`, and `tasks.md` for consistency. Report any CRITICAL or HIGH issues."
-- **Wait for Reviewer to return**
-- If CRITICAL issues found: spawn PM to fix, then re-run analyze (max 1 round)
-- **CP-2**: No CRITICAL issues
+{{IF_MODE_STANDARD}}
+## Tier 2 Execution Path — Dual Agent (Dev + Reviewer)
+
+> EXEC_TIER=2. You (orchestrator) handle context + planning. Then spawn Dev and Reviewer as subagents. No TeamCreate required.
+
+#### Phase 1: Build Context Snapshot
+
+Check first:
+```bash
+ls .prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md 2>/dev/null && echo "EXISTS" || echo "MISSING"
+```
+
+If MISSING — build it yourself now:
+1. Read `.prizm-docs/root.prizm` and relevant L1/L2 prizm docs
+2. Scan `src/` for files related to this feature; read each one
+3. Write `.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md` with:
+   - **Section 1 — Feature Brief**: feature description + acceptance criteria
+   - **Section 2 — Project Structure**: relevant `ls src/` output
+   - **Section 3 — Prizm Context**: root.prizm and L1/L2 content
+   - **Section 4 — Existing Source Files**: full content of each related file
+   - **Section 5 — Existing Tests**: full content of related test files
+
+#### Phase 2: Plan & Tasks
+
+Check:
+```bash
+ls .prizmkit/specs/{{FEATURE_SLUG}}/plan.md .prizmkit/specs/{{FEATURE_SLUG}}/tasks.md 2>/dev/null
+```
+
+If missing, write them yourself (orchestrator writes planning artifacts in Tier 2):
+- `plan.md`: architecture — components, interfaces, data flow, files to create/modify, testing approach
+- `tasks.md`: checklist with `[ ]` checkboxes ordered by dependency
+
+**CP-1**: plan.md and tasks.md exist.
+
+#### Phase 3: Implement — Dev Subagent
+
+Spawn Dev subagent (Task tool, subagent_type="prizm-dev-team-dev", run_in_background=false).
+
+Prompt:
+> "Read {{DEV_SUBAGENT_PATH}}. Implement feature {{FEATURE_ID}} (slug: {{FEATURE_SLUG}}).
+>
+> 1. Read `.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md` FIRST — all project context, source files, and tests are embedded there. Do NOT re-read individual source files.
+> 2. Read `.prizmkit/specs/{{FEATURE_SLUG}}/plan.md` for architecture and `.prizmkit/specs/{{FEATURE_SLUG}}/tasks.md` for the task list.
+> 3. Implement task-by-task using TDD. Mark each completed task `[x]` in tasks.md immediately after completion.
+> 4. After ALL tasks are complete, append an 'Implementation Log' section to `context-snapshot.md`:
+>    - Files created/modified (with paths)
+>    - Key implementation decisions
+>    - Any deviations from plan.md
+> Do NOT exit until all tasks are marked [x] and the Implementation Log is written."
+
+Wait for Dev to return. All tasks must be `[x]`, tests pass.
+
+#### Phase 4: Review — Reviewer Subagent
+
+Spawn Reviewer subagent (Task tool, subagent_type="prizm-dev-team-reviewer", run_in_background=false).
+
+Prompt:
+> "Read {{REVIEWER_SUBAGENT_PATH}}. Review feature {{FEATURE_ID}} (slug: {{FEATURE_SLUG}}).
+>
+> 1. Read `.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md` FIRST:
+>    - Section 1: acceptance criteria to verify against
+>    - Section 4: original source files (before changes)
+>    - 'Implementation Log' section: what Dev changed
+> 2. Run prizmkit-code-review: verify all acceptance criteria are met, check code quality and correctness. Only read files mentioned in the Implementation Log (not files that haven't changed).
+> 3. Run the test suite and report results.
+> 4. Append a 'Review Notes' section to `context-snapshot.md` with: issues found (severity), test results, final verdict.
+> Report verdict: PASS, PASS_WITH_WARNINGS, or NEEDS_FIXES."
+
+Wait for Reviewer to return.
+- If NEEDS_FIXES: spawn Dev to fix (Dev reads updated snapshot), re-run Review (max 3 rounds)
+
+**CP-2**: Tests pass, verdict is not NEEDS_FIXES.
+
+#### Phase 5: Commit
+- Run `prizmkit.summarize` → archive to REGISTRY.md
+- Mark feature complete:
+  ```bash
+  python3 {{VALIDATOR_SCRIPTS_DIR}}/update-feature-status.py \
+    --feature-list "{{FEATURE_LIST_PATH}}" \
+    --state-dir "{{PROJECT_ROOT}}/dev-pipeline/state" \
+    --feature-id "{{FEATURE_ID}}" --session-id "{{SESSION_ID}}" --action complete
+  ```
+- Run `prizmkit.committer` → `feat({{FEATURE_ID}}): {{FEATURE_TITLE}}`, do NOT push
+
 {{END_IF_MODE_STANDARD}}
 
+---
+
 {{IF_MODE_FULL}}
-#### Phase 1-3: Specify + Plan + Tasks (combined, one PM session)
-- Spawn PM agent (Task tool, subagent_type="prizm-dev-team-pm", run_in_background=false)
-  Prompt: "Read {{PM_SUBAGENT_PATH}}. For feature {{FEATURE_ID}} (slug: {{FEATURE_SLUG}}), complete all three planning steps in this single session:
-  1. Run prizmkit-specify → generate `.prizmkit/specs/{{FEATURE_SLUG}}/spec.md`. If there are `[NEEDS CLARIFICATION]` markers, run prizmkit-clarify to resolve them.
-  2. Run prizmkit-plan → generate `.prizmkit/specs/{{FEATURE_SLUG}}/plan.md` (architecture, components, interface design, data model, testing strategy, risk assessment — all in one file)
-  3. Run prizmkit-tasks → generate `.prizmkit/specs/{{FEATURE_SLUG}}/tasks.md` with `[ ]` checkboxes
-  All three files go under `.prizmkit/specs/{{FEATURE_SLUG}}/`."
-- **Wait for PM to return**
-- **CP-1**: spec.md, plan.md, and tasks.md all exist
+## Tier 3 Execution Path — Full Team (PM + Dev + Reviewer)
 
-#### Phase 4: Analyze (cross-check)
-- Spawn Reviewer agent (Task tool, subagent_type="prizm-dev-team-reviewer", run_in_background=false)
-  Prompt: "Read {{REVIEWER_SUBAGENT_PATH}}. Run prizmkit-analyze for feature {{FEATURE_ID}} (slug: {{FEATURE_SLUG}}). Cross-check `.prizmkit/specs/{{FEATURE_SLUG}}/spec.md`, `plan.md`, and `tasks.md` for consistency. Report any CRITICAL or HIGH issues."
-- **Wait for Reviewer to return**
-- If CRITICAL issues found: spawn PM to fix, then re-run analyze (max 1 round)
-- **CP-2**: No CRITICAL issues
-{{END_IF_MODE_FULL}}
+> EXEC_TIER=3. Requires TeamCreate from Step 1c. PM agent handles all planning. Full 7-phase pipeline.
 
-#### Phase 5: Schedule & Implement
-- Read tasks from `.prizmkit/specs/{{FEATURE_SLUG}}/tasks.md`
-- Create TaskList entries and assign to Dev agents
-- Spawn Dev agent (Task tool, subagent_type="prizm-dev-team-dev", run_in_background=false)
-  Prompt: "Read {{DEV_SUBAGENT_PATH}}. Implement all tasks for feature {{FEATURE_ID}} (slug: {{FEATURE_SLUG}}) using prizmkit-implement with TDD. Read the plan from `.prizmkit/specs/{{FEATURE_SLUG}}/plan.md` and tasks from `tasks.md`. Mark completed tasks [x] in tasks.md."
-- **Wait for Dev to return**
-- All tasks marked `[x]`, tests pass
+### Team Definition Reference
+- **Source of truth**: `core/team/prizm-dev-team.json`
+- **Installed config**: `{{TEAM_CONFIG_PATH}}`
 
-#### Phase 6: Review
-- Spawn Reviewer agent (Task tool, subagent_type="prizm-dev-team-reviewer", run_in_background=false)
-  Prompt: "Read {{REVIEWER_SUBAGENT_PATH}}. For feature {{FEATURE_ID}} (slug: {{FEATURE_SLUG}}):
-  1. Run prizmkit-code-review for spec compliance and code quality
-  2. Write and execute integration tests covering all user stories from spec.md
-  Report verdict: PASS, PASS_WITH_WARNINGS, or NEEDS_FIXES."
-- **Wait for Reviewer to return**
-- If NEEDS_FIXES: spawn Dev to fix, then re-run Review (max 3 rounds)
-- **CP-3**: Integration tests pass, review verdict is not NEEDS_FIXES
+#### Phase 1-3: Specify + Plan + Tasks — PM Agent
+
+**BEFORE spawning PM**, check existing artifacts:
+```bash
+ls .prizmkit/specs/{{FEATURE_SLUG}}/ 2>/dev/null
+```
+
+- All three files (spec.md, plan.md, tasks.md) exist → **SKIP to CP-1 check**
+- `context-snapshot.md` exists → PM reads it instead of re-scanning source files
+- Some missing → PM generates only missing files
+
+Spawn PM agent (Task tool, subagent_type="prizm-dev-team-pm", run_in_background=false, team_name from Step 1c).
+
+**Construct the prompt dynamically:**
+
+Always prefix with:
+> "Read {{PM_SUBAGENT_PATH}}. For feature {{FEATURE_ID}} (slug: {{FEATURE_SLUG}}), complete the following IN THIS SINGLE SESSION — do NOT exit until ALL listed steps are done and files are written to disk:"
+
+**Step A — Build Context Snapshot** (include only if `context-snapshot.md` does NOT exist):
+> "Step A: Write `.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md`. This is the knowledge base for the entire team — complete it before doing anything else. Include:
+> - Section 1 'Feature Brief': feature description and acceptance criteria (from the bootstrap prompt)
+> - Section 2 'Project Structure': output of `ls src/` and relevant subdirectories
+> - Section 3 'Prizm Context': full content of `.prizm-docs/root.prizm` and relevant L1/L2 prizm docs
+> - Section 4 'Existing Source Files': full content of every related source file as a code block
+> - Section 5 'Existing Tests': full content of related test files as code blocks
+> Confirm with `ls .prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md`."
+
+**Step B — Create Planning Artifacts** (include only missing files):
+- spec.md missing: "Run prizmkit-specify → generate spec.md. Resolve any `[NEEDS CLARIFICATION]` markers using the feature description — do NOT pause for interactive input."
+- plan.md missing: "Run prizmkit-plan → generate plan.md (architecture, components, interface design, data model, testing strategy, risk assessment — all in one file)"
+- tasks.md missing: "Run prizmkit-tasks → generate tasks.md with `[ ]` checkboxes"
+
+> "All files go under `.prizmkit/specs/{{FEATURE_SLUG}}/`. Confirm each with `ls` after writing."
+
+Wait for PM to return. **CP-1**: All three files exist. If missing, diagnose from PM output — do NOT spawn another PM blindly.
+
+#### Phase 4: Analyze — Reviewer Agent
+
+Spawn Reviewer agent (Task tool, subagent_type="prizm-dev-team-reviewer", run_in_background=false, team_name from Step 1c).
+
+Prompt:
+> "Read {{REVIEWER_SUBAGENT_PATH}}. For feature {{FEATURE_ID}} (slug: {{FEATURE_SLUG}}):
+> 1. Read `.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md` FIRST — all source files and project context are embedded there. Do NOT re-read individual source files.
+> 2. Run prizmkit-analyze: cross-check `spec.md`, `plan.md`, and `tasks.md` for consistency.
+> 3. Before flagging CRITICAL or HIGH issues, verify each against Section 4 of the snapshot. Do NOT report based on incomplete information.
+> Report: CRITICAL, HIGH, MEDIUM issues found (or 'No issues found')."
+
+Wait for Reviewer to return.
+- If CRITICAL issues found: spawn PM to fix (PM reads snapshot), re-run analyze (max 1 round)
+
+**CP-2**: No CRITICAL issues.
+
+#### Phase 5: Implement — Dev Agent
+
+Spawn Dev agent (Task tool, subagent_type="prizm-dev-team-dev", run_in_background=false, team_name from Step 1c).
+
+Prompt:
+> "Read {{DEV_SUBAGENT_PATH}}. Implement feature {{FEATURE_ID}} (slug: {{FEATURE_SLUG}}) using TDD.
+> 1. Read `.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md` FIRST — all source files and context are there. Do NOT re-read individual source files.
+> 2. Read `plan.md` and `tasks.md` from `.prizmkit/specs/{{FEATURE_SLUG}}/`.
+> 3. Implement task-by-task. Mark each `[x]` immediately after completion.
+> 4. After ALL tasks done, append 'Implementation Log' to context-snapshot.md: files changed/created, key decisions, deviations from plan.
+> Do NOT exit until all tasks are [x] and Implementation Log is written."
+
+Wait for Dev to return. All tasks `[x]`, tests pass.
+
+#### Phase 6: Review — Reviewer Agent
+
+Spawn Reviewer agent (Task tool, subagent_type="prizm-dev-team-reviewer", run_in_background=false, team_name from Step 1c).
+
+Prompt:
+> "Read {{REVIEWER_SUBAGENT_PATH}}. For feature {{FEATURE_ID}} (slug: {{FEATURE_SLUG}}):
+> 1. Read `.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md` FIRST — Section 4 has original source, 'Implementation Log' has what Dev changed.
+> 2. Run prizmkit-code-review: spec compliance (against spec.md), code quality, correctness. Only re-read files mentioned in the Implementation Log.
+> 3. Write and execute integration tests covering all user stories from spec.md.
+> 4. Append 'Review Notes' to context-snapshot.md: issues (with severity), test results, final verdict.
+> Report verdict: PASS, PASS_WITH_WARNINGS, or NEEDS_FIXES."
+
+Wait for Reviewer to return.
+- If NEEDS_FIXES: spawn Dev to fix (reads updated snapshot), re-run Review (max 3 rounds)
+
+**CP-3**: Integration tests pass, verdict is not NEEDS_FIXES.
 
 #### Phase 7: Summarize & Commit — DO NOT SKIP
 
-**IMPORTANT**: Phase 7 is for **new feature** commits only. If this session is a bug fix to an existing feature, skip `prizmkit.summarize` (do NOT create new REGISTRY.md entries for bug fixes — bugs are refinements of incomplete features, not new functionality). Still run `prizmkit.committer` with `fix(<scope>):` prefix.
+**IMPORTANT**: For bug fixes, skip `prizmkit.summarize` (no new REGISTRY.md entries). Use `fix(<scope>):` prefix for commits.
 
-**7a.** Run `prizmkit.summarize` (invoke the prizmkit-summarize skill) → archive to REGISTRY.md
+**7a.** Run `prizmkit.summarize` → archive to REGISTRY.md
 
-**7b.** Run `prizmkit.committer` (invoke the prizmkit-committer skill) → `feat({{FEATURE_ID}}): {{FEATURE_TITLE}}`, do NOT push
+**7b.** Mark feature complete:
+```bash
+python3 {{VALIDATOR_SCRIPTS_DIR}}/update-feature-status.py \
+  --feature-list "{{FEATURE_LIST_PATH}}" \
+  --state-dir "{{PROJECT_ROOT}}/dev-pipeline/state" \
+  --feature-id "{{FEATURE_ID}}" --session-id "{{SESSION_ID}}" --action complete
+```
+
+**7c.** Run `prizmkit.committer` → `feat({{FEATURE_ID}}): {{FEATURE_TITLE}}`, do NOT push
+
+{{END_IF_MODE_FULL}}
+
+---
 
 ### Step 3: Report Session Status
 
-**CRITICAL**: Before this session ends, you MUST write the session status file.
+**CRITICAL**: Before this session ends, write the session status file.
 
 Write to: `{{SESSION_STATUS_PATH}}`
 
@@ -204,59 +457,66 @@ Write to: `{{SESSION_STATUS_PATH}}`
   "session_id": "{{SESSION_ID}}",
   "feature_id": "{{FEATURE_ID}}",
   "feature_slug": "{{FEATURE_SLUG}}",
+  "exec_tier": "<1|2|3>",
   "status": "<success|partial|failed>",
   "completed_phases": [0, 1, 2, 3, 4, 5, 6, 7],
   "current_phase": 7,
-  "checkpoint_reached": "CP-3",
+  "checkpoint_reached": "<CP-1|CP-2|CP-3>",
   "tasks_completed": 12,
   "tasks_total": 12,
   "errors": [],
   "can_resume": false,
   "resume_from_phase": null,
   "artifacts": {
-    "spec_path": ".prizmkit/specs/{{FEATURE_SLUG}}/spec.md",
+    "context_snapshot_path": ".prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md",
     "plan_path": ".prizmkit/specs/{{FEATURE_SLUG}}/plan.md",
     "tasks_path": ".prizmkit/specs/{{FEATURE_SLUG}}/tasks.md"
   },
-  "git_commit": "<commit hash if Phase 7 completed>",
+  "git_commit": "<commit hash>",
   "timestamp": "2026-03-04T10:00:00Z"
 }
 ```
 
-**Status values**: `success` (all phases done) | `partial` (can resume) | `failed` (unrecoverable)
+**Status values**: `success` | `partial` (can resume) | `failed` (unrecoverable)
 
 If you encounter an error, still write session-status.json with status="failed" and error details.
 
-### Step 4: Team Cleanup (conditional)
+### Step 4: Team Cleanup (Tier 3 only)
 
-**Only if you CREATED the team in Step 1** (i.e. `TEAM_REUSED=false`), clean up:
+**Only for Tier 3, and only if you CREATED the team** (`TEAM_REUSED=false`):
 ```
 TeamDelete
 ```
 
-**If you REUSED an existing team** (i.e. `TEAM_REUSED=true`), do NOT call `TeamDelete` — the team is shared and may be used by other sessions.
+For Tier 1/2 (no team was created) or if you reused a team — skip this step entirely.
+
+---
 
 ## Critical Paths
 
 | Resource | Path |
 |----------|------|
-| Team Definition (source of truth) | `core/team/prizm-dev-team.json` |
-| Team Config (installed) | `{{TEAM_CONFIG_PATH}}` |
 | Feature Artifacts Dir | `.prizmkit/specs/{{FEATURE_SLUG}}/` |
+| **Context Snapshot (shared knowledge base)** | `.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md` |
+| Team Definition (Tier 3 source of truth) | `core/team/prizm-dev-team.json` |
+| Team Config (Tier 3 installed) | `{{TEAM_CONFIG_PATH}}` |
 | PM Agent Def | {{PM_SUBAGENT_PATH}} |
 | Dev Agent Def | {{DEV_SUBAGENT_PATH}} |
 | Reviewer Agent Def | {{REVIEWER_SUBAGENT_PATH}} |
 | Session Status Output | {{SESSION_STATUS_PATH}} |
 | Project Root | {{PROJECT_ROOT}} |
+| Feature List Path | {{FEATURE_LIST_PATH}} |
 
 ## Reminders
 
-- **MANDATORY**: You MUST use `prizm-dev-team` (reuse existing or create new) — single-agent execution is FORBIDDEN
-- **Team definition source**: `core/team/prizm-dev-team.json`; installed at `{{TEAM_CONFIG_PATH}}`
-- **All artifacts go under `.prizmkit/specs/{{FEATURE_SLUG}}/`** — only 3 files: spec.md, plan.md, tasks.md
+- **Adaptive execution**: Tier 1 = orchestrator only; Tier 2 = orchestrator + Dev + Reviewer subagents; Tier 3 = full team. Tier is set in Step 1 and only goes UP.
+- **TeamCreate is only for Tier 3** — do NOT create a team for Tier 1 or Tier 2
+- **context-snapshot.md is the shared knowledge base**: built once, read by all subsequent agents. Always check if it exists before spawning any agent.
+- **All artifacts go under `.prizmkit/specs/{{FEATURE_SLUG}}/`**
 - Dev agents use TDD approach
-- Phase 7 (summarize + commit) is MANDATORY
+- The commit phase is MANDATORY for all tiers
 - ALWAYS write session-status.json before exiting
 - **NEVER exit the session early** — wait for all spawned agents to complete
 - Do NOT use `run_in_background=true` when spawning agents
-- Only call `TeamDelete` if you created the team; do NOT delete a reused team
+- Only call `TeamDelete` if Tier 3 AND you created the team
+- **On timeout**: check snapshot → use model:lite → prompt only remaining steps → max 2 retries → orchestrator fallback

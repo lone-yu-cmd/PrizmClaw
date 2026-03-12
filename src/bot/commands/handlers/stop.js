@@ -8,7 +8,7 @@ import { stopPipeline } from '../../../services/pipeline-controller.js';
 import { logAuditEntry } from '../../../services/audit-log-service.js';
 import {
   createConfirmation,
-  checkConfirmation,
+  checkConfirmation as _checkConfirmation,
   confirmAction,
   cancelConfirmation
 } from '../../../security/confirmation-manager.js';
@@ -47,7 +47,7 @@ export const stopMeta = {
  * @param {Object} handlerCtx - Handler context
  */
 export async function handleStop(handlerCtx) {
-  const { params, reply, userId, userRole, requiresConfirmation, parsed } = handlerCtx;
+  const { params, reply, userId, userRole: _userRole, requiresConfirmation, parsed } = handlerCtx;
 
   // Sanitize target parameter
   const rawTarget = params._args?.[0] || params.target;

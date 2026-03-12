@@ -14,8 +14,8 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import readline from 'node:readline';
-import { once } from 'node:events';
+import _readline from 'node:readline';
+import { once as _once } from 'node:events';
 
 import { config } from '../config.js';
 
@@ -218,7 +218,7 @@ export async function queryAuditLogs(filters = {}) {
   }
 
   const limit = filters.limit || 100;
-  const userId = filters.userId != null ? String(filters.userId) : null;
+  const userId = filters.userId !== null && filters.userId !== undefined ? String(filters.userId) : null;
   const action = filters.action || null;
   const startDate = filters.startDate ? new Date(filters.startDate) : null;
   const endDate = filters.endDate ? new Date(filters.endDate) : null;
@@ -269,6 +269,7 @@ export async function queryAuditLogs(filters = {}) {
   }
 
   // Sort by timestamp descending (most recent first)
+  // @ts-ignore — Date arithmetic is valid at runtime
   entries.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
   // Apply limit

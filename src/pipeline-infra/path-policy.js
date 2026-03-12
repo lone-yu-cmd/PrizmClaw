@@ -1,5 +1,34 @@
 import path from 'node:path';
 
+/**
+ * Canonical directory layout relative to projectRoot.
+ * @type {Readonly<Record<string, string>>}
+ */
+export const DIRECTORY_CONVENTION = Object.freeze({
+  pipelineDir:      'dev-pipeline',
+  featureStateDir:  'dev-pipeline/state',
+  bugfixStateDir:   'dev-pipeline/bugfix-state',
+  featureListFile:  'feature-list.json',
+  bugFixListFile:   'bug-fix-list.json',
+  plansDir:         'plans',
+  specsDir:         '.prizmkit/specs',
+  logsDir:          'logs',
+  sessionLogsDir:   'dev-pipeline/state/features/{featureId}/sessions/{sessionId}/logs',
+  daemonLogFile:    'dev-pipeline/state/pipeline-daemon.log',
+});
+
+/**
+ * Resolve plans directory path.
+ * @param {string} projectRoot
+ * @returns {{ plansDir: string }}
+ */
+export function resolvePlansPaths(projectRoot) {
+  const resolvedRoot = path.resolve(String(projectRoot ?? ''));
+  return {
+    plansDir: path.join(resolvedRoot, DIRECTORY_CONVENTION.plansDir),
+  };
+}
+
 const SAFE_SEGMENT_PATTERN = /^[A-Za-z0-9._-]+$/;
 
 function assertSafeSegment(value, label) {

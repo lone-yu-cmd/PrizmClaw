@@ -418,7 +418,7 @@ test('log rotation should occur when file exceeds maxSizeMb', async () => {
     }
     
     // Check for rotated file
-    const rotatedFile = path.join(tempDir, 'audit.log.1');
+    const _rotatedFile = path.join(tempDir, 'audit.log.1');
     // Rotation may or may not have occurred depending on exact size
     // Just verify the main log file exists
     const logFile = path.join(tempDir, 'audit.log');

@@ -4,7 +4,7 @@ PATH: package.json,.env.example,.codebuddy/settings.json,CODEBUDDY.md
 DESCRIPTION: runtime dependencies, environment contract, and AI workflow rules
 
 MANIFEST:
-- package.json scripts: start, dev, test, typecheck, lint
+- package.json scripts: start, dev, test, test:unit, test:integration, typecheck, lint
 - dependencies: dotenv, express, pino, screenshot-desktop, telegraf, zod
 - devDependencies: typescript, eslint, @types/node
 
@@ -26,3 +26,4 @@ DEPENDENCY_HEALTH:
 DECISIONS:
 - 2026-03-09 | config-doc-init | lock platform=codebuddy and passive adoption defaults
 - 2026-03-10 | f001-config-loader | unify pipeline infra env+argv loading via src/pipeline-infra/config-loader.js and expose from src/config.js
+- 2026-03-12 | f001-v2-tooling | tsconfig expanded to src/**/*.js, eslint rules baseline added (eqeqeq, no-undef, no-unused-vars, etc.)

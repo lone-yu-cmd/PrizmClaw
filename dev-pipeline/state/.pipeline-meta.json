@@ -1,7 +1,7 @@
 {
-  "pid": 52316,
-  "started_at": "2026-03-11T18:22:22Z",
-  "feature_list": "/Users/loneyu/SelfProjects/PrizmClaw/feature-list.json",
+  "pid": 43436,
+  "started_at": "2026-03-12T13:20:54Z",
+  "feature_list": "/Users/wylonyu/selfProjects/PrizmClaw/feature-list.json",
   "env_overrides": "",
-  "log_file": "/Users/loneyu/SelfProjects/PrizmClaw/dev-pipeline/state/pipeline-daemon.log"
+  "log_file": "/Users/wylonyu/selfProjects/PrizmClaw/dev-pipeline/state/pipeline-daemon.log"
 }

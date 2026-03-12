@@ -3,12 +3,9 @@
   "status": "completed",
   "retry_count": 0,
   "max_retries": 3,
-  "sessions": [
-    "F-004-20260312033516",
-    "F-004-20260312033459"
-  ],
-  "last_session_id": "F-004-20260312033459",
+  "sessions": [],
+  "last_session_id": null,
   "resume_from_phase": null,
-  "created_at": "2026-03-11T17:53:07Z",
-  "updated_at": "2026-03-11T20:02:06Z"
+  "created_at": "2026-03-12T12:31:36Z",
+  "updated_at": "2026-03-12T13:20:48Z"
 }

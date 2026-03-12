@@ -15,7 +15,7 @@ import { createPlanIngestionService } from '../../../services/plan-ingestion-ser
 import { loadPipelineInfraConfig } from '../../../pipeline-infra/config-loader.js';
 
 // Valid plan types
-const PLAN_TYPES = ['feature-list', 'bug-fix-list'];
+const _PLAN_TYPES = ['feature-list', 'bug-fix-list'];
 
 /**
  * Get plan service instance.
@@ -48,7 +48,7 @@ function normalizePlanType(type) {
 function formatVersionInfo(version, currentVersion) {
   const isCurrent = version.version === currentVersion;
   const marker = isCurrent ? ' ← 当前' : '';
-  const time = version.timestamp?.toLocaleString?.() || version.version;
+  const _time = version.timestamp?.toLocaleString?.() || version.version;
   return `• ${version.version}${marker} (${version.itemCount} 项)`;
 }
 
@@ -99,7 +99,7 @@ export const planMeta = {
  * @param {Object} handlerCtx - Handler context
  */
 export async function handlePlan(handlerCtx) {
-  const { ctx, parsed, params, reply } = handlerCtx;
+  const { ctx: _ctx, parsed, params: _params, reply } = handlerCtx;
 
   // Determine action from subcommand or default to help (T-101)
   const action = parsed.subcommand || null;
@@ -136,7 +136,7 @@ export async function handlePlan(handlerCtx) {
 /**
  * T-104: Handle status subcommand.
  */
-async function handleStatus({ params, reply, parsed }) {
+async function handleStatus({ params, reply, parsed: _parsed }) {
   const service = getPlanService();
   const typeArg = params._args?.[0] || params.type;
   const type = normalizePlanType(typeArg);
@@ -187,7 +187,7 @@ async function getStatusForType(service, type) {
 /**
  * T-102: Handle versions subcommand.
  */
-async function handleVersions({ params, reply, parsed }) {
+async function handleVersions({ params, reply, parsed: _parsed }) {
   const service = getPlanService();
   const typeArg = params._args?.[0] || params.type;
   const type = normalizePlanType(typeArg);
@@ -224,7 +224,7 @@ async function handleVersions({ params, reply, parsed }) {
 /**
  * T-103: Handle use subcommand.
  */
-async function handleUse({ params, reply, parsed }) {
+async function handleUse({ params, reply, parsed: _parsed }) {
   const service = getPlanService();
   const args = params._args || [];
 
@@ -278,7 +278,7 @@ async function handleUse({ params, reply, parsed }) {
  * T-105: Handle rollback subcommand.
  * Maps to US-3 Version Management.
  */
-async function handleRollback({ params, reply, parsed }) {
+async function handleRollback({ params, reply, parsed: _parsed }) {
   const service = getPlanService();
   const typeArg = params._args?.[0] || params.type;
   const type = normalizePlanType(typeArg);
@@ -306,7 +306,7 @@ async function handleRollback({ params, reply, parsed }) {
  * T-106: Handle validate subcommand.
  * Note: This is a placeholder - actual validation happens when user sends a file.
  */
-async function handleValidate({ params, reply, parsed, ctx }) {
+async function handleValidate({ params: _params, reply, parsed: _parsed, ctx: _ctx }) {
   await reply([
     '🔍 计划文件校验',
     '',
