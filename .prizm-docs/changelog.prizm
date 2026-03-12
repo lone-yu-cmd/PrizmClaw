@@ -17,3 +17,6 @@ CHANGELOG:
 - 2026-03-13 | runtime/services | add: F-010 file-service for directory listing, tree building, file reading/writing, glob search with path validation
 - 2026-03-13 | runtime/bot | add: F-010 /ls, /tree, /cat, /head, /tail, /find, /upload, /download commands for file system operations
 - 2026-03-13 | runtime/security | update: F-010 path validation with symlink resolution, file size limits (50MB), overwrite confirmation
+- 2026-03-13 | runtime/services | add: F-011 ai-cli-service for AI CLI execution with process tracking, heartbeat, interrupt support
+- 2026-03-13 | runtime/utils | add: F-011 heartbeat-manager and markdown-v2-formatter for Telegram progress and output formatting
+- 2026-03-13 | runtime/bot | update: F-011 /stop extended for AI CLI task interrupt with permission check, telegram.js integrated AI CLI with streaming

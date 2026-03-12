@@ -272,7 +272,7 @@
         "AI CLI 的 Markdown 输出正确适配 Telegram MarkdownV2 格式",
         "AI CLI 进程异常退出或超时时返回可理解的错误信息与建议操作"
       ],
-      "status": "pending",
+      "status": "completed",
       "session_granularity": "auto",
       "sub_features": [
         {

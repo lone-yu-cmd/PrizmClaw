@@ -8,6 +8,8 @@ class SessionStore {
   #outputPagesBySessionKey = new Map();
   // F-010: File search results state for pagination
   #searchResultsBySessionKey = new Map();
+  // F-011: AI CLI process tracking
+  #activeProcessBySessionKey = new Map();
 
   get(sessionKey) {
     if (!this.#messagesBySessionKey.has(sessionKey)) {
@@ -34,6 +36,8 @@ class SessionStore {
     this.#outputPagesBySessionKey.delete(sessionKey);
     // F-010: Clear search results
     this.#searchResultsBySessionKey.delete(sessionKey);
+    // F-011: Clear active process
+    this.#activeProcessBySessionKey.delete(sessionKey);
   }
 
   toPrompt(sessionKey, channel = 'unknown') {
@@ -158,6 +162,49 @@ class SessionStore {
    */
   clearSearchResults(sessionKey) {
     this.#searchResultsBySessionKey.delete(sessionKey);
+  }
+
+  // F-011: AI CLI process tracking methods
+
+  /**
+   * Get active AI CLI process info.
+   * @param {string} sessionKey - Session identifier
+   * @returns {{ pid: number, startedAt: number, stdoutBytes?: number, childProcess: Object, interrupted?: boolean, timedOut?: boolean, userId?: string } | null}
+   */
+  getActiveProcess(sessionKey) {
+    return this.#activeProcessBySessionKey.get(sessionKey) || null;
+  }
+
+  /**
+   * Set active AI CLI process.
+   * @param {string} sessionKey - Session identifier
+   * @param {{ pid: number, startedAt: number, childProcess: Object, stdoutBytes?: number, userId?: string, interrupted?: boolean, timedOut?: boolean }} info
+   */
+  setActiveProcess(sessionKey, info) {
+    this.#activeProcessBySessionKey.set(sessionKey, {
+      ...info,
+      stdoutBytes: info.stdoutBytes ?? 0
+    });
+  }
+
+  /**
+   * Update stdout bytes for active process.
+   * @param {string} sessionKey - Session identifier
+   * @param {number} bytes - Additional bytes received
+   */
+  updateProcessBytes(sessionKey, bytes) {
+    const info = this.#activeProcessBySessionKey.get(sessionKey);
+    if (info) {
+      info.stdoutBytes = (info.stdoutBytes ?? 0) + bytes;
+    }
+  }
+
+  /**
+   * Clear active process.
+   * @param {string} sessionKey - Session identifier
+   */
+  clearActiveProcess(sessionKey) {
+    this.#activeProcessBySessionKey.delete(sessionKey);
   }
 }
 

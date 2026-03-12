@@ -7,6 +7,7 @@ import { config } from '../config.js';
 import { logger } from '../utils/logger.js';
 import { isAllowedUser } from '../security/guard.js';
 import { chatWithSession, resetSession } from '../services/chat-service.js';
+import { executeAiCli, interruptAiCli, isAiCliRunning } from '../services/ai-cli-service.js';
 import { captureScreenshot } from '../services/screenshot-service.js';
 import { executeCommand, confirmHighRiskCommand } from '../services/command-executor-service.js';
 import { createPlanIngestionService } from '../services/plan-ingestion-service.js';
@@ -37,6 +38,7 @@ import { uploadMeta, handleUpload } from './commands/handlers/upload.js';
 import { downloadMeta, handleDownload } from './commands/handlers/download.js';
 import { generateHelp } from './commands/help.js';
 import { sessionStore } from '../services/session-store.js';
+import { convertToMarkdownV2 } from '../utils/markdown-v2-formatter.js';
 
 const TELEGRAM_MSG_CHUNK_SIZE = 3800;
 const STREAM_MIN_CHARS = 220;
@@ -486,7 +488,14 @@ export function createTelegramBot() {
   bot.command('reset', async (ctx) => {
     try {
       ensureAllowed(ctx);
-      resetSession({ channel: 'telegram', sessionId: buildSessionId(ctx) });
+      const sessionId = buildSessionId(ctx);
+
+      // F-011: Interrupt any running AI CLI task
+      if (isAiCliRunning(sessionId)) {
+        interruptAiCli(sessionId);
+      }
+
+      resetSession({ channel: 'telegram', sessionId });
       await ctx.reply('已清空当前会话上下文。');
     } catch (error) {
       await ctx.reply(error instanceof Error ? error.message : String(error));
@@ -720,6 +729,12 @@ export function createTelegramBot() {
       }
     }
 
+    // F-011: Check if AI CLI is already running
+    if (isAiCliRunning(sessionId)) {
+      await ctx.reply('⏳ 有任务正在执行，请等待完成或使用 /stop 中断。');
+      return;
+    }
+
     let typingTimer = null;
 
     try {
@@ -731,23 +746,69 @@ export function createTelegramBot() {
         ctx.sendChatAction('typing').catch(() => undefined);
       }, TYPING_INTERVAL_MS);
 
-      const reply = await chatWithSession({
-        channel: 'telegram',
+      // F-011: Use ai-cli-service for execution with process tracking
+      const sessionKey = `telegram:${sessionId}`;
+
+      // Append user message to session history
+      sessionStore.append(sessionKey, 'user', ctx.message.text);
+
+      // Build prompt with context
+      const prompt = sessionStore.toPrompt(sessionKey, 'telegram');
+
+      // Track last heartbeat message for updates
+      /** @type {{ message_id: number } | null} */
+      let lastHeartbeatMsg = null;
+
+      const result = await executeAiCli({
         sessionId,
-        message: ctx.message.text,
-        realtimeHooks: {
-          onStatus: ({ stage }) => {
-            if (stage === 'running') {
+        prompt,
+        hooks: {
+          onChunk: (text) => {
+            streamPublisher.push(text);
+          },
+          onHeartbeat: config.aiCliEnableHeartbeat ? (info) => {
+            // Send/update heartbeat progress message
+            const elapsedSec = Math.floor(info.elapsedMs / 1000);
+            const progressText = `⏳ 任务执行中... (${elapsedSec}s, ${Math.floor(info.stdoutBytes / 1024)}KB)`;
+
+            // Don't await - fire and forget
+            if (lastHeartbeatMsg) {
+              ctx.telegram.editMessageText(ctx.chat.id, lastHeartbeatMsg.message_id, undefined, progressText)
+                .catch(() => {});
+            } else {
+              ctx.reply(progressText)
+                .then((msg) => { lastHeartbeatMsg = msg; })
+                .catch(() => {});
+            }
+          } : undefined,
+          onStatus: (status) => {
+            if (status === 'running') {
               ctx.sendChatAction('typing').catch(() => undefined);
             }
-          },
-          onAssistantChunk: ({ text }) => {
-            streamPublisher.push(text);
           }
         }
       });
 
-      const { fileRefs, cleanedText } = extractFileMarkers(reply);
+      // Delete heartbeat message if exists
+      if (lastHeartbeatMsg) {
+        ctx.telegram.deleteMessage(ctx.chat.id, lastHeartbeatMsg.message_id).catch(() => {});
+      }
+
+      // Append assistant reply to session history
+      sessionStore.append(sessionKey, 'assistant', result.output);
+
+      // F-011: Format output with MarkdownV2
+      const formattedOutput = convertToMarkdownV2(result.output);
+
+      // Handle result states
+      if (result.interrupted) {
+        await ctx.reply('⏹️ 任务已被中断。');
+      } else if (result.timedOut) {
+        await ctx.reply(`⏰ 任务执行超时。\n建议：使用 /stop 中断或增加 REQUEST_TIMEOUT_MS 配置。`);
+      }
+
+      // Extract file markers and send
+      const { fileRefs, cleanedText } = extractFileMarkers(result.output);
       logger.info({ sessionId, fileRefsCount: fileRefs.length, fileRefs }, 'Parsed file markers from assistant reply');
       const finalText = cleanedText || (fileRefs.length > 0 ? '已执行，正在发送文件。' : '已执行。');
 

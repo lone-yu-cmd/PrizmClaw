@@ -39,7 +39,11 @@ const schema = z.object({
   FILE_MAX_TREE_ITEMS: z.coerce.number().int().positive().default(100),
   FILE_MAX_SEARCH_DEPTH: z.coerce.number().int().positive().default(10),
   FILE_MAX_SEARCH_RESULTS: z.coerce.number().int().positive().default(100),
-  FILE_SEARCH_RESULTS_PER_PAGE: z.coerce.number().int().positive().default(20)
+  FILE_SEARCH_RESULTS_PER_PAGE: z.coerce.number().int().positive().default(20),
+  // F-011: AI CLI Proxy
+  AI_CLI_HEARTBEAT_THRESHOLD_MS: z.coerce.number().int().nonnegative().default(10000),
+  AI_CLI_HEARTBEAT_INTERVAL_MS: z.coerce.number().int().nonnegative().default(30000),
+  AI_CLI_ENABLE_HEARTBEAT: z.string().optional().default('true')
 });
 
 const parsed = schema.parse(process.env);
@@ -139,6 +143,10 @@ export const config = Object.freeze({
   fileMaxSearchDepth: parsed.FILE_MAX_SEARCH_DEPTH,
   fileMaxSearchResults: parsed.FILE_MAX_SEARCH_RESULTS,
   fileSearchResultsPerPage: parsed.FILE_SEARCH_RESULTS_PER_PAGE,
+  // F-011: AI CLI Proxy
+  aiCliHeartbeatThresholdMs: parsed.AI_CLI_HEARTBEAT_THRESHOLD_MS,
+  aiCliHeartbeatIntervalMs: parsed.AI_CLI_HEARTBEAT_INTERVAL_MS,
+  aiCliEnableHeartbeat: parseBoolean(parsed.AI_CLI_ENABLE_HEARTBEAT),
   pipelineInfra: Object.freeze({
     ...pipelineInfra,
     daemonLogPaths

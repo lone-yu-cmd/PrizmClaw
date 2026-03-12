@@ -37,3 +37,14 @@ export {
   resetAuditLogService,
   getAuditLogStats
 } from './audit-log-service.js';
+
+// F-011: AI CLI Proxy
+export {
+  executeAiCli,
+  interruptAiCli,
+  isAiCliRunning,
+  getActiveProcessInfo,
+  canInterruptAiCli,
+  getMetrics,
+  resetMetrics
+} from './ai-cli-service.js';

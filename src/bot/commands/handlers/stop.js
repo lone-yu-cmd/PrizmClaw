@@ -1,10 +1,12 @@
 /**
  * Stop Command Handler
- * Handles /stop command to stop running pipelines.
+ * Handles /stop command to stop running pipelines and AI CLI tasks.
  * F-006: Integrated with security guard
+ * F-011: Extended to handle AI CLI task interruption
  */
 
 import { stopPipeline } from '../../../services/pipeline-controller.js';
+import { interruptAiCli, isAiCliRunning, canInterruptAiCli } from '../../../services/ai-cli-service.js';
 import { logAuditEntry } from '../../../services/audit-log-service.js';
 import {
   createConfirmation,
@@ -21,11 +23,12 @@ const pendingConfirmations = new Map();
 /**
  * Stop command metadata.
  * T-102: minRole added
+ * F-011: Extended for AI CLI tasks
  */
 export const stopMeta = {
   name: 'stop',
   aliases: [],
-  description: '停止运行中的管道',
+  description: '停止运行中的管道或 AI CLI 任务',
   usage: '/stop [target]',
   examples: ['/stop', '/stop my-feature'],
   params: [
@@ -38,16 +41,61 @@ export const stopMeta = {
   ],
   requiresAuth: true,
   minRole: 'admin',
-  helpText: '/stop [target] - 停止运行中的管道'
+  helpText: '/stop [target] - 停止运行中的管道或 AI CLI 任务'
 };
 
 /**
  * Handle stop command.
  * T-104, T-106: Added confirmation flow
+ * F-011: Check for AI CLI tasks first
  * @param {Object} handlerCtx - Handler context
  */
 export async function handleStop(handlerCtx) {
-  const { params, reply, userId, userRole: _userRole, requiresConfirmation, parsed } = handlerCtx;
+  const { params, reply, userId, userRole: _userRole, requiresConfirmation, parsed, sessionId } = handlerCtx;
+
+  // F-011: Check for AI CLI task first
+  if (sessionId && isAiCliRunning(sessionId)) {
+    // T-033: Permission check - only task owner or admin can interrupt
+    const permissionCheck = canInterruptAiCli(sessionId, userId, isAdmin);
+    if (!permissionCheck.canInterrupt) {
+      await logAuditEntry({
+        userId,
+        action: 'stop-ai-cli',
+        params: {},
+        result: 'denied',
+        reason: permissionCheck.reason,
+        sessionId
+      });
+      await reply(`❌ ${permissionCheck.reason}`);
+      return;
+    }
+
+    const result = interruptAiCli(sessionId);
+
+    if (result.ok) {
+      await logAuditEntry({
+        userId,
+        action: 'stop-ai-cli',
+        params: { pid: result.pid },
+        result: 'success',
+        sessionId
+      });
+
+      await reply(`✅ AI CLI 任务已中断 (PID: ${result.pid})。`);
+      return;
+    } else {
+      await logAuditEntry({
+        userId,
+        action: 'stop-ai-cli',
+        params: {},
+        result: 'failed',
+        reason: result.error,
+        sessionId
+      });
+      await reply(`❌ 中断失败: ${result.error}`);
+      return;
+    }
+  }
 
   // Sanitize target parameter
   const rawTarget = params._args?.[0] || params.target;

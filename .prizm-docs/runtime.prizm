@@ -17,6 +17,7 @@ KEY_FILES:
 - src/services/command-executor-service.js
 - src/services/output-pager-service.js
 - src/services/file-service.js
+- src/services/ai-cli-service.js
 - src/pipeline-infra/config-loader.js
 - src/pipeline-infra/script-runner.js
 - src/adapters/codebuddy.js
@@ -39,6 +40,8 @@ KEY_FILES:
 - src/security/system-guard.js
 - src/services/system-exec-service.js
 - src/utils/file-utils.js
+- src/utils/heartbeat-manager.js
+- src/utils/markdown-v2-formatter.js
 
 SUBDIRS:
 - src/adapters -> (lazy) .prizm-docs/runtime/adapters.prizm
@@ -71,6 +74,8 @@ TRAPS:
 - F-010: file operations restricted to TELEGRAM_FILE_ALLOWED_ROOTS (defaults: cwd, Desktop, Downloads, tmpdir)
 - F-010: file download limited to 50MB for documents, 10MB for images
 - F-010: binary files cannot be displayed as text
+- F-011: AI CLI process tracked per session, can be interrupted via /stop
+- F-011: AI CLI heartbeat notifications configurable via AI_CLI_HEARTBEAT_THRESHOLD_MS/INTERVAL_MS
 
 DECISIONS:
 - 2026-03-09 | runtime-doc-init | model first-pass runtime map from source + API surface
@@ -83,3 +88,4 @@ DECISIONS:
 - 2026-03-16 | runtime-f009 | add general command executor with blacklist, high-risk keywords, confirmation flow, session cwd, output pagination, and /cd /more commands
 - 2026-03-13 | runtime-f009 | add general command executor with blacklist, high-risk keyword detection, confirmation flow, session cwd, output pagination, /cd and /more commands
 - 2026-03-13 | runtime-f010 | add file manager with /ls, /tree, /cat, /head, /tail, /find, /upload, /download commands, path validation, and file operations
+- 2026-03-17 | runtime-f011 | add AI CLI proxy with process tracking, heartbeat progress, /stop interrupt, and Telegram MarkdownV2 formatting

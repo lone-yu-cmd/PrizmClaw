@@ -1,0 +1,23 @@
+{
+  "session_id": "F-010-20260313023945",
+  "feature_id": "F-010",
+  "feature_slug": "010-file-manager",
+  "exec_tier": 3,
+  "status": "success",
+  "completed_phases": [0, 1, 2, 3, 4, 5, 6, 7],
+  "current_phase": 7,
+  "checkpoint_reached": "CP-3",
+  "tasks_completed": 35,
+  "tasks_total": 35,
+  "errors": [],
+  "can_resume": false,
+  "resume_from_phase": null,
+  "artifacts": {
+    "context_snapshot_path": ".prizmkit/specs/010-file-manager/context-snapshot.md",
+    "spec_path": ".prizmkit/specs/010-file-manager/spec.md",
+    "plan_path": ".prizmkit/specs/010-file-manager/plan.md",
+    "tasks_path": ".prizmkit/specs/010-file-manager/tasks.md"
+  },
+  "git_commit": "ef0ffa7a93a2e268c37b64ed5ef348b4b458ab5f",
+  "timestamp": "2026-03-13T03:25:19+08:00"
+}

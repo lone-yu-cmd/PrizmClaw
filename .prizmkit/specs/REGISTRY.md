@@ -60,7 +60,34 @@
 
 ---
 
+### [011] AI CLI Proxy
+- **Branch**: feat/F-011-ai-cli-proxy
+- **Status**: Complete
+- **Date**: 2026-03-13
+- **Key Files**:
+  - `src/services/ai-cli-service.js` (AI CLI execution with process tracking, heartbeat, interrupt support, metrics tracking)
+  - `src/utils/heartbeat-manager.js` (Reusable heartbeat utility with threshold and interval)
+  - `src/utils/markdown-v2-formatter.js` (Telegram MarkdownV2 formatter)
+  - `src/bot/commands/handlers/stop.js` (Extended for AI CLI task interruption with permission check)
+  - `src/bot/telegram.js` (Integrated AI CLI service with stream publishing and heartbeat progress)
+  - `src/services/session-store.js` (Extended with process tracking methods)
+  - `tests/services/ai-cli-service.test.js` (Comprehensive tests for AI CLI service)
+  - `tests/utils/heartbeat-manager.test.js` (Tests for heartbeat manager)
+  - `tests/utils/markdown-v2-formatter.test.js` (Tests for MarkdownV2 formatter)
+  - `tests/integration/ai-cli-telegram.test.js` (Integration tests for Telegram flow)
+  - `tests/integration/ai-cli-heartbeat.test.js` (Integration tests for heartbeat)
+  - `tests/integration/ai-cli-error-handling.test.js` (Integration tests for error recovery)
+- **API Changes**:
+  - Telegram: Natural language messages execute AI CLI tasks
+  - `/stop` now interrupts AI CLI tasks (with permission check: task owner or admin only)
+  - New exports: `executeAiCli`, `interruptAiCli`, `isAiCliRunning`, `getActiveProcessInfo`, `canInterruptAiCli`, `getMetrics`, `resetMetrics`
+- **Data Changes**: Session store extended with `#activeProcessBySessionKey` map for process tracking
+- **Config**: `AI_CLI_HEARTBEAT_THRESHOLD_MS`, `AI_CLI_HEARTBEAT_INTERVAL_MS`, `AI_CLI_ENABLE_HEARTBEAT`
+
+---
+
 ## Changelog
+- 2026-03-13 | [011] AI CLI Proxy | Complete
 - 2026-03-13 | [009] General Command Executor | Complete
 - 2026-03-12 | [008] Commit Workflow Integration | Complete
 - 2026-03-12 | [001] Project Infrastructure Setup | Complete
