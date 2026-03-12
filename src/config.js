@@ -51,7 +51,13 @@ const schema = z.object({
   SESSION_TIMEOUT_MS: z.coerce.number().int().positive().default(1800000), // 30 min
   SESSION_HISTORY_MAX: z.coerce.number().int().positive().default(100),
   SESSION_PERSISTENCE_DIR: z.string().optional().default('data/sessions'),
-  ALIAS_PERSISTENCE_PATH: z.string().optional().default('data/aliases.json')
+  ALIAS_PERSISTENCE_PATH: z.string().optional().default('data/aliases.json'),
+  // F-014: Notification and Scheduled Tasks
+  SCHEDULED_TASKS_PATH: z.string().optional().default('data/scheduled-tasks.json'),
+  FILE_WATCHERS_PATH: z.string().optional().default('data/file-watchers.json'),
+  MAX_SCHEDULED_TASKS: z.coerce.number().int().positive().default(100),
+  MAX_FILE_WATCHERS: z.coerce.number().int().positive().default(50),
+  TASK_DEBOUNCE_MS: z.coerce.number().int().positive().default(500)
 });
 
 const parsed = schema.parse(process.env);
@@ -163,6 +169,12 @@ export const config = Object.freeze({
   sessionHistoryMax: parsed.SESSION_HISTORY_MAX,
   sessionPersistenceDir: parsed.SESSION_PERSISTENCE_DIR,
   aliasPersistencePath: parsed.ALIAS_PERSISTENCE_PATH,
+  // F-014: Notification and Scheduled Tasks
+  scheduledTasksPath: parsed.SCHEDULED_TASKS_PATH,
+  fileWatchersPath: parsed.FILE_WATCHERS_PATH,
+  maxScheduledTasks: parsed.MAX_SCHEDULED_TASKS,
+  maxFileWatchers: parsed.MAX_FILE_WATCHERS,
+  taskDebounceMs: parsed.TASK_DEBOUNCE_MS,
   pipelineInfra: Object.freeze({
     ...pipelineInfra,
     daemonLogPaths

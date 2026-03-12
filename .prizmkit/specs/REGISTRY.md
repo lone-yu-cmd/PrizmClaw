@@ -136,7 +136,38 @@
 
 ---
 
+### [014] Notification and Scheduled Tasks
+- **Branch**: feat/F-014-notification-and-scheduled-tasks
+- **Status**: Complete
+- **Date**: 2026-03-13
+- **Key Files**:
+  - `src/services/scheduled-task-service.js` (Cron-based task scheduling with persistence and Telegram notifications)
+  - `src/services/file-watcher-service.js` (File system monitoring with debouncing and notifications)
+  - `src/bot/commands/handlers/cron.js` (/cron command for creating scheduled tasks)
+  - `src/bot/commands/handlers/jobs.js` (/jobs command for task management)
+  - `src/bot/commands/handlers/watch.js` (/watch and /unwatch commands for file monitoring)
+  - `src/config.js` (Added SCHEDULED_TASKS_PATH, FILE_WATCHERS_PATH, MAX_SCHEDULED_TASKS, MAX_FILE_WATCHERS)
+  - `tests/services/scheduled-task-service.test.js` (Unit tests for scheduled tasks)
+  - `tests/services/file-watcher-service.test.js` (Unit tests for file watchers)
+  - `tests/bot/commands/handlers/cron.test.js` (Tests for /cron command)
+  - `tests/bot/commands/handlers/jobs.test.js` (Tests for /jobs command)
+  - `tests/bot/commands/handlers/watch.test.js` (Tests for /watch command)
+  - `tests/integration/f014-scheduled-tasks.test.js` (Integration tests for scheduled tasks)
+  - `tests/integration/f014-file-watchers.test.js` (Integration tests for file watchers)
+- **API Changes**:
+  - Telegram commands: `/cron add <cron-expr|datetime> <command>` (create tasks), `/jobs list|pause|resume|delete <id>` (manage tasks), `/watch <path>` (monitor files), `/unwatch <path>` (stop monitoring)
+  - New exports: `scheduledTaskService`, `fileWatcherService`
+- **Data Changes**:
+  - Tasks persisted to `data/scheduled-tasks.json`
+  - Watchers persisted to `data/file-watchers.json`
+  - Support for cron expressions and one-time tasks
+- **Config**: `SCHEDULED_TASKS_PATH`, `FILE_WATCHERS_PATH`, `MAX_SCHEDULED_TASKS` (default 100), `MAX_FILE_WATCHERS` (default 50)
+- **Dependencies**: `croner` (cron expression parsing and scheduling)
+
+---
+
 ## Changelog
+- 2026-03-13 | [014] Notification and Scheduled Tasks | Complete
 - 2026-03-13 | [013] Session and Context Manager | Complete
 - 2026-03-13 | [012] System Monitor | Complete
 - 2026-03-13 | [011] AI CLI Proxy | Complete

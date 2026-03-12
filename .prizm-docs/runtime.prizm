@@ -40,6 +40,11 @@ KEY_FILES:
 - src/bot/commands/handlers/ps.js
 - src/bot/commands/handlers/kill.js
 - src/bot/commands/handlers/monitor.js
+- src/bot/commands/handlers/cron.js
+- src/bot/commands/handlers/jobs.js
+- src/bot/commands/handlers/watch.js
+- src/services/scheduled-task-service.js
+- src/services/file-watcher-service.js
 - src/security/permission-guard.js
 - src/security/param-sanitizer.js
 - src/security/confirmation-manager.js
@@ -61,11 +66,13 @@ SUBDIRS:
 
 INTERFACES:
 - HTTP: /healthz, /api/events(SSE), /api/chat, /api/chat/reset, /api/screenshot, /api/system/exec
-- Telegram: /start, /help, /reset, /screenshot, /exec, /cd, /more, /pipeline, /bugfix, /planner, /status, /logs, /stop, /plan, /audit, /commit, /commits, /ls, /tree, /cat, /head, /tail, /find, /upload, /download, /sysinfo, /ps, /kill, /monitor, /history, /alias, /sessions, text message relay
+- Telegram: /start, /help, /reset, /screenshot, /exec, /cd, /more, /pipeline, /bugfix, /planner, /status, /logs, /stop, /plan, /audit, /commit, /commits, /ls, /tree, /cat, /head, /tail, /find, /upload, /download, /sysinfo, /ps, /kill, /monitor, /history, /alias, /sessions, /cron, /jobs, /watch, /unwatch, text message relay
 - Security: PermissionGuard, ParamSanitizer, ConfirmationManager, AuditLogService, SystemGuard
 - File Service: validatePath, listDirectory, buildTree, readFile, searchFiles, writeFile
 - System Monitor: getSystemInfo, getProcessList, killProcess, formatUptime, formatBytes
 - Alert Manager: addRule, removeRule, listRules, checkThresholds, startMonitoring, stopMonitoring
+- Scheduled Tasks: addCronTask, addOneTimeTask, listTasks, pauseTask, resumeTask, deleteTask, executeTask, startScheduler, stopScheduler
+- File Watcher: addWatch, removeWatch, listWatches, startWatching, stopWatching, restoreWatches
 
 TRAPS:
 - ENABLE_TELEGRAM=true requires TELEGRAM_BOT_TOKEN
@@ -94,6 +101,14 @@ TRAPS:
 - F-013: /sessions requires admin role, shows all active sessions
 - F-013: aliases stored in data/aliases.json, persisted immediately
 - F-013: session context persisted to data/sessions/ directory
+- F-014: /cron add creates periodic tasks with cron expressions, /cron add --once creates one-time tasks
+- F-014: /jobs list|pause|resume|delete manages scheduled tasks
+- F-014: /watch monitors file/directory changes with debouncing (500ms default)
+- F-014: scheduled tasks stored in data/scheduled-tasks.json, persisted across restarts
+- F-014: file watchers stored in data/file-watchers.json, persisted across restarts
+- F-014: file watchers restricted to TELEGRAM_FILE_ALLOWED_ROOTS
+- F-014: task execution uses executeCommand with skipConfirmation=true
+- F-014: one-time tasks auto-delete after execution
 
 DECISIONS:
 - 2026-03-09 | runtime-doc-init | model first-pass runtime map from source + API surface
@@ -109,3 +124,4 @@ DECISIONS:
 - 2026-03-17 | runtime-f011 | add AI CLI proxy with process tracking, heartbeat progress, /stop interrupt, and Telegram MarkdownV2 formatting
 - 2026-03-13 | runtime-f012 | add system monitor with /sysinfo, /ps, /kill, /monitor commands, alert rules, threshold monitoring, and process management
 - 2026-03-12 | runtime-f013 | add session context manager with /history, /alias, /sessions commands, session timeout, persistence, and alias resolution
+- 2026-03-13 | runtime-f014 | add scheduled tasks and file watchers with /cron, /jobs, /watch, /unwatch commands, cron scheduling, file change detection, persistence

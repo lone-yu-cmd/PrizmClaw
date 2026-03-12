@@ -24,6 +24,8 @@ KEY_FILES:
 - src/services/alert-manager-service.js
 - src/services/session-context-service.js
 - src/services/alias-store.js
+- src/services/scheduled-task-service.js
+- src/services/file-watcher-service.js
 
 PUBLIC_APIS:
 - chatWithSession({ channel, sessionId, message, realtimeHooks })
@@ -43,6 +45,8 @@ PUBLIC_APIS:
 - alert manager (F-012): addRule/removeRule/listRules/checkThresholds/startMonitoring/stopMonitoring/loadRules/saveRules/parseRuleString -> threshold alerting with persistence
 - session context (F-013): sessionContextService -> initSessionContext/createSession/getOrCreateSession/touchSession/cleanupSession/persistSession/restoreSessions/startTimeoutWatcher/stopTimeoutWatcher/setNotificationCallback
 - alias store (F-013): aliasStore -> initAliasStore/setAlias/getAlias/getAllAliases/deleteAlias/resolveAlias/loadAliases/saveAliases
+- scheduled task (F-014): scheduledTaskService -> initScheduledTaskService/addCronTask/addOneTimeTask/listTasks/pauseTask/resumeTask/deleteTask/executeTask/saveTasks/loadTasks/startScheduler/stopScheduler/setNotificationCallback/setExecuteCallback
+- file watcher (F-014): fileWatcherService -> initFileWatcherService/addWatch/removeWatch/listWatches/startWatching/stopWatching/stopAllWatchers/saveWatches/loadWatches/restoreWatches/setNotificationCallback
 
 TRAPS:
 - chat operations are serialized by session key; keep async queue semantics unchanged
@@ -55,6 +59,11 @@ TRAPS:
 - alias-store is a singleton; call initAliasStore before use
 - alias names cannot contain spaces or equals sign
 - session files are stored with colon replaced by underscore in filename
+- scheduled-task-service is a singleton; call initScheduledTaskService before use
+- file-watcher-service is a singleton; call initFileWatcherService before use
+- scheduled tasks use croner library for cron expression parsing
+- file watcher uses fs.watch with debouncing to prevent rapid notifications
+- one-time tasks are auto-deleted after execution
 
 DECISIONS:
 - 2026-03-10 | f001-pipeline-service | expose logs/reset methods in pipeline-control-service to satisfy US3 reusable control surface
@@ -67,3 +76,4 @@ DECISIONS:
 - 2026-03-13 | f010-file-service | add file-service for directory listing, tree building, file reading/writing, and glob search with path validation
 - 2026-03-13 | f012-system-monitor | add system-monitor-service and alert-manager-service for system info, process management, and threshold-based alerting with persistence
 - 2026-03-12 | f013-session-context | add session-context-service and alias-store for session lifecycle management, command history, alias persistence, and timeout handling
+- 2026-03-13 | f014-scheduled-tasks | add scheduled-task-service and file-watcher-service for cron-based task scheduling, one-time tasks, file change detection, and Telegram notifications

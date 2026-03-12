@@ -45,11 +45,18 @@ import { monitorMeta, handleMonitor } from './commands/handlers/monitor.js';
 import { historyMeta, handleHistory } from './commands/handlers/history.js';
 import { aliasMeta, handleAlias } from './commands/handlers/alias.js';
 import { sessionsMeta, handleSessions } from './commands/handlers/sessions.js';
+// F-014: Notification and Scheduled Tasks command handlers
+import { cronMeta, handleCron } from './commands/handlers/cron.js';
+import { jobsMeta, handleJobs } from './commands/handlers/jobs.js';
+import { watchMeta, handleWatch } from './commands/handlers/watch.js';
 import { generateHelp } from './commands/help.js';
 import { sessionStore } from '../services/session-store.js';
 import { sessionContextService } from '../services/session-context-service.js';
 import { aliasStore } from '../services/alias-store.js';
+import { scheduledTaskService } from '../services/scheduled-task-service.js';
+import { fileWatcherService } from '../services/file-watcher-service.js';
 import { convertToMarkdownV2 } from '../utils/markdown-v2-formatter.js';
+import { escapeMarkdownV2 } from '../utils/markdown-v2-formatter.js';
 
 const TELEGRAM_MSG_CHUNK_SIZE = 3800;
 const STREAM_MIN_CHARS = 220;
@@ -90,6 +97,12 @@ function splitMessage(text, chunkSize = TELEGRAM_MSG_CHUNK_SIZE) {
     chunks.push(text.slice(i, i + chunkSize));
   }
   return chunks;
+}
+
+function truncate(text, maxLen) {
+  if (!text) return '';
+  if (text.length <= maxLen) return text;
+  return text.substring(0, maxLen) + '...';
 }
 
 function sanitizeMarkerPath(raw) {
@@ -481,6 +494,10 @@ function registerPipelineCommands() {
   registerCommand(historyMeta, handleHistory);
   registerCommand(aliasMeta, handleAlias);
   registerCommand(sessionsMeta, handleSessions);
+  // F-014: Notification and Scheduled Tasks commands
+  registerCommand(cronMeta, handleCron);
+  registerCommand(jobsMeta, handleJobs);
+  registerCommand(watchMeta, handleWatch);
 }
 
 export async function createTelegramBot() {
@@ -508,6 +525,89 @@ export async function createTelegramBot() {
 
   // F-013: Start timeout watcher
   sessionContextService.startTimeoutWatcher();
+
+  // F-014: Initialize scheduled task service
+  scheduledTaskService.initScheduledTaskService({
+    dataDir: config.systemMonitorDataDir,
+    tasksFile: config.scheduledTasksPath,
+    maxTasks: config.maxScheduledTasks
+  });
+
+  // F-014: Set up task execution callback
+  scheduledTaskService.setExecuteCallback(async ({ command, cwd, sessionId, userId }) => {
+    try {
+      return await executeCommand({
+        command,
+        cwd,
+        sessionId,
+        userId,
+        skipConfirmation: true // Skip confirmation for scheduled tasks
+      });
+    } catch (error) {
+      return {
+        stdout: '',
+        stderr: error.message,
+        exitCode: 1,
+        timedOut: false
+      };
+    }
+  });
+
+  // F-014: Set up task notification callback
+  scheduledTaskService.setNotificationCallback(async (chatId, task) => {
+    try {
+      const result = task.lastResult || {};
+      const lines = [
+        '⏰ *定时任务完成*',
+        '',
+        `任务ID: \`${task.id.substring(0, 8)}...\``,
+        `命令: \`${escapeMarkdownV2(task.command)}\``,
+        `执行时间: ${new Date(result.executedAt || Date.now()).toLocaleString()}`,
+        '',
+        `exitCode: ${result.exitCode}`,
+        result.stdout ? `stdout:\n${truncate(result.stdout, 500)}` : 'stdout: (empty)',
+        result.stderr ? `stderr:\n${escapeMarkdownV2(truncate(result.stderr, 500))}` : 'stderr: (empty)'
+      ];
+      await bot.telegram.sendMessage(chatId, lines.join('\n'), { parse_mode: 'MarkdownV2' });
+    } catch (error) {
+      logger.warn({ taskId: task.id, error: error.message }, 'Failed to send task notification');
+    }
+  });
+
+  // F-014: Load and start scheduled tasks
+  await scheduledTaskService.loadTasks();
+  scheduledTaskService.startScheduler();
+
+  // F-014: Initialize file watcher service
+  fileWatcherService.initFileWatcherService({
+    dataDir: config.systemMonitorDataDir,
+    watchersFile: config.fileWatchersPath,
+    maxWatchers: config.maxFileWatchers,
+    debounceMs: config.taskDebounceMs,
+    allowedRoots: config.telegramFileAllowedRoots.length > 0
+      ? config.telegramFileAllowedRoots
+      : [process.cwd()]
+  });
+
+  // F-014: Set up file watcher notification callback
+  fileWatcherService.setNotificationCallback(async (chatId, watcher) => {
+    try {
+      const lines = [
+        '📁 *文件变更检测*',
+        '',
+        `路径: \`${escapeMarkdownV2(watcher.path)}\``,
+        `事件: ${watcher.eventType}`,
+        `文件: ${watcher.filename || '(未知)'}`,
+        `时间: ${new Date().toLocaleString()}`
+      ];
+      await bot.telegram.sendMessage(chatId, lines.join('\n'), { parse_mode: 'MarkdownV2' });
+    } catch (error) {
+      logger.warn({ watcherId: watcher.id, error: error.message }, 'Failed to send file watcher notification');
+    }
+  });
+
+  // F-014: Restore file watchers
+  await fileWatcherService.restoreWatches();
 
   // Register pipeline commands
   registerPipelineCommands();

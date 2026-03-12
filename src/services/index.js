@@ -52,3 +52,7 @@ export {
 // F-013: Session and Context Manager
 export { sessionContextService } from './session-context-service.js';
 export { aliasStore } from './alias-store.js';
+
+// F-014: Notification and Scheduled Tasks
+export { scheduledTaskService } from './scheduled-task-service.js';
+export { fileWatcherService } from './file-watcher-service.js';

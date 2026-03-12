@@ -46,6 +46,18 @@ INTERFACES:
 - /find <pattern> - Search files by name/glob pattern (F-010)
 - /upload <path> - Upload file to specified path (F-010)
 - /download <file> - Download file to Telegram (F-010)
+- /sysinfo - Show system information (CPU/memory/disk/network) (F-012)
+- /ps - List running processes (F-012)
+- /kill <pid> - Terminate process by PID (F-012)
+- /monitor <set|list|remove|enable|disable> - Manage alert rules (F-012)
+- /history - View command history (F-013)
+- /alias <name=value> - Set/show command aliases (F-013)
+- /sessions - List active sessions (F-013)
+- /cron add <cron-expr> <cmd> - Add scheduled task (F-014)
+- /cron add --once <datetime> <cmd> - Add one-time task (F-014)
+- /jobs <list|pause|resume|delete> - Manage scheduled tasks (F-014)
+- /watch <path> - Watch file/directory for changes (F-014)
+- /unwatch <path> - Stop watching file/directory (F-014)
 
 TRAPS:
 - Commands require authorization via isAllowedUser()
@@ -55,6 +67,9 @@ TRAPS:
 - F002-CRIT-001: Parser treats first non-option token as subcommand; validator must check if command has no subcommands and use parsed.subcommand as first positional param
 - F-005: /status uses status-aggregator for aggregated status; /logs uses log-pager for pagination
 - F-008: /commit requires pre-commit validation (pipeline status + test status); --amend/--force require admin + confirmation
+- F-012: /kill requires admin role and confirmation; /monitor rules persisted to data/alert-rules.json
+- F-013: /history shows command history; /alias stored in data/aliases.json; /sessions requires admin role
+- F-014: /cron creates scheduled tasks with cron expressions; /jobs manages task lifecycle; /watch monitors file changes with debouncing
 
 DECISIONS:
 - 2026-03-12 | F-002-bot-commands | Add command routing layer with parser, registry, validator for pipeline commands
@@ -65,3 +80,6 @@ DECISIONS:
 - 2026-03-15 | F-008-commit-commands | Add /commit and /commits commands with pre-commit validation, session tracking, and admin confirmation for --amend/--force
 - 2026-03-16 | F-009-command-executor | Add /cd and /more commands for session cwd management and paginated output viewing; add direct text mode for shell execution
 - 2026-03-13 | F-010-file-manager | Add /ls, /tree, /cat, /head, /tail, /find, /upload, /download commands for file system operations with security sandbox
+- 2026-03-13 | F-012-system-monitor | Add /sysinfo, /ps, /kill, /monitor commands for system monitoring and process management
+- 2026-03-12 | F-013-session-context | Add /history, /alias, /sessions commands for session management and alias resolution
+- 2026-03-13 | F-014-scheduled-tasks | Add /cron, /jobs, /watch, /unwatch commands for scheduled task management and file monitoring
