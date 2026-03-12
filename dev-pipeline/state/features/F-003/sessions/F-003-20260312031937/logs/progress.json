@@ -1,0 +1,13 @@
+{
+  "updated_at": "2026-03-11T19:34:44Z",
+  "message_count": 0,
+  "current_tool": null,
+  "current_tool_input_summary": "",
+  "current_phase": null,
+  "detected_phases": [],
+  "tool_calls": [],
+  "total_tool_calls": 0,
+  "last_text_snippet": "",
+  "is_active": true,
+  "errors": []
+}
