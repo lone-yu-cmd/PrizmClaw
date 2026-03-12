@@ -26,6 +26,15 @@ import { commitsMeta, handleCommits } from './commands/handlers/commits.js';
 // F-009: New command handlers
 import { cdMeta, handleCd } from './commands/handlers/cd.js';
 import { moreMeta, handleMore } from './commands/handlers/more.js';
+// F-010: File Manager command handlers
+import { lsMeta, handleLs } from './commands/handlers/ls.js';
+import { treeMeta, handleTree } from './commands/handlers/tree.js';
+import { catMeta, handleCat } from './commands/handlers/cat.js';
+import { headMeta, handleHead } from './commands/handlers/head.js';
+import { tailMeta, handleTail } from './commands/handlers/tail.js';
+import { findMeta, handleFind } from './commands/handlers/find.js';
+import { uploadMeta, handleUpload } from './commands/handlers/upload.js';
+import { downloadMeta, handleDownload } from './commands/handlers/download.js';
 import { generateHelp } from './commands/help.js';
 import { sessionStore } from '../services/session-store.js';
 
@@ -441,6 +450,15 @@ function registerPipelineCommands() {
   // F-009: New commands
   registerCommand(cdMeta, handleCd);
   registerCommand(moreMeta, handleMore);
+  // F-010: File Manager commands
+  registerCommand(lsMeta, handleLs);
+  registerCommand(treeMeta, handleTree);
+  registerCommand(catMeta, handleCat);
+  registerCommand(headMeta, handleHead);
+  registerCommand(tailMeta, handleTail);
+  registerCommand(findMeta, handleFind);
+  registerCommand(uploadMeta, handleUpload);
+  registerCommand(downloadMeta, handleDownload);
 }
 
 export function createTelegramBot() {

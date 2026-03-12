@@ -36,8 +36,16 @@ INTERFACES:
   - /plan [action] [type] [version] - Plan file management (status/versions/use/rollback/validate)
   - /commit [--message="..."] [--amend] [--force] - Commit code changes with pre-commit validation (alias: /c)
   - /commits [--count=N] - View session commit history (alias: /history)
-  - /cd <path> - Change session working directory (F-009)
-  - /more - View next page of paginated output (F-009)
+- /cd <path> - Change session working directory (F-009)
+- /more - View next page of paginated output (F-009)
+- /ls [path] - List directory contents (alias: /dir) (F-010)
+- /tree [path] - Display directory tree structure (F-010)
+- /cat <file> - View file content (F-010)
+- /head [N] <file> - View first N lines of file (F-010)
+- /tail [N] <file> - View last N lines of file (F-010)
+- /find <pattern> - Search files by name/glob pattern (F-010)
+- /upload <path> - Upload file to specified path (F-010)
+- /download <file> - Download file to Telegram (F-010)
 
 TRAPS:
 - Commands require authorization via isAllowedUser()
@@ -56,3 +64,4 @@ DECISIONS:
 - 2026-03-13 | F-005-status-logs | Update /status and /logs to use status-aggregator and log-pager with pagination support
 - 2026-03-15 | F-008-commit-commands | Add /commit and /commits commands with pre-commit validation, session tracking, and admin confirmation for --amend/--force
 - 2026-03-16 | F-009-command-executor | Add /cd and /more commands for session cwd management and paginated output viewing; add direct text mode for shell execution
+- 2026-03-13 | F-010-file-manager | Add /ls, /tree, /cat, /head, /tail, /find, /upload, /download commands for file system operations with security sandbox

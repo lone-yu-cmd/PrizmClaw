@@ -26,6 +26,15 @@ const COMMAND_MIN_ROLE = {
   // F-009: cd and more commands
   cd: 'operator',
   more: 'viewer',
+  // F-010: File Manager commands
+  ls: 'viewer',
+  tree: 'viewer',
+  cat: 'viewer',
+  head: 'viewer',
+  tail: 'viewer',
+  find: 'viewer',
+  upload: 'operator',
+  download: 'operator',
   pipeline: 'operator',
   bugfix: 'operator',
   planner: 'operator',

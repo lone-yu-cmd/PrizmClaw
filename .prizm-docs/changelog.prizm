@@ -14,3 +14,6 @@ CHANGELOG:
 - 2026-03-15 | runtime/services | add: F-008 git-service and commit-service for commit workflow with pre-commit validation and audit logging
 - 2026-03-15 | runtime/bot | add: F-008 /commit and /commits commands with --amend/--force protection (admin + confirmation)
 - 2026-03-12 | runtime/pipeline-infra | add: F-001-v2 batch config validation (loadAndValidateConfig), DIRECTORY_CONVENTION, cli-entry wrapper, EXIT_CODES, Python parity update, tsconfig/eslint baseline expansion
+- 2026-03-13 | runtime/services | add: F-010 file-service for directory listing, tree building, file reading/writing, glob search with path validation
+- 2026-03-13 | runtime/bot | add: F-010 /ls, /tree, /cat, /head, /tail, /find, /upload, /download commands for file system operations
+- 2026-03-13 | runtime/security | update: F-010 path validation with symlink resolution, file size limits (50MB), overwrite confirmation

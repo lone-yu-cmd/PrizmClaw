@@ -32,7 +32,14 @@ const schema = z.object({
   // F-009: General Command Executor
   COMMAND_BLACKLIST: z.string().optional().default(''),
   HIGH_RISK_KEYWORDS: z.string().optional().default('rm -rf,sudo,kill,chmod -R,chown,dd,mkfs,shutdown,reboot,halt'),
-  DIRECT_EXEC_MODE: z.string().optional().default('false')
+  DIRECT_EXEC_MODE: z.string().optional().default('false'),
+  // F-010: File Manager
+  FILE_MAX_READ_SIZE: z.coerce.number().int().positive().default(1048576), // 1MB
+  FILE_MAX_TREE_DEPTH: z.coerce.number().int().positive().default(3),
+  FILE_MAX_TREE_ITEMS: z.coerce.number().int().positive().default(100),
+  FILE_MAX_SEARCH_DEPTH: z.coerce.number().int().positive().default(10),
+  FILE_MAX_SEARCH_RESULTS: z.coerce.number().int().positive().default(100),
+  FILE_SEARCH_RESULTS_PER_PAGE: z.coerce.number().int().positive().default(20)
 });
 
 const parsed = schema.parse(process.env);
@@ -125,6 +132,13 @@ export const config = Object.freeze({
   commandBlacklist: parseCsvList(parsed.COMMAND_BLACKLIST),
   highRiskKeywords: parseCsvList(parsed.HIGH_RISK_KEYWORDS),
   directExecMode: parseBoolean(parsed.DIRECT_EXEC_MODE),
+  // F-010: File Manager
+  fileMaxReadSize: parsed.FILE_MAX_READ_SIZE,
+  fileMaxTreeDepth: parsed.FILE_MAX_TREE_DEPTH,
+  fileMaxTreeItems: parsed.FILE_MAX_TREE_ITEMS,
+  fileMaxSearchDepth: parsed.FILE_MAX_SEARCH_DEPTH,
+  fileMaxSearchResults: parsed.FILE_MAX_SEARCH_RESULTS,
+  fileSearchResultsPerPage: parsed.FILE_SEARCH_RESULTS_PER_PAGE,
   pipelineInfra: Object.freeze({
     ...pipelineInfra,
     daemonLogPaths

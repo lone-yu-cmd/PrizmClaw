@@ -19,6 +19,7 @@ KEY_FILES:
 - src/services/commit-service.js
 - src/services/command-executor-service.js
 - src/services/output-pager-service.js
+- src/services/file-service.js
 
 PUBLIC_APIS:
 - chatWithSession({ channel, sessionId, message, realtimeHooks })
@@ -33,12 +34,15 @@ PUBLIC_APIS:
 - commit service (F-008): createCommitService -> validatePreConditions/commit/recordCommit/getSessionCommits/checkPipelineStatus/checkTestStatus/buildCommitMessage
 - command executor (F-009): executeCommand/confirmHighRiskCommand -> blacklist check, high-risk detection, confirmation flow, cwd support, output pagination
 - output pager (F-009): paginateOutput/storeOutputPages/getNextPage/clearPages/hasMorePages -> Telegram 4096 char limit handling
+- file service (F-010): validatePath/resolveSessionPath/listDirectory/buildTree/readFile/searchFiles/writeFile/isBinaryFile -> file operations with path validation
 
 TRAPS:
 - chat operations are serialized by session key; keep async queue semantics unchanged
 - pipeline-control-service must delegate to script-runner instead of shell string concatenation
 - pipeline-controller must use lock-manager for concurrency protection (F-004)
 - runSingle must NOT acquire lock (independent execution, D5)
+- file-service validatePath checks against config.telegramFileAllowedRoots (frozen at startup)
+- file-service resolves symlinks and re-validates against allowed roots for security
 
 DECISIONS:
 - 2026-03-10 | f001-pipeline-service | expose logs/reset methods in pipeline-control-service to satisfy US3 reusable control surface
@@ -48,3 +52,4 @@ DECISIONS:
 - 2026-03-15 | f008-commit-workflow | add git-service and commit-service for commit workflow with pre-commit validation, audit logging (AC-5.3)
 - 2026-03-15 | f008-exception-handling | add try-catch blocks in commit() function around validatePreConditions, gitService.commit/amendCommit, recordCommit, logAuditEntry calls to prevent crashes and ensure errors logged to audit trail
 - 2026-03-16 | f009-command-executor | add command-executor-service and output-pager-service for general shell command execution with blacklist, high-risk keywords, confirmation flow, session cwd, and pagination
+- 2026-03-13 | f010-file-service | add file-service for directory listing, tree building, file reading/writing, and glob search with path validation

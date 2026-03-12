@@ -16,6 +16,7 @@ KEY_FILES:
 - src/services/audit-log-service.js
 - src/services/command-executor-service.js
 - src/services/output-pager-service.js
+- src/services/file-service.js
 - src/pipeline-infra/config-loader.js
 - src/pipeline-infra/script-runner.js
 - src/adapters/codebuddy.js
@@ -24,11 +25,20 @@ KEY_FILES:
 - src/bot/commands/handlers/audit.js
 - src/bot/commands/handlers/cd.js
 - src/bot/commands/handlers/more.js
+- src/bot/commands/handlers/ls.js
+- src/bot/commands/handlers/tree.js
+- src/bot/commands/handlers/cat.js
+- src/bot/commands/handlers/head.js
+- src/bot/commands/handlers/tail.js
+- src/bot/commands/handlers/find.js
+- src/bot/commands/handlers/upload.js
+- src/bot/commands/handlers/download.js
 - src/security/permission-guard.js
 - src/security/param-sanitizer.js
 - src/security/confirmation-manager.js
 - src/security/system-guard.js
 - src/services/system-exec-service.js
+- src/utils/file-utils.js
 
 SUBDIRS:
 - src/adapters -> (lazy) .prizm-docs/runtime/adapters.prizm
@@ -42,8 +52,9 @@ SUBDIRS:
 
 INTERFACES:
 - HTTP: /healthz, /api/events(SSE), /api/chat, /api/chat/reset, /api/screenshot, /api/system/exec
-- Telegram: /start, /help, /reset, /screenshot, /exec, /cd, /more, /pipeline, /bugfix, /planner, /status, /logs, /stop, /plan, /audit, /commit, /commits, text message relay
+- Telegram: /start, /help, /reset, /screenshot, /exec, /cd, /more, /pipeline, /bugfix, /planner, /status, /logs, /stop, /plan, /audit, /commit, /commits, /ls, /tree, /cat, /head, /tail, /find, /upload, /download, text message relay
 - Security: PermissionGuard, ParamSanitizer, ConfirmationManager, AuditLogService, SystemGuard
+- File Service: validatePath, listDirectory, buildTree, readFile, searchFiles, writeFile
 
 TRAPS:
 - ENABLE_TELEGRAM=true requires TELEGRAM_BOT_TOKEN
@@ -57,6 +68,9 @@ TRAPS:
 - F-009: high-risk command keywords trigger confirmation flow (rm -rf, sudo, etc.)
 - F-009: blacklist commands are rejected before execution
 - F-009: long output is paginated with /more for remaining pages
+- F-010: file operations restricted to TELEGRAM_FILE_ALLOWED_ROOTS (defaults: cwd, Desktop, Downloads, tmpdir)
+- F-010: file download limited to 50MB for documents, 10MB for images
+- F-010: binary files cannot be displayed as text
 
 DECISIONS:
 - 2026-03-09 | runtime-doc-init | model first-pass runtime map from source + API surface
@@ -68,3 +82,4 @@ DECISIONS:
 - 2026-03-15 | runtime-f008 | add commit workflow with /commit, /commits commands, pre-commit validation, session tracking, and audit logging
 - 2026-03-16 | runtime-f009 | add general command executor with blacklist, high-risk keywords, confirmation flow, session cwd, output pagination, and /cd /more commands
 - 2026-03-13 | runtime-f009 | add general command executor with blacklist, high-risk keyword detection, confirmation flow, session cwd, output pagination, /cd and /more commands
+- 2026-03-13 | runtime-f010 | add file manager with /ls, /tree, /cat, /head, /tail, /find, /upload, /download commands, path validation, and file operations

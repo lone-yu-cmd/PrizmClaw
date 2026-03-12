@@ -6,6 +6,8 @@ class SessionStore {
   // F-009: Command executor extensions
   #cwdBySessionKey = new Map();
   #outputPagesBySessionKey = new Map();
+  // F-010: File search results state for pagination
+  #searchResultsBySessionKey = new Map();
 
   get(sessionKey) {
     if (!this.#messagesBySessionKey.has(sessionKey)) {
@@ -30,6 +32,8 @@ class SessionStore {
     // F-009: Clear cwd and output pages
     this.#cwdBySessionKey.delete(sessionKey);
     this.#outputPagesBySessionKey.delete(sessionKey);
+    // F-010: Clear search results
+    this.#searchResultsBySessionKey.delete(sessionKey);
   }
 
   toPrompt(sessionKey, channel = 'unknown') {
@@ -126,6 +130,34 @@ class SessionStore {
    */
   clearOutputPages(sessionKey) {
     this.#outputPagesBySessionKey.delete(sessionKey);
+  }
+
+  // F-010: File search results methods
+
+  /**
+   * Get search results for a session.
+   * @param {string} sessionKey - Session identifier
+   * @returns {Object[]|null} Array of search results or null
+   */
+  getSearchResults(sessionKey) {
+    return this.#searchResultsBySessionKey.get(sessionKey) || null;
+  }
+
+  /**
+   * Set search results for a session.
+   * @param {string} sessionKey - Session identifier
+   * @param {Object[]} results - Array of search result objects
+   */
+  setSearchResults(sessionKey, results) {
+    this.#searchResultsBySessionKey.set(sessionKey, results);
+  }
+
+  /**
+   * Clear search results for a session.
+   * @param {string} sessionKey - Session identifier
+   */
+  clearSearchResults(sessionKey) {
+    this.#searchResultsBySessionKey.delete(sessionKey);
   }
 }
 

@@ -240,7 +240,7 @@
         "/find 支持按文件名、扩展名或 glob 模式搜索，结果分页展示",
         "所有文件操作受安全沙箱限制，访问 TELEGRAM_FILE_ALLOWED_ROOTS 外路径时拒绝并提示"
       ],
-      "status": "pending",
+      "status": "completed",
       "session_granularity": "auto",
       "sub_features": [
         {
