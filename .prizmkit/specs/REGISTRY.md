@@ -39,6 +39,28 @@
 
 ---
 
+---
+
+### [009] General Command Executor
+- **Branch**: feat/F-009-general-command-executor
+- **Status**: Complete
+- **Date**: 2026-03-13
+- **Key Files**:
+  - `src/services/command-executor-service.js` (Main command execution with blacklist, high-risk detection, confirmation flow)
+  - `src/services/output-pager-service.js` (Pagination service for long output)
+  - `src/bot/commands/handlers/cd.js` (/cd command for working directory)
+  - `src/bot/commands/handlers/more.js` (/more command for paginated output)
+  - `src/security/system-guard.js` (checkCommandBlacklist, detectHighRiskKeywords)
+  - `src/services/session-store.js` (Extended with cwd and output pages)
+  - `src/services/system-exec-service.js` (Enhanced with SIGTERM→SIGKILL timeout)
+- **API Changes**:
+  - Telegram commands: `/cd <path>` (change working directory), `/more` (view paginated output)
+  - Config: COMMAND_BLACKLIST, HIGH_RISK_KEYWORDS, DIRECT_EXEC_MODE
+- **Data Changes**: Session store extended with cwdBySessionKey and outputPagesBySessionKey maps
+
+---
+
 ## Changelog
+- 2026-03-13 | [009] General Command Executor | Complete
 - 2026-03-12 | [008] Commit Workflow Integration | Complete
 - 2026-03-12 | [001] Project Infrastructure Setup | Complete

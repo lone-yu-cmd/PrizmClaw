@@ -17,6 +17,8 @@ KEY_FILES:
 - src/services/telegram-pusher.js
 - src/services/git-service.js
 - src/services/commit-service.js
+- src/services/command-executor-service.js
+- src/services/output-pager-service.js
 
 PUBLIC_APIS:
 - chatWithSession({ channel, sessionId, message, realtimeHooks })
@@ -29,6 +31,8 @@ PUBLIC_APIS:
 - telegram pusher (F-005): createTelegramPusher -> startHeartbeat/stopHeartbeat/pushErrorSummary/sendMessageChunked/sendFile
 - git service (F-008): createGitService -> getStatus/isClean/getChangedFiles/commit/amendCommit/getLastCommit/getCommitLog/getShortHash
 - commit service (F-008): createCommitService -> validatePreConditions/commit/recordCommit/getSessionCommits/checkPipelineStatus/checkTestStatus/buildCommitMessage
+- command executor (F-009): executeCommand/confirmHighRiskCommand -> blacklist check, high-risk detection, confirmation flow, cwd support, output pagination
+- output pager (F-009): paginateOutput/storeOutputPages/getNextPage/clearPages/hasMorePages -> Telegram 4096 char limit handling
 
 TRAPS:
 - chat operations are serialized by session key; keep async queue semantics unchanged
@@ -43,3 +47,4 @@ DECISIONS:
 - 2026-03-13 | f005-status-logs | add status-aggregator, log-pager, telegram-pusher for pipeline status aggregation and log streaming
 - 2026-03-15 | f008-commit-workflow | add git-service and commit-service for commit workflow with pre-commit validation, audit logging (AC-5.3)
 - 2026-03-15 | f008-exception-handling | add try-catch blocks in commit() function around validatePreConditions, gitService.commit/amendCommit, recordCommit, logAuditEntry calls to prevent crashes and ensure errors logged to audit trail
+- 2026-03-16 | f009-command-executor | add command-executor-service and output-pager-service for general shell command execution with blacklist, high-risk keywords, confirmation flow, session cwd, and pagination

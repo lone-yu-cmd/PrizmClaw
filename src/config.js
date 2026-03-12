@@ -28,7 +28,11 @@ const schema = z.object({
   ALLOW_ADMIN_SKIP_CONFIRM: z.string().optional().default('true'),
   AUDIT_LOG_DIR: z.string().optional().default('logs'),
   AUDIT_LOG_MAX_SIZE_MB: z.coerce.number().int().positive().default(10),
-  AUDIT_LOG_MAX_FILES: z.coerce.number().int().positive().default(5)
+  AUDIT_LOG_MAX_FILES: z.coerce.number().int().positive().default(5),
+  // F-009: General Command Executor
+  COMMAND_BLACKLIST: z.string().optional().default(''),
+  HIGH_RISK_KEYWORDS: z.string().optional().default('rm -rf,sudo,kill,chmod -R,chown,dd,mkfs,shutdown,reboot,halt'),
+  DIRECT_EXEC_MODE: z.string().optional().default('false')
 });
 
 const parsed = schema.parse(process.env);
@@ -117,6 +121,10 @@ export const config = Object.freeze({
   auditLogDir: parsed.AUDIT_LOG_DIR,
   auditLogMaxSizeMb: parsed.AUDIT_LOG_MAX_SIZE_MB,
   auditLogMaxFiles: parsed.AUDIT_LOG_MAX_FILES,
+  // F-009: General Command Executor
+  commandBlacklist: parseCsvList(parsed.COMMAND_BLACKLIST),
+  highRiskKeywords: parseCsvList(parsed.HIGH_RISK_KEYWORDS),
+  directExecMode: parseBoolean(parsed.DIRECT_EXEC_MODE),
   pipelineInfra: Object.freeze({
     ...pipelineInfra,
     daemonLogPaths

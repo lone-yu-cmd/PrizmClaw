@@ -217,7 +217,7 @@
         "支持通过 /cd 切换工作目录，目录状态在用户会话内保持",
         "高风险命令（含 rm -rf、sudo、kill 等关键词）执行前需用户二次确认"
       ],
-      "status": "pending",
+      "status": "completed",
       "session_granularity": "feature",
       "sub_features": []
     },

@@ -23,6 +23,9 @@ const COMMAND_MIN_ROLE = {
   status: 'viewer',
   logs: 'viewer',
   commits: 'viewer',
+  // F-009: cd and more commands
+  cd: 'operator',
+  more: 'viewer',
   pipeline: 'operator',
   bugfix: 'operator',
   planner: 'operator',

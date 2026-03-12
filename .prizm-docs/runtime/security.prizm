@@ -24,6 +24,8 @@ INTERFACES:
 - cancelConfirmation(confirmId, userId) -> void
 - logAuditEntry(entry) -> Promise<void>
 - queryAuditLogs(filters) -> Promise<Object[]>
+- checkCommandBlacklist(command, blacklist) -> { blocked, reason?, matchedCommand? }
+- detectHighRiskKeywords(command, keywords) -> { isHighRisk, detectedKeywords }
 
 ROLE_HIERARCHY:
 - viewer: 0 -> can view status and logs
@@ -31,8 +33,8 @@ ROLE_HIERARCHY:
 - admin: 2 -> can stop, reset, force-unlock, exec
 
 COMMAND_PERMISSIONS:
-- status, logs: viewer
-- pipeline, bugfix, planner, retry: operator
+- status, logs, more: viewer
+- pipeline, bugfix, planner, retry, cd: operator
 - stop, reset, force-unlock, exec: admin
 
 HIGH_RISK_COMMANDS:
@@ -59,4 +61,7 @@ TRAPS:
 - param sanitizer rejects all dangerous patterns regardless of context
 
 DEPENDS_ON:
-- src/config.js -> USER_PERMISSIONS, ALLOW_ADMIN_SKIP_CONFIRM, AUDIT_LOG_*
+- src/config.js -> USER_PERMISSIONS, ALLOW_ADMIN_SKIP_CONFIRM, AUDIT_LOG_*, COMMAND_BLACKLIST, HIGH_RISK_KEYWORDS, DIRECT_EXEC_MODE
+
+DECISIONS:
+- 2026-03-16 | f009-security-extensions | add checkCommandBlacklist and detectHighRiskKeywords to system-guard.js for command blacklist and high-risk keyword detection

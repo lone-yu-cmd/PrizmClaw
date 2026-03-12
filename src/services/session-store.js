@@ -3,6 +3,9 @@ import { config } from '../config.js';
 class SessionStore {
   #messagesBySessionKey = new Map();
   #commitsBySessionKey = new Map();
+  // F-009: Command executor extensions
+  #cwdBySessionKey = new Map();
+  #outputPagesBySessionKey = new Map();
 
   get(sessionKey) {
     if (!this.#messagesBySessionKey.has(sessionKey)) {
@@ -24,6 +27,9 @@ class SessionStore {
   clear(sessionKey) {
     this.#messagesBySessionKey.delete(sessionKey);
     this.#commitsBySessionKey.delete(sessionKey);
+    // F-009: Clear cwd and output pages
+    this.#cwdBySessionKey.delete(sessionKey);
+    this.#outputPagesBySessionKey.delete(sessionKey);
   }
 
   toPrompt(sessionKey, channel = 'unknown') {
@@ -74,6 +80,52 @@ class SessionStore {
   getLastCommit(sessionKey) {
     const commits = this.getCommits(sessionKey);
     return commits.length > 0 ? commits[commits.length - 1] : null;
+  }
+
+  // F-009: Command executor methods
+
+  /**
+   * Get current working directory for a session.
+   * @param {string} sessionKey - Session identifier
+   * @returns {string|null} Current working directory or null
+   */
+  getCwd(sessionKey) {
+    return this.#cwdBySessionKey.get(sessionKey) || null;
+  }
+
+  /**
+   * Set current working directory for a session.
+   * @param {string} sessionKey - Session identifier
+   * @param {string} cwd - Working directory path
+   */
+  setCwd(sessionKey, cwd) {
+    this.#cwdBySessionKey.set(sessionKey, cwd);
+  }
+
+  /**
+   * Get output pages for a session (for /more pagination).
+   * @param {string} sessionKey - Session identifier
+   * @returns {string[]|null} Array of output pages or null
+   */
+  getOutputPages(sessionKey) {
+    return this.#outputPagesBySessionKey.get(sessionKey) || null;
+  }
+
+  /**
+   * Set output pages for a session.
+   * @param {string} sessionKey - Session identifier
+   * @param {string[]} pages - Array of output page strings
+   */
+  setOutputPages(sessionKey, pages) {
+    this.#outputPagesBySessionKey.set(sessionKey, pages);
+  }
+
+  /**
+   * Clear output pages for a session.
+   * @param {string} sessionKey - Session identifier
+   */
+  clearOutputPages(sessionKey) {
+    this.#outputPagesBySessionKey.delete(sessionKey);
   }
 }
 

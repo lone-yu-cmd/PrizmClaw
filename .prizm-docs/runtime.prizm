@@ -14,15 +14,20 @@ KEY_FILES:
 - src/services/pipeline-control-service.js
 - src/services/plan-ingestion-service.js
 - src/services/audit-log-service.js
+- src/services/command-executor-service.js
+- src/services/output-pager-service.js
 - src/pipeline-infra/config-loader.js
 - src/pipeline-infra/script-runner.js
 - src/adapters/codebuddy.js
 - src/bot/telegram.js
 - src/bot/commands/handlers/plan.js
 - src/bot/commands/handlers/audit.js
+- src/bot/commands/handlers/cd.js
+- src/bot/commands/handlers/more.js
 - src/security/permission-guard.js
 - src/security/param-sanitizer.js
 - src/security/confirmation-manager.js
+- src/security/system-guard.js
 - src/services/system-exec-service.js
 
 SUBDIRS:
@@ -37,8 +42,8 @@ SUBDIRS:
 
 INTERFACES:
 - HTTP: /healthz, /api/events(SSE), /api/chat, /api/chat/reset, /api/screenshot, /api/system/exec
-- Telegram: /start, /help, /reset, /screenshot, /exec, /pipeline, /bugfix, /planner, /status, /logs, /stop, /plan, /audit, /commit, /commits, text message relay
-- Security: PermissionGuard, ParamSanitizer, ConfirmationManager, AuditLogService
+- Telegram: /start, /help, /reset, /screenshot, /exec, /cd, /more, /pipeline, /bugfix, /planner, /status, /logs, /stop, /plan, /audit, /commit, /commits, text message relay
+- Security: PermissionGuard, ParamSanitizer, ConfirmationManager, AuditLogService, SystemGuard
 
 TRAPS:
 - ENABLE_TELEGRAM=true requires TELEGRAM_BOT_TOKEN
@@ -49,6 +54,9 @@ TRAPS:
 - permission check happens before command handler execution
 - param sanitizer blocks path traversal and shell injection patterns
 - audit logs are async written, failure does not block execution
+- F-009: high-risk command keywords trigger confirmation flow (rm -rf, sudo, etc.)
+- F-009: blacklist commands are rejected before execution
+- F-009: long output is paginated with /more for remaining pages
 
 DECISIONS:
 - 2026-03-09 | runtime-doc-init | model first-pass runtime map from source + API surface
@@ -58,3 +66,5 @@ DECISIONS:
 - 2026-03-12 | runtime-f006 | add security guard layer with permission tiers, param sanitization, confirmation flow, and audit logging
 - 2026-03-14 | runtime-f007 | add test infrastructure with fixtures, helpers (mock-runner, mock-telegram, test-state, fixture-loader), and layered test execution (npm run test:unit, test:integration)
 - 2026-03-15 | runtime-f008 | add commit workflow with /commit, /commits commands, pre-commit validation, session tracking, and audit logging
+- 2026-03-16 | runtime-f009 | add general command executor with blacklist, high-risk keywords, confirmation flow, session cwd, output pagination, and /cd /more commands
+- 2026-03-13 | runtime-f009 | add general command executor with blacklist, high-risk keyword detection, confirmation flow, session cwd, output pagination, /cd and /more commands

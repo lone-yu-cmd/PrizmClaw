@@ -8,7 +8,7 @@ import { logger } from '../utils/logger.js';
 import { isAllowedUser } from '../security/guard.js';
 import { chatWithSession, resetSession } from '../services/chat-service.js';
 import { captureScreenshot } from '../services/screenshot-service.js';
-import { executeSystemCommand } from '../services/system-exec-service.js';
+import { executeCommand, confirmHighRiskCommand } from '../services/command-executor-service.js';
 import { createPlanIngestionService } from '../services/plan-ingestion-service.js';
 import { loadPipelineInfraConfig } from '../pipeline-infra/config-loader.js';
 import { registerCommand } from './commands/index.js';
@@ -23,7 +23,11 @@ import { planMeta, handlePlan } from './commands/handlers/plan.js';
 import { auditMeta, handleAudit } from './commands/handlers/audit.js';
 import { commitMeta, handleCommit } from './commands/handlers/commit.js';
 import { commitsMeta, handleCommits } from './commands/handlers/commits.js';
+// F-009: New command handlers
+import { cdMeta, handleCd } from './commands/handlers/cd.js';
+import { moreMeta, handleMore } from './commands/handlers/more.js';
 import { generateHelp } from './commands/help.js';
+import { sessionStore } from '../services/session-store.js';
 
 const TELEGRAM_MSG_CHUNK_SIZE = 3800;
 const STREAM_MIN_CHARS = 220;
@@ -434,6 +438,9 @@ function registerPipelineCommands() {
   registerCommand(auditMeta, handleAudit);
   registerCommand(commitMeta, handleCommit);
   registerCommand(commitsMeta, handleCommits);
+  // F-009: New commands
+  registerCommand(cdMeta, handleCd);
+  registerCommand(moreMeta, handleMore);
 }
 
 export function createTelegramBot() {
@@ -490,19 +497,75 @@ export function createTelegramBot() {
         return;
       }
 
-      await ctx.reply('正在执行命令。');
-      const result = await executeSystemCommand(payload);
-      const output = [
-        `exitCode: ${result.exitCode}`,
-        result.stdout ? `stdout:\n${result.stdout}` : 'stdout: (empty)',
-        result.stderr ? `stderr:\n${result.stderr}` : 'stderr: (empty)'
-      ].join('\n\n');
+      const sessionId = buildSessionId(ctx);
+      const userId = ctx.from?.id;
 
-      await replyLargeText(ctx, output);
+      await ctx.reply('正在执行命令...');
+      const result = await executeCommand({
+        command: payload,
+        sessionId,
+        userId
+      });
+
+      // Handle confirmation required
+      if (result.needsConfirmation) {
+        await ctx.reply(result.confirmationMessage);
+        return;
+      }
+
+      // Send output
+      await replyLargeText(ctx, result.output);
+
+      // Indicate if more pages available
+      if (result.hasMorePages) {
+        await ctx.reply('📄 输出已截断。使用 /more 查看更多内容。');
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       logger.error({ err: message }, 'Failed to exec command in telegram');
       await ctx.reply(`执行失败：${message}`);
+    }
+  });
+
+  // F-009: /cd command handler
+  bot.command('cd', async (ctx) => {
+    try {
+      ensureAllowed(ctx);
+      const payload = ctx.message.text.replace('/cd', '').trim();
+      const sessionId = buildSessionId(ctx);
+
+      await handleCd({
+        ctx,
+        reply: (msg) => ctx.reply(msg),
+        params: {},
+        userId: ctx.from?.id,
+        sessionId,
+        args: payload ? [payload] : []
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error({ err: message }, 'Failed to cd in telegram');
+      await ctx.reply(`切换目录失败：${message}`);
+    }
+  });
+
+  // F-009: /more command handler
+  bot.command('more', async (ctx) => {
+    try {
+      ensureAllowed(ctx);
+      const sessionId = buildSessionId(ctx);
+
+      await handleMore({
+        ctx,
+        reply: (msg) => ctx.reply(msg),
+        params: {},
+        userId: ctx.from?.id,
+        sessionId
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error({ err: message }, 'Failed to get more output in telegram');
+      await ctx.reply(`获取更多输出失败：${message}`);
     }
   });
 
@@ -601,6 +664,43 @@ export function createTelegramBot() {
     }
 
     const sessionId = buildSessionId(ctx);
+    const userId = ctx.from?.id;
+
+    // F-009: Direct exec mode - treat plain text as command when enabled
+    if (config.directExecMode && config.enableSystemExec) {
+      try {
+        ensureAllowed(ctx);
+        const command = ctx.message.text;
+
+        // Skip if it looks like a chat message (contains Chinese or Japanese characters, etc.)
+        const isLikelyChat = /[\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff]/.test(command);
+
+        if (!isLikelyChat) {
+          await ctx.reply('正在执行命令...');
+          const result = await executeCommand({
+            command,
+            sessionId,
+            userId
+          });
+
+          if (result.needsConfirmation) {
+            await ctx.reply(result.confirmationMessage);
+            return;
+          }
+
+          await replyLargeText(ctx, result.output);
+
+          if (result.hasMorePages) {
+            await ctx.reply('📄 输出已截断。使用 /more 查看更多内容。');
+          }
+          return;
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        // If exec fails, fall through to chat mode
+        logger.warn({ err: message }, 'Direct exec mode failed, falling back to chat');
+      }
+    }
 
     let typingTimer = null;
 
