@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Core state machine for updating feature status in the dev-pipeline.
 
-Handles seven actions:
+Handles eight actions:
   - get_next: Find the next feature to process based on priority and dependencies
+  - start: Mark a feature as in_progress when a session starts
   - update: Update a feature's status based on session outcome
   - status: Print a formatted overview of all features
   - pause: Save pipeline state for graceful shutdown
@@ -13,7 +14,7 @@ Handles seven actions:
 Usage:
     python3 update-feature-status.py \
         --feature-list <path> --state-dir <path> \
-        --action <get_next|update|status|pause|reset|clean|complete> \
+        --action <get_next|start|update|status|pause|reset|clean|complete> \
         [--feature-id <id>] [--session-status <status>] \
         [--session-id <id>] [--max-retries <n>]
 """
@@ -63,13 +64,13 @@ def parse_args():
     parser.add_argument(
         "--action",
         required=True,
-        choices=["get_next", "update", "status", "pause", "reset", "clean", "complete"],
+        choices=["get_next", "start", "update", "status", "pause", "reset", "clean", "complete"],
         help="Action to perform",
     )
     parser.add_argument(
         "--feature-id",
         default=None,
-        help="Feature ID (required for 'update' action)",
+        help="Feature ID (required for start/reset/clean/complete/update actions)",
     )
     parser.add_argument(
         "--session-status",
@@ -768,6 +769,47 @@ def action_status(feature_list_data, state_dir):
 
 
 # ---------------------------------------------------------------------------
+# Action: start
+# ---------------------------------------------------------------------------
+
+def action_start(args, feature_list_path, state_dir):
+    """Mark a feature as in_progress at session start.
+
+    This keeps feature-list.json/state status in sync during execution,
+    instead of only updating after session end.
+    """
+    feature_id = args.feature_id
+    if not feature_id:
+        error_out("--feature-id is required for 'start' action")
+        return
+
+    fs = load_feature_status(state_dir, feature_id)
+    old_status = fs.get("status", "pending")
+
+    fs["status"] = "in_progress"
+    fs["updated_at"] = now_iso()
+
+    err = save_feature_status(state_dir, feature_id, fs)
+    if err:
+        error_out("Failed to save feature status: {}".format(err))
+        return
+
+    err = update_feature_in_list(feature_list_path, feature_id, "in_progress")
+    if err:
+        error_out("Failed to update feature-list.json: {}".format(err))
+        return
+
+    result = {
+        "action": "start",
+        "feature_id": feature_id,
+        "old_status": old_status,
+        "new_status": "in_progress",
+        "updated_at": fs["updated_at"],
+    }
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+
+
+# ---------------------------------------------------------------------------
 # Action: reset
 # ---------------------------------------------------------------------------
 
@@ -964,7 +1006,7 @@ def main():
             error_out("--feature-id is required for 'update' action")
         if not args.session_status:
             error_out("--session-status is required for 'update' action")
-    if args.action in ("reset", "clean", "complete"):
+    if args.action in ("start", "reset", "clean", "complete"):
         if not args.feature_id:
             error_out("--feature-id is required for '{}' action".format(args.action))
     if args.action == "clean":
@@ -981,6 +1023,8 @@ def main():
     # Dispatch action
     if args.action == "get_next":
         action_get_next(feature_list_data, args.state_dir)
+    elif args.action == "start":
+        action_start(args, args.feature_list, args.state_dir)
     elif args.action == "update":
         action_update(args, args.feature_list, args.state_dir)
     elif args.action == "status":

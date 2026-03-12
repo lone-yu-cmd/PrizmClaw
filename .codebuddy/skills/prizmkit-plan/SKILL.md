@@ -18,8 +18,10 @@ Create a technical implementation plan for a specified feature.
 **STEPS:**
 
 **Phase 0 — Research:**
-1. Read `spec.md` and `.prizm-docs/root.prizm` for project context
-2. Read relevant `.prizm-docs/` L1/L2 docs for affected modules
+1. Read `spec.md` for feature requirements
+2. Load project context (use first available source):
+   - If `.prizmkit/specs/###-feature-name/context-snapshot.md` exists → read it for all context (Section 3 'Prizm Context' for docs, Section 4 'Existing Source Files' for code). Do NOT re-read `.prizm-docs/` or individual source files.
+   - Otherwise → read `.prizm-docs/root.prizm` and relevant `.prizm-docs/` L1/L2 docs for affected modules
 3. Resolve any remaining `[NEEDS CLARIFICATION]` by proposing solutions
 4. Research technical approach based on project's tech stack
 

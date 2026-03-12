@@ -19,7 +19,9 @@ Create a new feature specification.
 2. Auto-generate 2-4 word feature slug from description
 3. Determine next feature number by scanning `.prizmkit/specs/`
 4. Create directory: `.prizmkit/specs/###-feature-name/`
-5. Read Prizm docs (`.prizm-docs/root.prizm`) for project context
+5. Load project context (use first available source):
+   - If `.prizmkit/specs/###-feature-name/context-snapshot.md` exists → read Section 3 'Prizm Context' from it (do NOT re-read `.prizm-docs/` files)
+   - Otherwise → read `.prizm-docs/root.prizm`
 6. Generate `spec.md` from template (`${SKILL_DIR}/assets/spec-template.md`) focusing on:
    - Feature title and description
    - User stories (As a... I want... So that...)

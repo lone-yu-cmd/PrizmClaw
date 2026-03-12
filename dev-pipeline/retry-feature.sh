@@ -202,6 +202,13 @@ if [[ "$USE_STREAM_JSON" == "true" ]]; then
     STREAM_JSON_FLAG="--output-format stream-json"
 fi
 
+# Mark feature as in-progress before spawning session
+python3 "$SCRIPTS_DIR/update-feature-status.py" \
+    --feature-list "$FEATURE_LIST" \
+    --state-dir "$STATE_DIR" \
+    --feature-id "$FEATURE_ID" \
+    --action start >/dev/null 2>&1 || true
+
 # Spawn AI CLI session
 case "$CLI_CMD" in
     *claude*)

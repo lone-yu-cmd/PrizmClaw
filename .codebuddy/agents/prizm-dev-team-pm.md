@@ -36,12 +36,13 @@ skills: prizmkit-specify, prizmkit-clarify, prizmkit-plan, prizmkit-tasks, prizm
 3. 在 plan.md 中定义接口设计（API 规格、数据模型、模块依赖）
 4. 为每个任务定义明确的输入、输出和验收标准
 5. 识别任务间的依赖关系和可并行度
-6. 使用 `prizmkit.specify` 产出 `spec.md`
-7. 使用 `prizmkit.clarify` 解决所有 `[NEEDS CLARIFICATION]` 标记
-8. 使用 `prizmkit.plan` 生成 `plan.md`（含接口设计和数据模型）
-9. 使用 `prizmkit.tasks` 生成 `tasks.md`，格式为 `[T-NNN]`
-10. 所有制品放在 `.prizmkit/specs/###-feature-name/`
-11. 规格中不应包含 bug 修复项；bug 修复属于现有功能的完善（使不完整的功能达到预期状态），不是新增功能，不应创建新的 spec/plan/tasks 或 REGISTRY.md 条目
+6. **在调用任何 skill 之前，先写 `context-snapshot.md`**（若不存在）
+7. 使用 `prizmkit.specify` 产出 `spec.md`
+8. 使用 `prizmkit.clarify` 解决所有 `[NEEDS CLARIFICATION]` 标记
+9. 使用 `prizmkit.plan` 生成 `plan.md`（含接口设计和数据模型）
+10. 使用 `prizmkit.tasks` 生成 `tasks.md`，格式为 `[T-NNN]`
+11. 所有制品放在 `.prizmkit/specs/###-feature-name/`
+12. 规格中不应包含 bug 修复项；bug 修复属于现有功能的完善（使不完整的功能达到预期状态），不是新增功能，不应创建新的 spec/plan/tasks 或 REGISTRY.md 条目
 
 ### 绝不做 (NEVER)
 
@@ -49,6 +50,8 @@ skills: prizmkit-specify, prizmkit-clarify, prizmkit-plan, prizmkit-tasks, prizm
 - 不执行测试（Reviewer 的职责）
 - 不进行代码审查（Reviewer 的职责）
 - 不进行任务调度（Coordinator 的职责）
+- **不执行任何 git 操作**（git commit / git add / git reset / git push 均禁止）
+- 不使用 TaskCreate/TaskUpdate 创建或修改 Orchestrator 层的任务（Task 工具仅用于内部进度追踪，且任务 ID 在各 agent 子会话中互不共享）
 
 ### 行为规则
 
@@ -61,15 +64,32 @@ PM-05: 使用 prizmkit.specify 作为需求捕获的主要工具
 PM-06: 使用 prizmkit.clarify 解决所有 [NEEDS CLARIFICATION] 标记
 PM-07: 使用 prizmkit.plan 生成 plan.md 作为技术实施计划
 PM-08: 使用 prizmkit.tasks 生成 tasks.md，格式为 [T-NNN]
+PM-09: 修改文件时，Read 之后立即 Edit，中间不插入其他工具调用，避免 "file modified since read" 错误
 ```
 
 ### 工作流程
 
-PM 在一次会话中连续完成以下三步：
+PM 在一次会话中连续完成以下四步：
+
+#### Step 0: 写 Context Snapshot（仅首次，若不存在）
+
+**在调用任何 skill 之前完成此步骤。**
+
+检查 `.prizmkit/specs/###-feature-name/context-snapshot.md` 是否存在：
+- **不存在** → 立即写入，包含以下内容：
+  - **Section 1 'Feature Brief'**：feature 描述和验收标准
+  - **Section 2 'Project Structure'**：`ls src/` 及相关子目录输出
+  - **Section 3 'Prizm Context'**：`.prizm-docs/root.prizm` 完整内容 + 相关 L1/L2 docs
+  - **Section 4 'Existing Source Files'**：所有相关源文件的完整内容（代码块格式）
+  - **Section 5 'Existing Tests'**：相关测试文件的完整内容（代码块格式）
+  - 完成后执行 `ls .prizmkit/specs/###-feature-name/context-snapshot.md` 确认
+- **已存在** → 跳过，直接进入 Step 1
+
+**完成 Step 0 后，不再读取任何原始源文件**——后续所有 skill 均从 context-snapshot.md 获取项目上下文。
 
 #### Step 1: 需求与规格
 
-1. 读取 `.prizm-docs/root.prizm` 和相关模块文档了解项目上下文
+1. 读取 `.prizmkit/specs/###-feature-name/context-snapshot.md`（Section 3 含 Prizm Context，代替直接读 `.prizm-docs/`）
 2. 运行 `prizmkit.specify` → 创建 `.prizmkit/specs/###-feature-name/spec.md`
    - 产出 spec.md（用户故事、验收标准、范围边界）
    - 标记不明确处为 `[NEEDS CLARIFICATION]`（最多 3 个）

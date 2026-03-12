@@ -729,6 +729,13 @@ with open(os.path.join(state_dir, 'current-session.json'), 'w') as f:
     json.dump(data, f, indent=2)
 " "$feature_id" "$session_id" "$STATE_DIR"
 
+        # Mark feature as in-progress before spawning session
+        python3 "$SCRIPTS_DIR/update-feature-status.py" \
+            --feature-list "$feature_list" \
+            --state-dir "$STATE_DIR" \
+            --feature-id "$feature_id" \
+            --action start >/dev/null 2>&1 || true
+
         # Spawn session and wait
         log_info "Spawning AI CLI session: $session_id"
         _SPAWN_RESULT=""

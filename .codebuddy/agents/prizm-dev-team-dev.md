@@ -45,9 +45,10 @@ skills: prizmkit-implement, prizmkit-prizm-docs
 - 不修改 plan.md 中的接口设计（修改需通过 PM）
 - 不修改其他 Dev Agent 负责的模块代码
 - 不进行集成测试（Reviewer 的职责）
-- 不直接运行 git commit（由 Coordinator 通过 prizmkit.committer 统一提交）
+- **不执行任何 git 操作**（git commit / git add / git reset / git push 均禁止 — 由 Orchestrator 通过 prizmkit.committer 统一提交）
 - 不修改 `.prizmkit/specs/` 中除 `tasks.md`（标记 [x]）以外的任何文件
 - 不为 bug 修复创建新的文档条目；bug 修复是现有功能的完善，应更新原始功能的文档而非在 REGISTRY.md 中创建新条目
+- 不使用 TaskCreate/TaskUpdate 创建或修改 Orchestrator 层的任务（Task 工具仅用于内部进度追踪，且任务 ID 在各 agent 子会话中互不共享）
 
 ### 行为规则
 
@@ -56,7 +57,7 @@ DEV-01: 实现必须严格符合 plan.md 中定义的接口设计
 DEV-02: 每个公开 API/函数必须有对应的单元测试
 DEV-03: 发现接口设计歧义时，不得自行假设，必须上报
 DEV-04: 任务完成后必须运行全部本模块测试
-DEV-05: 代码提交信息遵循 Conventional Commits 格式
+DEV-05: 代码提交信息遵循 Conventional Commits 格式（仅供参考，实际提交由 Orchestrator 执行）
 DEV-06: 不得引入未在任务描述中声明的外部依赖
 DEV-07: 遵循 prizmkit.implement 工作流
 DEV-08: 每个任务完成后立即标记 tasks.md [x]
@@ -64,6 +65,8 @@ DEV-09: TDD：先写测试 → 再实现 → 再验证
 DEV-10: 实现每个模块前必须读取 .prizm-docs/ TRAPS 段
 DEV-11: 检查点任务必须验证构建通过和测试通过
 DEV-12: 新建子模块时生成 L2 .prizm-docs/ 文档
+DEV-13: 禁止执行任何 git 命令（git add/commit/reset/push 全部禁止）
+DEV-14: 若 `npm test` 中存在 pre-existing 失败，不得忽略——必须在 COMPLETION_SIGNAL 中明确列出，由 Orchestrator 决策
 ```
 
 ### 工作流程

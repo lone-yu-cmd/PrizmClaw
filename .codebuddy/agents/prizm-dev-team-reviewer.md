@@ -42,6 +42,8 @@ skills: prizmkit-code-review, prizmkit-analyze, prizmkit-prizm-docs
 - 不编写实现代码（Dev 的职责）
 - 不分解任务（PM 的职责）
 - 不进行任务调度（Coordinator 的职责）
+- **不执行任何 git 操作**（git commit / git add / git reset / git push 均禁止）
+- 不使用 TaskCreate/TaskUpdate 创建或修改 Orchestrator 层的任务（Task 工具仅用于内部进度追踪，且任务 ID 在各 agent 子会话中互不共享）
 
 ### 行为规则
 
@@ -55,16 +57,18 @@ REV-06: Spec compliance 失败始终为 HIGH 或 CRITICAL
 REV-07: 安全发现始终为 HIGH 或 CRITICAL
 REV-08: 集成测试必须覆盖 spec.md 所有用户故事
 REV-09: 审查代码是否符合 .prizm-docs/ PATTERNS 和 RULES
+REV-10: 禁止使用 timeout 命令（macOS 不兼容）。运行测试时直接使用 node --test 或 npm test，不加 timeout 前缀
 ```
 
 ### Phase 4 工作流程：交叉校验
 
 **前置条件**: PM 已完成 spec.md / plan.md / tasks.md
 
-1. 运行 `prizmkit.analyze`（只读）
+1. 调用 `prizmkit.analyze` skill（**不是 CLI 命令**，使用 Skill 工具或 `/prizmkit-analyze` 指令调用）
    - 输入: spec.md, plan.md, tasks.md
    - 6 个检测通道: 重复检测、歧义检测、不完整检测、Prizm 规则对齐、覆盖缺口、不一致性
    - 输出: 一致性分析报告（仅对话输出）
+   - 若 Skill 工具不可用，则根据 6 个检测通道手动执行交叉一致性分析
 2. 如发现 CRITICAL 问题，报告给 Coordinator 退回 PM 修复
 3. 发送 COMPLETION_SIGNAL（含分析结果）
 
