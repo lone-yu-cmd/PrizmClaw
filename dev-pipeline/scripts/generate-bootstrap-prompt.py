@@ -428,6 +428,7 @@ def build_replacements(args, feature, features, global_context, script_dir):
         "{{RUN_ID}}": args.run_id,
         "{{SESSION_ID}}": args.session_id,
         "{{FEATURE_ID}}": args.feature_id,
+        "{{FEATURE_LIST_PATH}}": os.path.abspath(args.feature_list),
         "{{FEATURE_TITLE}}": feature.get("title", ""),
         "{{RETRY_COUNT}}": str(args.retry_count),
         "{{MAX_RETRIES}}": str(DEFAULT_MAX_RETRIES),
@@ -507,9 +508,32 @@ def main():
     if args.template:
         template_path = args.template
     else:
-        template_path = os.path.join(
-            script_dir, "..", "templates", "bootstrap-prompt.md"
-        )
+        # Determine pipeline mode to select the right tier template
+        _complexity = None
+        try:
+            _fl, _ = load_json_file(args.feature_list)
+            if _fl:
+                for _f in _fl.get("features", []):
+                    if isinstance(_f, dict) and _f.get("id") == args.feature_id:
+                        _complexity = _f.get("estimated_complexity", "medium")
+                        break
+        except Exception:
+            pass
+        _mode = args.mode or determine_pipeline_mode(_complexity or "medium")
+        _tier_file_map = {
+            "lite": "bootstrap-tier1.md",
+            "standard": "bootstrap-tier2.md",
+            "full": "bootstrap-tier3.md",
+        }
+        _tier_file = _tier_file_map.get(_mode, "bootstrap-tier2.md")
+        _tier_path = os.path.join(script_dir, "..", "templates", _tier_file)
+        # Fall back to legacy monolithic template if tier file doesn't exist
+        if os.path.isfile(_tier_path):
+            template_path = _tier_path
+        else:
+            template_path = os.path.join(
+                script_dir, "..", "templates", "bootstrap-prompt.md"
+            )
 
     # Load template
     template_content, err = read_text_file(template_path)
