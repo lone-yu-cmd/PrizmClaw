@@ -46,7 +46,12 @@ const schema = z.object({
   AI_CLI_ENABLE_HEARTBEAT: z.string().optional().default('true'),
   // F-012: System Monitor
   SYSTEM_MONITOR_INTERVAL_MS: z.coerce.number().int().positive().default(60000),
-  SYSTEM_MONITOR_DATA_DIR: z.string().optional().default('data')
+  SYSTEM_MONITOR_DATA_DIR: z.string().optional().default('data'),
+  // F-013: Session and Context Manager
+  SESSION_TIMEOUT_MS: z.coerce.number().int().positive().default(1800000), // 30 min
+  SESSION_HISTORY_MAX: z.coerce.number().int().positive().default(100),
+  SESSION_PERSISTENCE_DIR: z.string().optional().default('data/sessions'),
+  ALIAS_PERSISTENCE_PATH: z.string().optional().default('data/aliases.json')
 });
 
 const parsed = schema.parse(process.env);
@@ -153,6 +158,11 @@ export const config = Object.freeze({
   // F-012: System Monitor
   systemMonitorIntervalMs: parsed.SYSTEM_MONITOR_INTERVAL_MS,
   systemMonitorDataDir: parsed.SYSTEM_MONITOR_DATA_DIR,
+  // F-013: Session and Context Manager
+  sessionTimeoutMs: parsed.SESSION_TIMEOUT_MS,
+  sessionHistoryMax: parsed.SESSION_HISTORY_MAX,
+  sessionPersistenceDir: parsed.SESSION_PERSISTENCE_DIR,
+  aliasPersistencePath: parsed.ALIAS_PERSISTENCE_PATH,
   pipelineInfra: Object.freeze({
     ...pipelineInfra,
     daemonLogPaths

@@ -40,6 +40,10 @@ const COMMAND_MIN_ROLE = {
   ps: 'viewer',
   monitor: 'operator',
   kill: 'admin',
+  // F-013: Session and Context Manager commands
+  history: 'viewer',
+  alias: 'operator',
+  sessions: 'admin',
   pipeline: 'operator',
   bugfix: 'operator',
   planner: 'operator',

@@ -304,7 +304,7 @@
         "告警规则持久化存储，Bot 重启后自动恢复监控",
         "系统信息展示适配 Telegram 消息格式，信息密度高且可读性好"
       ],
-      "status": "pending",
+      "status": "completed",
       "session_granularity": "feature",
       "sub_features": []
     },
@@ -326,7 +326,7 @@
         "管理员可通过 /sessions 查看所有活跃会话的概要信息",
         "会话状态在 Bot 重启后可从持久化存储恢复"
       ],
-      "status": "pending",
+      "status": "completed",
       "session_granularity": "feature",
       "sub_features": []
     },

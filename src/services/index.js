@@ -48,3 +48,7 @@ export {
   getMetrics,
   resetMetrics
 } from './ai-cli-service.js';
+
+// F-013: Session and Context Manager
+export { sessionContextService } from './session-context-service.js';
+export { aliasStore } from './alias-store.js';

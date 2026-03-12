@@ -41,8 +41,14 @@ import { sysinfoMeta, handleSysinfo } from './commands/handlers/sysinfo.js';
 import { psMeta, handlePs } from './commands/handlers/ps.js';
 import { killMeta, handleKill } from './commands/handlers/kill.js';
 import { monitorMeta, handleMonitor } from './commands/handlers/monitor.js';
+// F-013: Session and Context Manager command handlers
+import { historyMeta, handleHistory } from './commands/handlers/history.js';
+import { aliasMeta, handleAlias } from './commands/handlers/alias.js';
+import { sessionsMeta, handleSessions } from './commands/handlers/sessions.js';
 import { generateHelp } from './commands/help.js';
 import { sessionStore } from '../services/session-store.js';
+import { sessionContextService } from '../services/session-context-service.js';
+import { aliasStore } from '../services/alias-store.js';
 import { convertToMarkdownV2 } from '../utils/markdown-v2-formatter.js';
 
 const TELEGRAM_MSG_CHUNK_SIZE = 3800;
@@ -471,12 +477,37 @@ function registerPipelineCommands() {
   registerCommand(psMeta, handlePs);
   registerCommand(killMeta, handleKill);
   registerCommand(monitorMeta, handleMonitor);
+  // F-013: Session and Context Manager commands
+  registerCommand(historyMeta, handleHistory);
+  registerCommand(aliasMeta, handleAlias);
+  registerCommand(sessionsMeta, handleSessions);
 }
 
-export function createTelegramBot() {
+export async function createTelegramBot() {
   const bot = new Telegraf(config.telegramBotToken, {
     handlerTimeout: TELEGRAM_HANDLER_TIMEOUT_MS
   });
+
+  // F-013: Initialize session context service
+  await sessionContextService.initSessionContext({ dataDir: config.sessionPersistenceDir });
+  await aliasStore.initAliasStore({ filePath: config.aliasPersistencePath });
+
+  // F-013: Restore sessions from disk
+  await sessionContextService.restoreSessions();
+
+  // F-013: Set up notification callback for session timeout
+  sessionContextService.setNotificationCallback(async (sessionKey, userId) => {
+    try {
+      // Extract chat ID from session key (format: telegram:123456789)
+      const chatId = sessionKey.replace('telegram:', '');
+      await bot.telegram.sendMessage(chatId, '⏰ 会话因长时间未活动已超时，相关状态已清理。');
+    } catch (error) {
+      logger.warn({ sessionKey, userId, error: error.message }, 'Failed to send session timeout notification');
+    }
+  });
+
+  // F-013: Start timeout watcher
+  sessionContextService.startTimeoutWatcher();
 
   // Register pipeline commands
   registerPipelineCommands();

@@ -107,7 +107,37 @@
 
 ---
 
+### [013] Session and Context Manager
+- **Branch**: feat/F-013-session-and-context-manager
+- **Status**: Complete
+- **Date**: 2026-03-13
+- **Key Files**:
+  - `src/services/session-context-service.js` (Session lifecycle, persistence, timeout watcher)
+  - `src/services/alias-store.js` (Alias persistence and resolution)
+  - `src/services/session-store.js` (Extended with command history, env overrides, activity tracking)
+  - `src/bot/commands/handlers/history.js` (/history command for command history)
+  - `src/bot/commands/handlers/alias.js` (/alias command for alias management)
+  - `src/bot/commands/handlers/sessions.js` (/sessions command for admin session view)
+  - `src/config.js` (Added SESSION_TIMEOUT_MS, SESSION_HISTORY_MAX, SESSION_PERSISTENCE_DIR, ALIAS_PERSISTENCE_PATH)
+  - `tests/services/session-store-f013.test.js` (Tests for session store extensions)
+  - `tests/services/session-context-service.test.js` (Tests for session lifecycle)
+  - `tests/services/alias-store.test.js` (Tests for alias store)
+  - `tests/bot/commands/handlers/history.test.js` (Tests for /history command)
+  - `tests/bot/commands/handlers/alias.test.js` (Tests for /alias command)
+  - `tests/bot/commands/handlers/sessions.test.js` (Tests for /sessions command)
+- **API Changes**:
+  - Telegram commands: `/history [N]` (view command history), `/alias [name=command|del <name>]` (manage aliases), `/sessions` (view active sessions, admin only)
+  - New exports: `sessionContextService`, `aliasStore`
+- **Data Changes**:
+  - Session store extended with `#commandHistoryBySessionKey`, `#envOverridesBySessionKey`, `#lastActivityBySessionKey`, `#userIdBySessionKey`, `#sessionCreatedAtBySessionKey`
+  - Sessions persisted to `data/sessions/` directory
+  - Aliases persisted to `data/aliases.json`
+- **Config**: `SESSION_TIMEOUT_MS` (default 30 min), `SESSION_HISTORY_MAX` (default 100), `SESSION_PERSISTENCE_DIR`, `ALIAS_PERSISTENCE_PATH`
+
+---
+
 ## Changelog
+- 2026-03-13 | [013] Session and Context Manager | Complete
 - 2026-03-13 | [012] System Monitor | Complete
 - 2026-03-13 | [011] AI CLI Proxy | Complete
 - 2026-03-13 | [009] General Command Executor | Complete

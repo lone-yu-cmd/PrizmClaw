@@ -61,7 +61,7 @@ SUBDIRS:
 
 INTERFACES:
 - HTTP: /healthz, /api/events(SSE), /api/chat, /api/chat/reset, /api/screenshot, /api/system/exec
-- Telegram: /start, /help, /reset, /screenshot, /exec, /cd, /more, /pipeline, /bugfix, /planner, /status, /logs, /stop, /plan, /audit, /commit, /commits, /ls, /tree, /cat, /head, /tail, /find, /upload, /download, /sysinfo, /ps, /kill, /monitor, text message relay
+- Telegram: /start, /help, /reset, /screenshot, /exec, /cd, /more, /pipeline, /bugfix, /planner, /status, /logs, /stop, /plan, /audit, /commit, /commits, /ls, /tree, /cat, /head, /tail, /find, /upload, /download, /sysinfo, /ps, /kill, /monitor, /history, /alias, /sessions, text message relay
 - Security: PermissionGuard, ParamSanitizer, ConfirmationManager, AuditLogService, SystemGuard
 - File Service: validatePath, listDirectory, buildTree, readFile, searchFiles, writeFile
 - System Monitor: getSystemInfo, getProcessList, killProcess, formatUptime, formatBytes
@@ -87,6 +87,13 @@ TRAPS:
 - F-012: /kill requires admin role and confirmation before terminating process
 - F-012: alert rules stored in data/alert-rules.json, persisted across restarts
 - F-012: alert cooldown prevents notification spam (5 min default)
+- F-013: sessions keyed by telegram chat ID (sessionKey = "telegram:<chatId>")
+- F-013: session timeout defaults to 30 min, configurable via SESSION_TIMEOUT_MS
+- F-013: /history shows recent commands (default 10), max 100
+- F-013: /alias requires operator role, per-user storage
+- F-013: /sessions requires admin role, shows all active sessions
+- F-013: aliases stored in data/aliases.json, persisted immediately
+- F-013: session context persisted to data/sessions/ directory
 
 DECISIONS:
 - 2026-03-09 | runtime-doc-init | model first-pass runtime map from source + API surface
@@ -101,3 +108,4 @@ DECISIONS:
 - 2026-03-13 | runtime-f010 | add file manager with /ls, /tree, /cat, /head, /tail, /find, /upload, /download commands, path validation, and file operations
 - 2026-03-17 | runtime-f011 | add AI CLI proxy with process tracking, heartbeat progress, /stop interrupt, and Telegram MarkdownV2 formatting
 - 2026-03-13 | runtime-f012 | add system monitor with /sysinfo, /ps, /kill, /monitor commands, alert rules, threshold monitoring, and process management
+- 2026-03-12 | runtime-f013 | add session context manager with /history, /alias, /sessions commands, session timeout, persistence, and alias resolution

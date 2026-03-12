@@ -10,6 +10,12 @@ class SessionStore {
   #searchResultsBySessionKey = new Map();
   // F-011: AI CLI process tracking
   #activeProcessBySessionKey = new Map();
+  // F-013: Session and Context Manager
+  #commandHistoryBySessionKey = new Map();
+  #envOverridesBySessionKey = new Map();
+  #lastActivityBySessionKey = new Map();
+  #userIdBySessionKey = new Map();
+  #sessionCreatedAtBySessionKey = new Map();
 
   get(sessionKey) {
     if (!this.#messagesBySessionKey.has(sessionKey)) {
@@ -38,6 +44,12 @@ class SessionStore {
     this.#searchResultsBySessionKey.delete(sessionKey);
     // F-011: Clear active process
     this.#activeProcessBySessionKey.delete(sessionKey);
+    // F-013: Clear session context data
+    this.#commandHistoryBySessionKey.delete(sessionKey);
+    this.#envOverridesBySessionKey.delete(sessionKey);
+    this.#lastActivityBySessionKey.delete(sessionKey);
+    this.#userIdBySessionKey.delete(sessionKey);
+    this.#sessionCreatedAtBySessionKey.delete(sessionKey);
   }
 
   toPrompt(sessionKey, channel = 'unknown') {
@@ -205,6 +217,174 @@ class SessionStore {
    */
   clearActiveProcess(sessionKey) {
     this.#activeProcessBySessionKey.delete(sessionKey);
+  }
+
+  // F-013: Session and Context Manager methods
+
+  /**
+   * Record a command execution in history.
+   * @param {string} sessionKey - Session identifier
+   * @param {string} command - Command that was executed
+   * @param {number} exitCode - Exit code of the command
+   */
+  recordCommand(sessionKey, command, exitCode) {
+    if (!this.#commandHistoryBySessionKey.has(sessionKey)) {
+      this.#commandHistoryBySessionKey.set(sessionKey, []);
+    }
+    const history = this.#commandHistoryBySessionKey.get(sessionKey);
+    history.push({
+      command,
+      exitCode,
+      timestamp: Date.now()
+    });
+
+    // Trim to max history size
+    const maxHistory = config.sessionHistoryMax;
+    if (history.length > maxHistory) {
+      history.splice(0, history.length - maxHistory);
+    }
+  }
+
+  /**
+   * Get command history for a session.
+   * @param {string} sessionKey - Session identifier
+   * @param {number} [limit] - Maximum number of entries to return
+   * @returns {Object[]} Array of { command, exitCode, timestamp }
+   */
+  getCommandHistory(sessionKey, limit) {
+    const history = this.#commandHistoryBySessionKey.get(sessionKey) || [];
+    if (limit !== undefined && limit > 0) {
+      const start = Math.max(0, history.length - limit);
+      return history.slice(start);
+    }
+    return [...history];
+  }
+
+  /**
+   * Set an environment variable override for a session.
+   * @param {string} sessionKey - Session identifier
+   * @param {string} key - Environment variable name
+   * @param {string} value - Environment variable value
+   */
+  setEnvOverride(sessionKey, key, value) {
+    if (!this.#envOverridesBySessionKey.has(sessionKey)) {
+      this.#envOverridesBySessionKey.set(sessionKey, {});
+    }
+    this.#envOverridesBySessionKey.get(sessionKey)[key] = value;
+  }
+
+  /**
+   * Get all environment variable overrides for a session.
+   * @param {string} sessionKey - Session identifier
+   * @returns {Object} Environment variable key-value pairs
+   */
+  getEnvOverrides(sessionKey) {
+    return { ...this.#envOverridesBySessionKey.get(sessionKey) } || {};
+  }
+
+  /**
+   * Update session activity timestamp and user ID.
+   * @param {string} sessionKey - Session identifier
+   * @param {string} userId - Telegram user ID
+   */
+  touchSession(sessionKey, userId) {
+    const now = Date.now();
+    this.#lastActivityBySessionKey.set(sessionKey, now);
+    if (userId !== undefined) {
+      this.#userIdBySessionKey.set(sessionKey, userId);
+    }
+    // Set creation time if this is a new session
+    if (!this.#sessionCreatedAtBySessionKey.has(sessionKey)) {
+      this.#sessionCreatedAtBySessionKey.set(sessionKey, now);
+    }
+  }
+
+  /**
+   * Get last activity timestamp for a session.
+   * @param {string} sessionKey - Session identifier
+   * @returns {number|null} Timestamp or null if not set
+   */
+  getLastActivity(sessionKey) {
+    return this.#lastActivityBySessionKey.get(sessionKey) || null;
+  }
+
+  /**
+   * Get comprehensive session information.
+   * @param {string} sessionKey - Session identifier
+   * @returns {Object|null} Session info object or null if not found
+   */
+  getSessionInfo(sessionKey) {
+    const userId = this.#userIdBySessionKey.get(sessionKey);
+    const createdAt = this.#sessionCreatedAtBySessionKey.get(sessionKey);
+    const lastActivityAt = this.#lastActivityBySessionKey.get(sessionKey);
+
+    // Return null if session has no tracking data
+    if (!createdAt && !lastActivityAt) {
+      return null;
+    }
+
+    return {
+      sessionKey,
+      userId: userId || null,
+      cwd: this.#cwdBySessionKey.get(sessionKey) || null,
+      envOverrides: { ...this.#envOverridesBySessionKey.get(sessionKey) } || {},
+      commandCount: (this.#commandHistoryBySessionKey.get(sessionKey) || []).length,
+      createdAt: createdAt || null,
+      lastActivityAt: lastActivityAt || null
+    };
+  }
+
+  /**
+   * Get all active session keys.
+   * @returns {string[]} Array of session keys
+   */
+  getAllSessionKeys() {
+    // Return keys from sessions that have activity tracking
+    return Array.from(this.#lastActivityBySessionKey.keys());
+  }
+
+  /**
+   * Get the age of a session in milliseconds.
+   * @param {string} sessionKey - Session identifier
+   * @returns {number|null} Age in ms or null if not found
+   */
+  getSessionAge(sessionKey) {
+    const createdAt = this.#sessionCreatedAtBySessionKey.get(sessionKey);
+    if (!createdAt) {
+      return null;
+    }
+    return Date.now() - createdAt;
+  }
+
+  /**
+   * Get idle time for a session in milliseconds.
+   * @param {string} sessionKey - Session identifier
+   * @returns {number|null} Idle time in ms or null if not found
+   */
+  getIdleTime(sessionKey) {
+    const lastActivity = this.#lastActivityBySessionKey.get(sessionKey);
+    if (!lastActivity) {
+      return null;
+    }
+    return Date.now() - lastActivity;
+  }
+
+  /**
+   * Set user ID for a session.
+   * @param {string} sessionKey - Session identifier
+   * @param {string} userId - Telegram user ID
+   */
+  setUserId(sessionKey, userId) {
+    this.#userIdBySessionKey.set(sessionKey, userId);
+  }
+
+  /**
+   * Get user ID for a session.
+   * @param {string} sessionKey - Session identifier
+   * @returns {string|null} User ID or null if not set
+   */
+  getUserId(sessionKey) {
+    return this.#userIdBySessionKey.get(sessionKey) || null;
   }
 }
 

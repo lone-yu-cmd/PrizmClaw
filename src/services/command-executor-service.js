@@ -125,6 +125,9 @@ export async function executeCommand(options) {
     sessionId
   });
 
+  // F-013: Record command in history
+  sessionStore.recordCommand(sessionId, command, result.exitCode);
+
   return {
     stdout: result.stdout,
     stderr: result.stderr,

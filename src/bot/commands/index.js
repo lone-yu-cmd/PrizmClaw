@@ -10,6 +10,8 @@ import { formatError, formatValidationErrors, ErrorCodes } from './formatter.js'
 import { isAllowedUser } from '../../security/guard.js';
 import { checkCommandPermission, getUserRole } from '../../security/permission-guard.js';
 import { logAuditEntry } from '../../services/audit-log-service.js';
+import { aliasStore } from '../../services/alias-store.js';
+import { sessionStore } from '../../services/session-store.js';
 
 /**
  * @typedef {import('./parser.js').ParsedCommand} ParsedCommand
@@ -18,12 +20,21 @@ import { logAuditEntry } from '../../services/audit-log-service.js';
  */
 
 /**
+ * Build session ID from context.
+ * @param {Object} ctx - Telegraf context
+ * @returns {string} Session ID
+ */
+function buildSessionId(ctx) {
+  return String(ctx.chat.id);
+}
+
+/**
  * Route and dispatch a command from Telegram context.
  * @param {Object} ctx - Telegraf context
  * @returns {Promise<boolean>} True if command was handled
  */
 export async function routeCommand(ctx) {
-  const text = ctx.message?.text;
+  let text = ctx.message?.text;
 
   if (!text || !text.startsWith('/')) {
     return false;
@@ -34,6 +45,24 @@ export async function routeCommand(ctx) {
   if (!isAuthorized(userId)) {
     await ctx.reply(formatErrorResponse(formatError(ErrorCodes.UNAUTHORIZED)));
     return true;
+  }
+
+  const sessionId = buildSessionId(ctx);
+  const userIdStr = String(userId);
+
+  // F-013: Touch session on each command
+  sessionStore.touchSession(sessionId, userIdStr);
+
+  // F-013: Resolve alias if the command name is an alias
+  const commandMatch = text.match(/^\/(\S+)/);
+  if (commandMatch) {
+    const potentialAlias = commandMatch[1].toLowerCase();
+    const resolvedCommand = aliasStore.resolveAlias(userIdStr, potentialAlias);
+    if (resolvedCommand) {
+      // Replace the alias with the resolved command
+      const args = text.slice(commandMatch[0].length);
+      text = `/${resolvedCommand}${args}`;
+    }
   }
 
   // Parse command
@@ -90,12 +119,14 @@ export async function routeCommand(ctx) {
     params: validation.normalized || {},
     userId,
     userRole: getUserRole(userId),
+    sessionId,
     requiresConfirmation: permResult.requiresConfirmation,
     reply: async (text) => ctx.reply(text),
     replyFile: async (content, filename) => {
       // Will be implemented with proper file handling
       await ctx.replyWithDocument({ source: Buffer.from(content), filename });
-    }
+    },
+    args: parsed.args || []
   };
 
   // Dispatch to handler
