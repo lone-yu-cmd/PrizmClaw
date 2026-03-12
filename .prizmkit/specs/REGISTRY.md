@@ -23,5 +23,22 @@
 
 ---
 
+### [008] Commit Workflow Integration
+- **Branch**: feat/F-008-commit-workflow-integration
+- **Status**: Complete
+- **Date**: 2026-03-12
+- **Key Files**:
+  - `src/services/git-service.js` (Git wrapper, status operations, commit/amend)
+  - `src/services/commit-service.js` (Validation orchestration, commit recording, history retrieval)
+  - `src/bot/commands/handlers/commit.js` (Telegram /commit command handler)
+  - `src/bot/commands/handlers/commits.js` (Telegram /commits history command handler)
+  - `test/` (Unit and integration tests for commit workflow)
+- **API Changes**: 
+  - Telegram commands: `/commit` (with --message, --amend, --force flags), `/commits`
+- **Data Changes**: Session store extended to track CommitRecord entries with hash, message, timestamp, author, featureId, bugfixId, filesChanged
+
+---
+
 ## Changelog
+- 2026-03-12 | [008] Commit Workflow Integration | Complete
 - 2026-03-12 | [001] Project Infrastructure Setup | Complete

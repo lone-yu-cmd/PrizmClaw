@@ -42,3 +42,4 @@ DECISIONS:
 - 2026-03-12 | f004-pipeline-controller | new module for unified pipeline control with lock management (D4)
 - 2026-03-13 | f005-status-logs | add status-aggregator, log-pager, telegram-pusher for pipeline status aggregation and log streaming
 - 2026-03-15 | f008-commit-workflow | add git-service and commit-service for commit workflow with pre-commit validation, audit logging (AC-5.3)
+- 2026-03-15 | f008-exception-handling | add try-catch blocks in commit() function around validatePreConditions, gitService.commit/amendCommit, recordCommit, logAuditEntry calls to prevent crashes and ensure errors logged to audit trail
