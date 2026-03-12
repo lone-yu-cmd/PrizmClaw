@@ -36,6 +36,11 @@ import { tailMeta, handleTail } from './commands/handlers/tail.js';
 import { findMeta, handleFind } from './commands/handlers/find.js';
 import { uploadMeta, handleUpload } from './commands/handlers/upload.js';
 import { downloadMeta, handleDownload } from './commands/handlers/download.js';
+// F-012: System Monitor command handlers
+import { sysinfoMeta, handleSysinfo } from './commands/handlers/sysinfo.js';
+import { psMeta, handlePs } from './commands/handlers/ps.js';
+import { killMeta, handleKill } from './commands/handlers/kill.js';
+import { monitorMeta, handleMonitor } from './commands/handlers/monitor.js';
 import { generateHelp } from './commands/help.js';
 import { sessionStore } from '../services/session-store.js';
 import { convertToMarkdownV2 } from '../utils/markdown-v2-formatter.js';
@@ -461,6 +466,11 @@ function registerPipelineCommands() {
   registerCommand(findMeta, handleFind);
   registerCommand(uploadMeta, handleUpload);
   registerCommand(downloadMeta, handleDownload);
+  // F-012: System Monitor commands
+  registerCommand(sysinfoMeta, handleSysinfo);
+  registerCommand(psMeta, handlePs);
+  registerCommand(killMeta, handleKill);
+  registerCommand(monitorMeta, handleMonitor);
 }
 
 export function createTelegramBot() {

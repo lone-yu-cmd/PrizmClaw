@@ -20,3 +20,6 @@ CHANGELOG:
 - 2026-03-13 | runtime/services | add: F-011 ai-cli-service for AI CLI execution with process tracking, heartbeat, interrupt support
 - 2026-03-13 | runtime/utils | add: F-011 heartbeat-manager and markdown-v2-formatter for Telegram progress and output formatting
 - 2026-03-13 | runtime/bot | update: F-011 /stop extended for AI CLI task interrupt with permission check, telegram.js integrated AI CLI with streaming
+- 2026-03-13 | runtime/services | add: F-012 system-monitor-service and alert-manager-service for system metrics and threshold monitoring
+- 2026-03-13 | runtime/bot | add: F-012 /sysinfo, /ps, /kill, /monitor commands for system monitoring and process management
+- 2026-03-13 | runtime/security | update: F-012 /kill added to HIGH_RISK_COMMANDS requiring admin role and confirmation

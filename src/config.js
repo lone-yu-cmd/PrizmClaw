@@ -43,7 +43,10 @@ const schema = z.object({
   // F-011: AI CLI Proxy
   AI_CLI_HEARTBEAT_THRESHOLD_MS: z.coerce.number().int().nonnegative().default(10000),
   AI_CLI_HEARTBEAT_INTERVAL_MS: z.coerce.number().int().nonnegative().default(30000),
-  AI_CLI_ENABLE_HEARTBEAT: z.string().optional().default('true')
+  AI_CLI_ENABLE_HEARTBEAT: z.string().optional().default('true'),
+  // F-012: System Monitor
+  SYSTEM_MONITOR_INTERVAL_MS: z.coerce.number().int().positive().default(60000),
+  SYSTEM_MONITOR_DATA_DIR: z.string().optional().default('data')
 });
 
 const parsed = schema.parse(process.env);
@@ -147,6 +150,9 @@ export const config = Object.freeze({
   aiCliHeartbeatThresholdMs: parsed.AI_CLI_HEARTBEAT_THRESHOLD_MS,
   aiCliHeartbeatIntervalMs: parsed.AI_CLI_HEARTBEAT_INTERVAL_MS,
   aiCliEnableHeartbeat: parseBoolean(parsed.AI_CLI_ENABLE_HEARTBEAT),
+  // F-012: System Monitor
+  systemMonitorIntervalMs: parsed.SYSTEM_MONITOR_INTERVAL_MS,
+  systemMonitorDataDir: parsed.SYSTEM_MONITOR_DATA_DIR,
   pipelineInfra: Object.freeze({
     ...pipelineInfra,
     daemonLogPaths

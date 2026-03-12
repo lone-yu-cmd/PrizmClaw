@@ -18,6 +18,8 @@ KEY_FILES:
 - src/services/output-pager-service.js
 - src/services/file-service.js
 - src/services/ai-cli-service.js
+- src/services/system-monitor-service.js
+- src/services/alert-manager-service.js
 - src/pipeline-infra/config-loader.js
 - src/pipeline-infra/script-runner.js
 - src/adapters/codebuddy.js
@@ -34,6 +36,10 @@ KEY_FILES:
 - src/bot/commands/handlers/find.js
 - src/bot/commands/handlers/upload.js
 - src/bot/commands/handlers/download.js
+- src/bot/commands/handlers/sysinfo.js
+- src/bot/commands/handlers/ps.js
+- src/bot/commands/handlers/kill.js
+- src/bot/commands/handlers/monitor.js
 - src/security/permission-guard.js
 - src/security/param-sanitizer.js
 - src/security/confirmation-manager.js
@@ -55,16 +61,18 @@ SUBDIRS:
 
 INTERFACES:
 - HTTP: /healthz, /api/events(SSE), /api/chat, /api/chat/reset, /api/screenshot, /api/system/exec
-- Telegram: /start, /help, /reset, /screenshot, /exec, /cd, /more, /pipeline, /bugfix, /planner, /status, /logs, /stop, /plan, /audit, /commit, /commits, /ls, /tree, /cat, /head, /tail, /find, /upload, /download, text message relay
+- Telegram: /start, /help, /reset, /screenshot, /exec, /cd, /more, /pipeline, /bugfix, /planner, /status, /logs, /stop, /plan, /audit, /commit, /commits, /ls, /tree, /cat, /head, /tail, /find, /upload, /download, /sysinfo, /ps, /kill, /monitor, text message relay
 - Security: PermissionGuard, ParamSanitizer, ConfirmationManager, AuditLogService, SystemGuard
 - File Service: validatePath, listDirectory, buildTree, readFile, searchFiles, writeFile
+- System Monitor: getSystemInfo, getProcessList, killProcess, formatUptime, formatBytes
+- Alert Manager: addRule, removeRule, listRules, checkThresholds, startMonitoring, stopMonitoring
 
 TRAPS:
 - ENABLE_TELEGRAM=true requires TELEGRAM_BOT_TOKEN
 - system exec is disabled unless ENABLE_SYSTEM_EXEC=true
 - system exec requires ALLOWED_COMMAND_PREFIXES whitelist
 - chat is serialized per session via chat-queue
-- high-risk commands (stop, reset, force-unlock) require admin role and confirmation
+- high-risk commands (stop, reset, force-unlock, kill) require admin role and confirmation
 - permission check happens before command handler execution
 - param sanitizer blocks path traversal and shell injection patterns
 - audit logs are async written, failure does not block execution
@@ -76,6 +84,9 @@ TRAPS:
 - F-010: binary files cannot be displayed as text
 - F-011: AI CLI process tracked per session, can be interrupted via /stop
 - F-011: AI CLI heartbeat notifications configurable via AI_CLI_HEARTBEAT_THRESHOLD_MS/INTERVAL_MS
+- F-012: /kill requires admin role and confirmation before terminating process
+- F-012: alert rules stored in data/alert-rules.json, persisted across restarts
+- F-012: alert cooldown prevents notification spam (5 min default)
 
 DECISIONS:
 - 2026-03-09 | runtime-doc-init | model first-pass runtime map from source + API surface
@@ -89,3 +100,4 @@ DECISIONS:
 - 2026-03-13 | runtime-f009 | add general command executor with blacklist, high-risk keyword detection, confirmation flow, session cwd, output pagination, /cd and /more commands
 - 2026-03-13 | runtime-f010 | add file manager with /ls, /tree, /cat, /head, /tail, /find, /upload, /download commands, path validation, and file operations
 - 2026-03-17 | runtime-f011 | add AI CLI proxy with process tracking, heartbeat progress, /stop interrupt, and Telegram MarkdownV2 formatting
+- 2026-03-13 | runtime-f012 | add system monitor with /sysinfo, /ps, /kill, /monitor commands, alert rules, threshold monitoring, and process management

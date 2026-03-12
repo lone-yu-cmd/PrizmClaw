@@ -86,7 +86,29 @@
 
 ---
 
+### [012] System Monitor
+- **Branch**: feat/F-012-system-monitor
+- **Status**: Complete
+- **Date**: 2026-03-13
+- **Key Files**:
+  - `src/services/system-monitor-service.js` (Core system monitoring: CPU, memory, disk, network, processes)
+  - `src/services/alert-manager-service.js` (Alert rule management with persistence and threshold monitoring)
+  - `src/bot/commands/handlers/sysinfo.js` (/sysinfo command for system overview)
+  - `src/bot/commands/handlers/ps.js` (/ps command for process listing with sort/filter)
+  - `src/bot/commands/handlers/kill.js` (/kill command with permission and confirmation flow)
+  - `src/bot/commands/handlers/monitor.js` (/monitor command for alert rule management)
+  - `src/config.js` (Added SYSTEM_MONITOR_INTERVAL_MS, SYSTEM_MONITOR_DATA_DIR)
+  - `src/security/permission-guard.js` (Added kill to HIGH_RISK_COMMANDS, new command permissions)
+  - `data/alert-rules.json` (Persistent alert rule storage)
+- **API Changes**:
+  - Telegram commands: `/sysinfo` (system metrics), `/ps [--sort=cpu|memory] [--filter=keyword]` (process list), `/kill <pid>` (terminate process), `/monitor set|list|remove|enable|disable` (alert rules)
+- **Data Changes**: Alert rules persisted in `data/alert-rules.json`, 5-minute cooldown for alerts
+- **Config**: `SYSTEM_MONITOR_INTERVAL_MS`, `SYSTEM_MONITOR_DATA_DIR`
+
+---
+
 ## Changelog
+- 2026-03-13 | [012] System Monitor | Complete
 - 2026-03-13 | [011] AI CLI Proxy | Complete
 - 2026-03-13 | [009] General Command Executor | Complete
 - 2026-03-12 | [008] Commit Workflow Integration | Complete

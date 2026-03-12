@@ -1,0 +1,18 @@
+[
+  {
+    "id": "28d2a689-b62c-41b5-9355-07af1982661f",
+    "metric": "cpu",
+    "operator": ">",
+    "threshold": 80,
+    "enabled": true,
+    "createdAt": 1773348344397
+  },
+  {
+    "id": "79b18f0d-5304-4e42-9f2f-d86cce9b1ea9",
+    "metric": "cpu",
+    "operator": ">",
+    "threshold": 80,
+    "enabled": true,
+    "createdAt": 1773348344400
+  }
+]

@@ -35,6 +35,11 @@ const COMMAND_MIN_ROLE = {
   find: 'viewer',
   upload: 'operator',
   download: 'operator',
+  // F-012: System Monitor commands
+  sysinfo: 'viewer',
+  ps: 'viewer',
+  monitor: 'operator',
+  kill: 'admin',
   pipeline: 'operator',
   bugfix: 'operator',
   planner: 'operator',
@@ -51,7 +56,7 @@ const COMMAND_MIN_ROLE = {
 /**
  * High-risk commands that require confirmation
  */
-const HIGH_RISK_COMMANDS = new Set(['stop', 'reset', 'force-unlock', 'commit-amend', 'commit-force']);
+const HIGH_RISK_COMMANDS = new Set(['stop', 'reset', 'force-unlock', 'commit-amend', 'commit-force', 'kill']);
 
 /**
  * Internal config reference - can be overridden for testing

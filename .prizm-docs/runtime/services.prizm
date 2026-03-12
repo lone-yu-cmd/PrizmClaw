@@ -20,6 +20,8 @@ KEY_FILES:
 - src/services/command-executor-service.js
 - src/services/output-pager-service.js
 - src/services/file-service.js
+- src/services/system-monitor-service.js
+- src/services/alert-manager-service.js
 
 PUBLIC_APIS:
 - chatWithSession({ channel, sessionId, message, realtimeHooks })
@@ -35,6 +37,8 @@ PUBLIC_APIS:
 - command executor (F-009): executeCommand/confirmHighRiskCommand -> blacklist check, high-risk detection, confirmation flow, cwd support, output pagination
 - output pager (F-009): paginateOutput/storeOutputPages/getNextPage/clearPages/hasMorePages -> Telegram 4096 char limit handling
 - file service (F-010): validatePath/resolveSessionPath/listDirectory/buildTree/readFile/searchFiles/writeFile/isBinaryFile -> file operations with path validation
+- system monitor (F-012): getSystemInfo/getProcessList/killProcess/formatUptime/formatBytes -> CPU/memory/disk/network info, process management
+- alert manager (F-012): addRule/removeRule/listRules/checkThresholds/startMonitoring/stopMonitoring/loadRules/saveRules/parseRuleString -> threshold alerting with persistence
 
 TRAPS:
 - chat operations are serialized by session key; keep async queue semantics unchanged
@@ -53,3 +57,4 @@ DECISIONS:
 - 2026-03-15 | f008-exception-handling | add try-catch blocks in commit() function around validatePreConditions, gitService.commit/amendCommit, recordCommit, logAuditEntry calls to prevent crashes and ensure errors logged to audit trail
 - 2026-03-16 | f009-command-executor | add command-executor-service and output-pager-service for general shell command execution with blacklist, high-risk keywords, confirmation flow, session cwd, and pagination
 - 2026-03-13 | f010-file-service | add file-service for directory listing, tree building, file reading/writing, and glob search with path validation
+- 2026-03-13 | f012-system-monitor | add system-monitor-service and alert-manager-service for system info, process management, and threshold-based alerting with persistence
