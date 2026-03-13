@@ -348,7 +348,7 @@
         "支持 /watch 监听文件或目录变更，有变化时推送通知",
         "定时任务和监听规则持久化存储，Bot 重启后自动恢复"
       ],
-      "status": "pending",
+      "status": "completed",
       "session_granularity": "feature",
       "sub_features": []
     }
