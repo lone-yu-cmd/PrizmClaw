@@ -1,8 +1,0 @@
-{
-  "pid": 21385,
-  "started_at": "2026-03-19T17:05:39Z",
-  "feature_list": "/Users/loneyu/SelfProjects/PrizmClaw/feature-list.json",
-  "env_overrides": "",
-  "mode": "",
-  "log_file": "/Users/loneyu/SelfProjects/PrizmClaw/dev-pipeline/state/pipeline-daemon.log"
-}
