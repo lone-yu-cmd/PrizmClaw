@@ -1,0 +1,27 @@
+MODULE: src
+FILES: index.js, config.js
+RESPONSIBILITY: Main application - Telegram bot bridge to AI CLI with web dashboard
+
+SUBDIRS:
+- bot -> .prizm-docs/src/bot.prizm
+- services -> .prizm-docs/src/services.prizm
+- security -> .prizm-docs/src/security.prizm
+- pipeline-infra -> .prizm-docs/src/pipeline-infra.prizm
+- adapters -> .prizm-docs/src/adapters.prizm
+- http -> .prizm-docs/src/http.prizm
+- routes -> .prizm-docs/src/routes.prizm
+- utils -> .prizm-docs/src/utils.prizm
+
+INTERFACES:
+- config: validated env config object (Zod schema)
+- createTelegramBot(): Telegraf bot instance
+- createHttpServer(): Express app
+
+DEPENDENCIES:
+- telegraf: Telegram Bot API client
+- express: HTTP server
+- zod: config validation
+- dotenv: env loading
+- pino: structured logging
+
+UPDATED: 2026-03-16

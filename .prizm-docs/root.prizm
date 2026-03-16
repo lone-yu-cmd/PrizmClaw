@@ -1,0 +1,38 @@
+PRIZM_VERSION: 1.0
+PROJECT: PrizmClaw
+LANG: JavaScript (Node.js ES modules)
+DESCRIPTION: Telegram to AI CLI bridge - sends commands from Telegram to CodeBuddy/Claude CLI, streams output back
+ENTRY_POINT: src/index.js
+
+TECH_STACK:
+- runtime: Node.js (ES modules, --watch for dev)
+- bot: Telegraf 4.x (Telegram Bot API)
+- http: Express 4.x
+- validation: Zod
+- logging: Pino
+- git: simple-git
+- scheduling: croner
+- config: dotenv
+
+MODULE_INDEX:
+- src -> .prizm-docs/src.prizm
+- dev-pipeline -> .prizm-docs/dev-pipeline.prizm
+- tests: test suite mirroring src/ structure, Node.js test runner
+- data: runtime data (alert-rules.json)
+- public: web dashboard (index.html, styles.css, js/)
+
+RULES:
+- All source is ESM (import/export, "type": "module")
+- Config via Zod schema validation from .env
+- Security: permission-guard, system-guard, param-sanitizer, confirmation-manager
+- Tests use Node.js built-in test runner (node --test)
+- Conventional Commits format required
+- POSIX shell commands preferred
+
+PATTERNS:
+- Service layer pattern: src/services/ contains business logic
+- Command handler pattern: src/bot/commands/handlers/ one file per command
+- Registry pattern: commands registered in src/bot/commands/registry.js
+- Barrel exports: index.js files re-export module contents
+
+UPDATED: 2026-03-16

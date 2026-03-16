@@ -1,0 +1,159 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Dev-Pipeline Bug Fix List",
+  "description": "Schema for bug-fix-list.json — standardized input for the Bug Fix Pipeline",
+  "type": "object",
+  "required": ["$schema", "project_name", "bugs"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "const": "dev-pipeline-bug-fix-list-v1"
+    },
+    "project_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "project_description": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "created_by": {
+      "type": "string"
+    },
+    "bugs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id", "title", "description", "severity",
+          "error_source", "verification_type",
+          "acceptance_criteria", "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^B-\\d{3}$",
+            "description": "Bug ID, format B-001, B-002..."
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bug title — brief description of the symptom"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Detailed bug description: expected vs actual behavior"
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["critical", "high", "medium", "low"],
+            "description": "critical=crash/data-loss; high=core-feature-broken; medium=workaround-exists; low=cosmetic"
+          },
+          "priority": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Fix priority (lower = higher priority), determines pipeline processing order"
+          },
+          "error_source": {
+            "type": "object",
+            "required": ["type"],
+            "description": "Structured error source information extracted from various input formats",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "stack_trace",
+                  "user_report",
+                  "failed_test",
+                  "log_pattern",
+                  "monitoring_alert"
+                ]
+              },
+              "stack_trace": {
+                "type": "string",
+                "description": "Error stack trace (when type=stack_trace)"
+              },
+              "error_message": {
+                "type": "string",
+                "description": "Error message text"
+              },
+              "log_snippet": {
+                "type": "string",
+                "description": "Relevant log snippet (when type=log_pattern)"
+              },
+              "failed_test_path": {
+                "type": "string",
+                "description": "Path to failing test file (when type=failed_test)"
+              },
+              "reproduction_steps": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "User-reported reproduction steps (when type=user_report)"
+              }
+            }
+          },
+          "affected_feature": {
+            "type": "string",
+            "pattern": "^F-\\d{3}(-[A-Z])?$",
+            "description": "Related original Feature ID (if any), for TRAPS cross-reference"
+          },
+          "affected_modules": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Known affected module names (optional, triage will auto-detect)"
+          },
+          "environment": {
+            "type": "object",
+            "description": "Environment where the bug occurs",
+            "properties": {
+              "os": { "type": "string" },
+              "runtime": { "type": "string" },
+              "browser": { "type": "string" },
+              "version": { "type": "string" }
+            }
+          },
+          "verification_type": {
+            "type": "string",
+            "enum": ["automated", "manual", "hybrid"],
+            "description": "automated=unit/integration-test; manual=human-UAT; hybrid=both"
+          },
+          "acceptance_criteria": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string" },
+            "description": "Conditions that must be met for the bug to be considered fixed"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "triaging",
+              "reproducing",
+              "fixing",
+              "verifying",
+              "completed",
+              "failed",
+              "needs_info",
+              "skipped"
+            ],
+            "description": "Bug fix status, maps to pipeline phases"
+          }
+        }
+      }
+    },
+    "global_context": {
+      "type": "object",
+      "description": "Global context for all bug fixes in this batch",
+      "properties": {
+        "tech_stack": { "type": "string" },
+        "testing_framework": { "type": "string" },
+        "ci_pipeline": { "type": "string" }
+      }
+    }
+  }
+}

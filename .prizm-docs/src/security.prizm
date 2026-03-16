@@ -1,0 +1,15 @@
+MODULE: src/security
+FILES: index.js, guard.js, permission-guard.js, system-guard.js, confirmation-manager.js, param-sanitizer.js
+RESPONSIBILITY: Security layer - permission checks, command sanitization, confirmation flows, system protection
+
+INTERFACES:
+- PermissionGuard: check user permissions by role (admin, user)
+- SystemGuard: block dangerous commands (rm -rf, sudo, etc.)
+- ConfirmationManager: require user confirmation for risky ops
+- ParamSanitizer: sanitize command parameters against injection
+- guard.js: unified guard orchestrator
+
+DEPENDENCIES:
+- imports: src/config: permission and security settings
+
+UPDATED: 2026-03-16

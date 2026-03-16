@@ -1,0 +1,18 @@
+MODULE: src/pipeline-infra
+FILES: index.js, cli-entry.js, config-loader.js, error-codes.js, lock-manager.js, path-policy.js, script-runner.js, state-manager.js
+RESPONSIBILITY: Pipeline infrastructure - config loading, state management, script execution, locking, path resolution
+
+INTERFACES:
+- loadPipelineInfraConfig(): pipeline config from env/files
+- StateManager: read/write pipeline state JSON
+- LockManager: file-based locking for concurrent pipelines
+- ScriptRunner: execute Python/shell pipeline scripts
+- PathPolicy: resolve and validate pipeline paths
+- ErrorCodes: standardized error code enum
+- cliEntry: CLI entrypoint for pipeline commands
+
+DEPENDENCIES:
+- uses: child_process: spawn scripts
+- imports: src/config: base config
+
+UPDATED: 2026-03-16

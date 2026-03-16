@@ -1,0 +1,24 @@
+MODULE: src/bot
+FILES: telegram.js, commands/index.js, commands/registry.js, commands/parser.js, commands/validator.js, commands/formatter.js, commands/help.js
+RESPONSIBILITY: Telegram bot setup and command routing system
+
+KEY_FILES:
+- telegram.js: bot creation, middleware setup, message handling
+- commands/registry.js: command registration and lookup
+- commands/parser.js: parse user input into command + args
+- commands/validator.js: validate command permissions and args
+- commands/formatter.js: format output for Telegram MarkdownV2
+- commands/handlers/: one handler per command (alias, audit, bugfix, cat, cd, commit, commits, cron, download, find, head, history, jobs, kill, logs, ls, monitor, more, pipeline, plan, planner, ps, sessions, status, stop, sysinfo, tail, tree, upload, watch)
+
+INTERFACES:
+- createTelegramBot(): creates and configures Telegraf bot
+- CommandRegistry: register/lookup/list commands
+- parseCommand(text): { command, args }
+- validateCommand(cmd, ctx): boolean
+
+DEPENDENCIES:
+- uses: telegraf: bot framework
+- imports: src/services: business logic for command execution
+- imports: src/security: permission checks
+
+UPDATED: 2026-03-16

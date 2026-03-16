@@ -1,0 +1,26 @@
+MODULE: src/services
+FILES: index.js, ai-cli-service.js, alert-manager-service.js, alias-store.js, audit-log-service.js, chat-queue.js, chat-service.js, command-executor-service.js, commit-service.js, file-service.js, file-watcher-service.js, git-service.js, log-pager.js, output-pager-service.js, pipeline-control-service.js, pipeline-controller.js, plan-ingestion-service.js, realtime-hub.js, scheduled-task-service.js, screenshot-service.js, session-context-service.js, session-store.js, status-aggregator.js, system-exec-service.js, system-monitor-service.js, telegram-pusher.js
+RESPONSIBILITY: Business logic layer - all domain services for CLI bridging, pipeline control, file ops, git, sessions
+
+INTERFACES:
+- AiCliService: spawn and manage AI CLI sessions, stream output
+- CommandExecutorService: execute shell commands with safety guards
+- PipelineControlService: start/stop/status of dev pipelines
+- PipelineController: orchestrate pipeline lifecycle
+- FileService: file read, tree, search operations
+- GitService: git status, log, diff, commit
+- CommitService: commit workflow
+- SessionStore: manage active CLI sessions
+- PlanIngestionService: parse and validate feature-list.json
+- ScheduledTaskService: cron-based task scheduling
+- AlertManagerService: alert rules and notification
+- AuditLogService: security audit trail
+
+DEPENDENCIES:
+- uses: simple-git: git operations
+- uses: croner: cron scheduling
+- uses: pino: logging
+- imports: src/security: permission and system guards
+- imports: src/pipeline-infra: pipeline state and config
+
+UPDATED: 2026-03-16

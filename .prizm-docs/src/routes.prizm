@@ -1,0 +1,12 @@
+MODULE: src/routes
+FILES: api-routes.js
+RESPONSIBILITY: API route definitions for web dashboard
+
+INTERFACES:
+- apiRoutes: Express router with REST endpoints
+
+DEPENDENCIES:
+- imports: src/services: business logic
+- imports: express: Router
+
+UPDATED: 2026-03-16

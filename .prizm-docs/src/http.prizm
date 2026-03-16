@@ -1,0 +1,12 @@
+MODULE: src/http
+FILES: server.js
+RESPONSIBILITY: Express HTTP server for web dashboard and API endpoints
+
+INTERFACES:
+- createHttpServer({ logger }): Express app instance
+
+DEPENDENCIES:
+- uses: express: HTTP framework
+- imports: src/routes: API route handlers
+
+UPDATED: 2026-03-16
