@@ -148,6 +148,11 @@ cmd_start() {
     log_info "Bug fix list: $bug_list"
     log_info "Log file: $LOG_FILE"
 
+    # Unset CLAUDECODE to allow spawning nested Claude Code sessions.
+    # When this daemon is launched from within a Claude Code session, the env var
+    # is inherited and blocks child claude processes with "nested sessions" error.
+    unset CLAUDECODE 2>/dev/null || true
+
     {
         echo ""
         echo "================================================================"

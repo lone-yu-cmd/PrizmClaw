@@ -136,3 +136,13 @@ REV-10: 禁止使用 timeout 命令（macOS 不兼容）。运行测试时直接
 - 发送 COMPLETION_SIGNAL（含判定结果）标志完成
 - 发送 ISSUE_REPORT 报告 CRITICAL 发现
 - 接收 TASK_ASSIGNMENT 获取分配的工作
+
+### Framework Self-Development Review (self-evolve mode)
+
+When reviewing in self-evolve mode (framework is modifying itself), add these review dimensions:
+
+1. **`_metadata.json` ↔ skill directory 1:1 mapping**: Verify every `core/skills/*/` has a `_metadata.json`, and every `_metadata.json` references a valid skill directory. Run `node tests/validate-all.js` to automate this check.
+2. **Template variable completeness**: For modified `dev-pipeline/templates/*.md` files, verify all `{{PLACEHOLDER}}` markers have matching open/close tags and are resolvable by `generate-bootstrap-prompt.py`.
+3. **Agent frontmatter validation**: For modified `core/agents/*.md` files, validate YAML frontmatter contains required fields: `name`, `description`, `tools`. Optionally check `model`, `skills`.
+4. **CI gate execution**: Run `npm run ci` and report the full result. Any failure here is **CRITICAL** severity — the framework must always ship green.
+5. **Bundle safety check**: Verify no files in `create-prizmkit/bundled/` were directly modified (use `git diff --name-only` to check). Direct modifications to bundled assets are always CRITICAL.

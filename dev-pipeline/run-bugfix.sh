@@ -84,18 +84,23 @@ spawn_and_wait_session() {
         model_flag="--model $MODEL"
     fi
 
+    # Unset CLAUDECODE to prevent "nested session" error when launched from
+    # within an existing Claude Code session (e.g. via launch-bugfix-daemon.sh).
+    unset CLAUDECODE 2>/dev/null || true
+
     case "$CLI_CMD" in
         *claude*)
+            # Claude Code: prompt via -p, --dangerously-skip-permissions for auto-accept
             "$CLI_CMD" \
-                --print \
                 -p "$(cat "$bootstrap_prompt")" \
-                --yes \
+                --dangerously-skip-permissions \
                 $verbose_flag \
                 $stream_json_flag \
                 $model_flag \
                 > "$session_log" 2>&1 &
             ;;
         *)
+            # CodeBuddy (cbc) and others: prompt via stdin, -y for auto-accept
             "$CLI_CMD" \
                 --print \
                 -y \

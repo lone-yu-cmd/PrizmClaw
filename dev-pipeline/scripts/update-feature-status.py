@@ -124,9 +124,9 @@ def load_feature_status(state_dir, feature_id, feature_list_status=None):
     )
     if not os.path.isfile(status_path):
         now = now_iso()
-        return {
+        data = {
             "feature_id": feature_id,
-            "status": "pending",
+            "status": feature_list_status if feature_list_status else "pending",
             "retry_count": 0,
             "max_retries": 3,
             "sessions": [],
@@ -135,13 +135,14 @@ def load_feature_status(state_dir, feature_id, feature_list_status=None):
             "created_at": now,
             "updated_at": now,
         }
+        return data
     data, err = load_json_file(status_path)
     if err:
         # If we can't read it, treat as pending
         now = now_iso()
         data = {
             "feature_id": feature_id,
-            "status": "pending",
+            "status": feature_list_status if feature_list_status else "pending",
             "retry_count": 0,
             "max_retries": 3,
             "sessions": [],
@@ -685,7 +686,12 @@ def _estimate_remaining_time(features, state_dir, counts, feature_list_data=None
 
 
 def action_status(feature_list_data, state_dir):
-    """Print a formatted overview of all features and their status."""
+    """Print a formatted overview of all features and their status.
+
+    Status is read exclusively from feature-list.json (the single source of
+    truth).  state_dir is only used for ETA estimation when session history
+    is available.
+    """
     features = feature_list_data.get("features", [])
     app_name = feature_list_data.get("app_name", "Unknown")
 
@@ -701,7 +707,7 @@ def action_status(feature_list_data, state_dir):
     }
     feature_lines = []
 
-    # Build dependency info: feature_id -> list of dep_ids that are not completed
+    # Build status map from feature-list.json only
     status_map = {}
     for feature in features:
         if not isinstance(feature, dict):
@@ -709,8 +715,7 @@ def action_status(feature_list_data, state_dir):
         fid = feature.get("id")
         if not fid:
             continue
-        fs = load_feature_status(state_dir, fid, feature.get("status"))
-        status_map[fid] = fs.get("status", "pending")
+        status_map[fid] = feature.get("status", "pending")
 
     for feature in features:
         if not isinstance(feature, dict):
@@ -720,11 +725,7 @@ def action_status(feature_list_data, state_dir):
         if not fid:
             continue
 
-        fs = load_feature_status(state_dir, fid, feature.get("status"))
-        fstatus = fs.get("status", "pending")
-        retry_count = fs.get("retry_count", 0)
-        max_retries_val = fs.get("max_retries", 3)
-        resume_phase = fs.get("resume_from_phase")
+        fstatus = feature.get("status", "pending")
 
         # Count statuses
         if fstatus in counts:
@@ -750,21 +751,7 @@ def action_status(feature_list_data, state_dir):
 
         # Build detail suffix
         detail = ""
-        if fstatus == "in_progress":
-            parts = []
-            if retry_count > 0:
-                parts.append("retry {}/{}".format(retry_count, max_retries_val))
-            if resume_phase is not None:
-                parts.append("CP-{}".format(resume_phase))
-            if parts:
-                detail = " ({})".format(", ".join(parts))
-        elif fstatus == "failed":
-            detail = " (failed after {} retries)".format(retry_count)
-        elif fstatus == "commit_missing":
-            detail = " (commit missing, retry {}/{})".format(retry_count, max_retries_val)
-        elif fstatus == "docs_missing":
-            detail = " (docs missing, retry {}/{})".format(retry_count, max_retries_val)
-        elif fstatus == "pending":
+        if fstatus == "pending":
             # Check if blocked by dependencies
             deps = feature.get("dependencies", [])
             blocking = [

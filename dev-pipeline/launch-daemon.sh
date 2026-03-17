@@ -8,11 +8,11 @@ set -euo pipefail
 # log consolidation, and lifecycle commands.
 #
 # Usage:
-#   ./launch-daemon.sh start [feature-list.json] [--env "KEY=VAL ..."]
+#   ./launch-daemon.sh start [feature-list.json] [--mode <mode>] [--env "KEY=VAL ..."]
 #   ./launch-daemon.sh stop
 #   ./launch-daemon.sh status
 #   ./launch-daemon.sh logs [--lines N] [--follow]
-#   ./launch-daemon.sh restart [feature-list.json] [--env "KEY=VAL ..."]
+#   ./launch-daemon.sh restart [feature-list.json] [--mode <mode>] [--env "KEY=VAL ..."]
 #
 # NOTE:
 #   In AI skill sessions, always use this daemon wrapper.
@@ -92,6 +92,7 @@ clean_stale_pid() {
 cmd_start() {
     local feature_list=""
     local env_overrides=""
+    local mode_override=""
 
     # Parse arguments
     while [[ $# -gt 0 ]]; do
@@ -103,6 +104,23 @@ cmd_start() {
                     exit 1
                 fi
                 env_overrides="$1"
+                shift
+                ;;
+            --mode)
+                shift
+                if [[ $# -eq 0 ]]; then
+                    log_error "--mode requires a value (lite|standard|full|self-evolve)"
+                    exit 1
+                fi
+                case "$1" in
+                    lite|standard|full|self-evolve)
+                        mode_override="$1"
+                        ;;
+                    *)
+                        log_error "Invalid mode: $1 (must be lite, standard, full, or self-evolve)"
+                        exit 1
+                        ;;
+                esac
                 shift
                 ;;
             *)
@@ -152,8 +170,15 @@ cmd_start() {
 
     # Build environment prefix
     local env_cmd=""
+    local env_parts=""
     if [[ -n "$env_overrides" ]]; then
-        env_cmd="env $env_overrides"
+        env_parts="$env_overrides"
+    fi
+    if [[ -n "$mode_override" ]]; then
+        env_parts="${env_parts:+$env_parts }PIPELINE_MODE=$mode_override"
+    fi
+    if [[ -n "$env_parts" ]]; then
+        env_cmd="env $env_parts"
     fi
 
     # Record start time
@@ -174,6 +199,9 @@ cmd_start() {
     log_info "Launching pipeline..."
     log_info "Feature list: $feature_list"
     log_info "Log file: $LOG_FILE"
+    if [[ -n "$mode_override" ]]; then
+        log_info "Mode: $mode_override"
+    fi
     if [[ -n "$env_overrides" ]]; then
         log_info "Environment overrides: $env_overrides"
     fi
@@ -184,6 +212,9 @@ cmd_start() {
         echo "================================================================"
         echo "  Pipeline Daemon Started: $start_time"
         echo "  Feature list: $feature_list"
+        if [[ -n "$mode_override" ]]; then
+            echo "  Mode: $mode_override"
+        fi
         if [[ -n "$env_overrides" ]]; then
             echo "  Environment: $env_overrides"
         fi
@@ -212,12 +243,13 @@ cmd_start() {
     # Write start metadata (atomic)
     python3 -c "
 import json, sys, os
-pid, started_at, feature_list, env_overrides, log_file, state_dir = int(sys.argv[1]), sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], sys.argv[6]
+pid, started_at, feature_list, env_overrides, log_file, state_dir, mode = int(sys.argv[1]), sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], sys.argv[6], sys.argv[7]
 data = {
     'pid': pid,
     'started_at': started_at,
     'feature_list': feature_list,
     'env_overrides': env_overrides,
+    'mode': mode,
     'log_file': log_file
 }
 target = os.path.join(state_dir, '.pipeline-meta.json')
@@ -225,7 +257,7 @@ tmp = target + '.tmp'
 with open(tmp, 'w') as f:
     json.dump(data, f, indent=2)
 os.replace(tmp, target)
-" "$pipeline_pid" "$start_time" "$feature_list" "$env_overrides" "$LOG_FILE" "$STATE_DIR" 2>/dev/null || true
+" "$pipeline_pid" "$start_time" "$feature_list" "$env_overrides" "$LOG_FILE" "$STATE_DIR" "$mode_override" 2>/dev/null || true
 
     # Wait briefly and verify
     sleep 2
@@ -516,17 +548,23 @@ show_help() {
 Usage: launch-daemon.sh <command> [options]
 
 Commands:
-  start [feature-list.json] [--env "K=V ..."]   Start pipeline in background
+  start [feature-list.json] [--mode <mode>] [--env "K=V ..."]   Start pipeline in background
   stop                                            Gracefully stop pipeline
   status                                          Check if pipeline is running
   logs [--lines N] [--follow]                     View pipeline logs
-  restart [feature-list.json] [--env "K=V ..."]  Stop + start pipeline
+  restart [feature-list.json] [--mode <mode>] [--env "K=V ..."]  Stop + start pipeline
   help                                            Show this help
+
+Options:
+  --mode <lite|standard|full|self-evolve>   Override pipeline mode for all features
+  --env "KEY=VAL ..."                        Set environment variables
 
 Examples:
   ./launch-daemon.sh start                        # Start with default feature-list.json
   ./launch-daemon.sh start my-features.json       # Start with custom feature list
+  ./launch-daemon.sh start --mode self-evolve     # Self-evolve mode (framework development)
   ./launch-daemon.sh start --env "MAX_RETRIES=5 SESSION_TIMEOUT=7200"
+  ./launch-daemon.sh start feature-list.json --mode self-evolve --env "VERBOSE=1"
   ./launch-daemon.sh status                       # Check if running (JSON on stdout)
   ./launch-daemon.sh logs --follow                # Live log tailing
   ./launch-daemon.sh logs --lines 100             # Last 100 lines

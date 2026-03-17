@@ -84,7 +84,7 @@ def parse_args():
     )
     parser.add_argument(
         "--mode",
-        choices=["lite", "standard", "full"],
+        choices=["lite", "standard", "full", "self-evolve"],
         default=None,
         help="Override pipeline mode (default: auto-detect from complexity)",
     )
@@ -276,14 +276,35 @@ def process_mode_blocks(content, pipeline_mode, init_done):
     """Process pipeline mode and init conditional blocks.
 
     Keeps the block matching the current mode, removes the others.
+    For self-evolve mode: keeps SELF_EVOLVE blocks AND FULL blocks
+    (since self-evolve is full + framework guardrails).
     """
+    is_self_evolve = pipeline_mode == "self-evolve"
+
+    # Step 1: Handle SELF_EVOLVE conditional blocks first
+    se_open = "{{IF_MODE_SELF_EVOLVE}}"
+    se_close = "{{END_IF_MODE_SELF_EVOLVE}}"
+    if is_self_evolve:
+        # Keep content, remove tags
+        content = content.replace(se_open + "\n", "")
+        content = content.replace(se_open, "")
+        content = content.replace(se_close + "\n", "")
+        content = content.replace(se_close, "")
+    else:
+        # Remove entire SELF_EVOLVE blocks
+        pattern = re.escape(se_open) + r".*?" + re.escape(se_close) + r"\n?"
+        content = re.sub(pattern, "", content, flags=re.DOTALL)
+
+    # Step 2: Handle lite/standard/full blocks
+    # self-evolve inherits full mode for the standard tier blocks
+    effective_mode = "full" if is_self_evolve else pipeline_mode
     modes = ["lite", "standard", "full"]
 
     for mode in modes:
         tag_open = "{{{{IF_MODE_{}}}}}".format(mode.upper())
         tag_close = "{{{{END_IF_MODE_{}}}}}".format(mode.upper())
 
-        if mode == pipeline_mode:
+        if mode == effective_mode:
             # Keep content, remove tags
             content = content.replace(tag_open + "\n", "")
             content = content.replace(tag_open, "")
@@ -427,6 +448,8 @@ def build_replacements(args, feature, features, global_context, script_dir):
     else:
         pipeline_mode = determine_pipeline_mode(complexity)
 
+    is_self_evolve = pipeline_mode == "self-evolve"
+
     # Auto-detect resume: if all planning artifacts exist and resume_phase
     # is "null" (fresh start), skip to Phase 6
     effective_resume = args.resume_phase
@@ -468,6 +491,7 @@ def build_replacements(args, feature, features, global_context, script_dir):
         "{{HAS_PLAN}}": "true" if artifacts["has_plan"] else "false",
         "{{HAS_TASKS}}": "true" if artifacts["has_tasks"] else "false",
         "{{ARTIFACTS_COMPLETE}}": "true" if artifacts["all_complete"] else "false",
+        "{{IS_SELF_EVOLVE}}": "true" if is_self_evolve else "false",
     }
 
     return replacements, effective_resume
@@ -539,6 +563,7 @@ def main():
             "lite": "bootstrap-tier1.md",
             "standard": "bootstrap-tier2.md",
             "full": "bootstrap-tier3.md",
+            "self-evolve": "bootstrap-tier3.md",
         }
         _tier_file = _tier_file_map.get(_mode, "bootstrap-tier2.md")
         _tier_path = os.path.join(script_dir, "..", "templates", _tier_file)

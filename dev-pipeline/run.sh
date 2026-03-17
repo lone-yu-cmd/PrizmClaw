@@ -27,6 +27,7 @@ set -euo pipefail
 #   LOG_CLEANUP_ENABLED   Run periodic log cleanup (default: 1)
 #   LOG_RETENTION_DAYS    Delete logs older than N days (default: 14)
 #   LOG_MAX_TOTAL_MB      Keep total logs under N MB via oldest-first cleanup (default: 1024)
+#   PIPELINE_MODE         Override mode for all features: lite|standard|full|self-evolve (used by daemon)
 # ============================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -91,10 +92,6 @@ spawn_and_wait_session() {
     local stream_json_flag=""
     if [[ "$USE_STREAM_JSON" == "true" ]]; then
         stream_json_flag="--output-format stream-json"
-        # stream-json requires --verbose on Claude Code
-        if [[ "$CLI_CMD" == *"claude"* && -z "$verbose_flag" ]]; then
-            verbose_flag="--verbose"
-        fi
     fi
 
     local model_flag=""
@@ -110,7 +107,6 @@ spawn_and_wait_session() {
         *claude*)
             # Claude Code: prompt via -p argument, --dangerously-skip-permissions for auto-accept
             "$CLI_CMD" \
-                --print \
                 -p "$(cat "$bootstrap_prompt")" \
                 --dangerously-skip-permissions \
                 $verbose_flag \
@@ -337,11 +333,11 @@ run_one() {
                     exit 1
                 fi
                 case "$1" in
-                    lite|standard|full)
+                    lite|standard|full|self-evolve)
                         mode_override="$1"
                         ;;
                     *)
-                        log_error "Invalid mode: $1 (must be lite, standard, or full)"
+                        log_error "Invalid mode: $1 (must be lite, standard, full, or self-evolve)"
                         exit 1
                         ;;
                 esac
@@ -413,6 +409,14 @@ run_one() {
 
     check_dependencies
     run_log_cleanup
+
+    # Auto-detect framework repo: if scripts/bundle.js exists, enable self-evolve mode
+    local project_root
+    project_root=$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || echo "")
+    if [[ -z "$mode_override" && -n "$project_root" && -f "$project_root/scripts/bundle.js" ]]; then
+        log_info "Detected PrizmKit framework repo — auto-enabling self-evolve mode"
+        mode_override="self-evolve"
+    fi
 
     # Verify feature exists
     local feature_title
@@ -597,6 +601,37 @@ sys.exit(1)
 
     echo ""
     if [[ "$session_status" == "success" ]]; then
+        # Self-evolve mode: run framework validation after successful session
+        if [[ "$mode_override" == "self-evolve" ]]; then
+            log_info "Self-evolve mode: running framework validation..."
+            if bash "$SCRIPTS_DIR/validate-framework.sh" 2>&1; then
+                log_success "Framework validation passed"
+            else
+                log_warn "Framework validation failed — review issues above"
+                session_status="framework_validation_failed"
+            fi
+
+            # Check for reload_needed marker in session status
+            local session_status_file="$session_dir/session-status.json"
+            if [[ -f "$session_status_file" ]]; then
+                local reload_needed
+                reload_needed=$(python3 -c "
+import json, sys
+with open(sys.argv[1]) as f:
+    data = json.load(f)
+print(data.get('reload_needed', False))
+" "$session_status_file" 2>/dev/null || echo "False")
+                if [[ "$reload_needed" == "True" ]]; then
+                    echo ""
+                    log_warn "╔══════════════════════════════════════════════════════════════╗"
+                    log_warn "║  RELOAD NEEDED: This session modified pipeline skills or     ║"
+                    log_warn "║  templates that are used by the dev-pipeline itself.          ║"
+                    log_warn "║  Changes will take effect in the NEXT session.                ║"
+                    log_warn "╚══════════════════════════════════════════════════════════════╝"
+                fi
+            fi
+        fi
+
         log_success "════════════════════════════════════════════════════"
         log_success "  $feature_id completed successfully!"
         log_success "════════════════════════════════════════════════════"
@@ -749,15 +784,36 @@ for f in data.get('stuck_features', []):
         mkdir -p "$session_dir/logs"
 
         local bootstrap_prompt="$session_dir/bootstrap-prompt.md"
-        python3 "$SCRIPTS_DIR/generate-bootstrap-prompt.py" \
-            --feature-list "$feature_list" \
-            --feature-id "$feature_id" \
-            --session-id "$session_id" \
-            --run-id "$run_id" \
-            --retry-count "$retry_count" \
-            --resume-phase "$resume_phase" \
-            --state-dir "$STATE_DIR" \
-            --output "$bootstrap_prompt" >/dev/null 2>&1
+
+        local main_prompt_args=(
+            --feature-list "$feature_list"
+            --feature-id "$feature_id"
+            --session-id "$session_id"
+            --run-id "$run_id"
+            --retry-count "$retry_count"
+            --resume-phase "$resume_phase"
+            --state-dir "$STATE_DIR"
+            --output "$bootstrap_prompt"
+        )
+
+        # Support PIPELINE_MODE env var (set by launch-daemon.sh --mode)
+        if [[ -n "${PIPELINE_MODE:-}" ]]; then
+            main_prompt_args+=(--mode "$PIPELINE_MODE")
+        fi
+
+        # Auto-detect framework repo: if scripts/bundle.js exists, enable self-evolve mode
+        if [[ -z "${PIPELINE_MODE:-}" ]]; then
+            local _project_root
+            _project_root=$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || echo "")
+            if [[ -n "$_project_root" && -f "$_project_root/scripts/bundle.js" ]]; then
+                if [[ $session_count -eq 0 ]]; then
+                    log_info "Detected PrizmKit framework repo — auto-enabling self-evolve mode"
+                fi
+                main_prompt_args+=(--mode "self-evolve")
+            fi
+        fi
+
+        python3 "$SCRIPTS_DIR/generate-bootstrap-prompt.py" "${main_prompt_args[@]}" >/dev/null 2>&1
 
         # Update current session tracking (atomic write via temp file)
         python3 -c "
@@ -817,7 +873,7 @@ show_help() {
     echo "Single Feature Options (run <feature-id>):"
     echo "  --dry-run                   Generate bootstrap prompt only, don't spawn session"
     echo "  --resume-phase N            Override resume phase (default: auto-detect)"
-    echo "  --mode <lite|standard|full> Override pipeline mode (bypasses estimated_complexity)"
+    echo "  --mode <lite|standard|full|self-evolve> Override pipeline mode (bypasses estimated_complexity)"
     echo "  --clean                     Delete artifacts and reset before running"
     echo "  --no-reset                  Skip feature status reset step"
     echo "  --timeout N                 Session timeout in seconds (default: 0 = no limit)"
@@ -832,6 +888,7 @@ show_help() {
     echo "  LOG_CLEANUP_ENABLED   Run log cleanup before execution (default: 1)"
     echo "  LOG_RETENTION_DAYS    Delete logs older than N days (default: 14)"
     echo "  LOG_MAX_TOTAL_MB      Keep total logs under N MB (default: 1024)"
+    echo "  PIPELINE_MODE         Override mode for all features: lite|standard|full|self-evolve"
     echo ""
     echo "Examples:"
     echo "  ./run.sh run                                         # Run all features"
@@ -898,7 +955,7 @@ case "${1:-run}" in
             unset CLAUDECODE
             case "$CLI_CMD" in
                 *claude*)
-                    "$CLI_CMD" --print -p "$test_prompt" --dangerously-skip-permissions --no-session-persistence $local_model_flag > "$tmpfile" 2>/dev/null
+                    "$CLI_CMD" -p "$test_prompt" --dangerously-skip-permissions --no-session-persistence $local_model_flag > "$tmpfile" 2>/dev/null
                     ;;
                 *)
                     echo "$test_prompt" | "$CLI_CMD" --print -y $local_model_flag > "$tmpfile" 2>/dev/null
