@@ -228,6 +228,11 @@ python3 "$SCRIPTS_DIR/update-feature-status.py" \
     --action start >/dev/null 2>&1 || true
 
 # Spawn AI CLI session
+MODEL_FLAG=""
+if [[ -n "${MODEL:-}" ]]; then
+    MODEL_FLAG="--model $MODEL"
+fi
+
 case "$CLI_CMD" in
     *claude*)
         "$CLI_CMD" \
@@ -235,6 +240,7 @@ case "$CLI_CMD" in
             -p "$(cat "$BOOTSTRAP_PROMPT")" \
             --yes \
             $STREAM_JSON_FLAG \
+            $MODEL_FLAG \
             > "$SESSION_LOG" 2>&1 &
         ;;
     *)
@@ -242,6 +248,7 @@ case "$CLI_CMD" in
             --print \
             -y \
             $STREAM_JSON_FLAG \
+            $MODEL_FLAG \
             < "$BOOTSTRAP_PROMPT" \
             > "$SESSION_LOG" 2>&1 &
         ;;

@@ -19,6 +19,7 @@ from datetime import datetime, timezone
 
 EXPECTED_SCHEMA = "dev-pipeline-feature-list-v1"
 FEATURE_ID_PATTERN = re.compile(r"^F-\d{3}$")
+TERMINAL_STATUSES = {"completed", "failed", "skipped"}
 
 REQUIRED_FEATURE_FIELDS = [
     "id",
@@ -234,6 +235,12 @@ def create_state_directory(state_dir, feature_list_path, features):
     os.makedirs(abs_state_dir, exist_ok=True)
     os.makedirs(features_dir, exist_ok=True)
 
+    # Count features already in terminal status at init time
+    completed_count = sum(
+        1 for f in features
+        if isinstance(f, dict) and f.get("status") in TERMINAL_STATUSES
+    )
+
     # Write pipeline.json
     pipeline_state = {
         "run_id": run_id,
@@ -241,7 +248,7 @@ def create_state_directory(state_dir, feature_list_path, features):
         "feature_list_path": abs_feature_list_path,
         "created_at": now,
         "total_features": len(features),
-        "completed_features": 0,
+        "completed_features": completed_count,
     }
     pipeline_path = os.path.join(abs_state_dir, "pipeline.json")
     with open(pipeline_path, "w", encoding="utf-8") as f:
@@ -260,9 +267,13 @@ def create_state_directory(state_dir, feature_list_path, features):
         sessions_dir = os.path.join(feature_dir, "sessions")
         os.makedirs(sessions_dir, exist_ok=True)
 
+        # Respect existing terminal status from feature-list.json
+        fl_status = feature.get("status", "pending")
+        init_status = fl_status if fl_status in TERMINAL_STATUSES else "pending"
+
         feature_status = {
             "feature_id": fid,
-            "status": "pending",
+            "status": init_status,
             "retry_count": 0,
             "max_retries": 3,
             "sessions": [],

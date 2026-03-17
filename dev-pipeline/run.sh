@@ -20,6 +20,7 @@ set -euo pipefail
 #   AI_CLI                AI CLI command name (override; also readable from .prizmkit/config.json)
 #   CODEBUDDY_CLI         Legacy alias for AI_CLI (deprecated, use AI_CLI instead)
 #   PRIZMKIT_PLATFORM     Force platform: 'codebuddy' or 'claude' (auto-detected)
+#   MODEL                 AI model to use (e.g. claude-opus-4.6, claude-sonnet-4.6, claude-haiku-4.5)
 #   VERBOSE               Set to 1 to enable --verbose on AI CLI (shows subagent output)
 #   HEARTBEAT_INTERVAL    Heartbeat log interval in seconds (default: 30)
 #   HEARTBEAT_STALE_THRESHOLD  Heartbeat stale threshold in seconds (default: 600)
@@ -41,6 +42,7 @@ LOG_CLEANUP_ENABLED=${LOG_CLEANUP_ENABLED:-1}
 LOG_RETENTION_DAYS=${LOG_RETENTION_DAYS:-14}
 LOG_MAX_TOTAL_MB=${LOG_MAX_TOTAL_MB:-1024}
 VERBOSE=${VERBOSE:-0}
+MODEL=${MODEL:-""}
 
 # Source shared common helpers (CLI/platform detection + logs + deps)
 source "$SCRIPT_DIR/lib/common.sh"
@@ -89,17 +91,31 @@ spawn_and_wait_session() {
     local stream_json_flag=""
     if [[ "$USE_STREAM_JSON" == "true" ]]; then
         stream_json_flag="--output-format stream-json"
+        # stream-json requires --verbose on Claude Code
+        if [[ "$CLI_CMD" == *"claude"* && -z "$verbose_flag" ]]; then
+            verbose_flag="--verbose"
+        fi
     fi
+
+    local model_flag=""
+    if [[ -n "$MODEL" ]]; then
+        model_flag="--model $MODEL"
+    fi
+
+    # Unset CLAUDECODE to prevent "nested session" error when launched from
+    # within an existing Claude Code session (e.g. via launch-daemon.sh).
+    unset CLAUDECODE 2>/dev/null || true
 
     case "$CLI_CMD" in
         *claude*)
-            # Claude Code: prompt via -p argument, --yes for auto-accept
+            # Claude Code: prompt via -p argument, --dangerously-skip-permissions for auto-accept
             "$CLI_CMD" \
                 --print \
                 -p "$(cat "$bootstrap_prompt")" \
-                --yes \
+                --dangerously-skip-permissions \
                 $verbose_flag \
                 $stream_json_flag \
+                $model_flag \
                 > "$session_log" 2>&1 &
             ;;
         *)
@@ -109,6 +125,7 @@ spawn_and_wait_session() {
                 -y \
                 $verbose_flag \
                 $stream_json_flag \
+                $model_flag \
                 < "$bootstrap_prompt" \
                 > "$session_log" 2>&1 &
             ;;
@@ -237,6 +254,9 @@ with open(p, 'w', encoding='utf-8') as f:
 cleanup() {
     echo ""
     log_warn "Received interrupt signal. Saving state..."
+
+    # Kill all child processes (claude-internal, heartbeat, progress parser, etc.)
+    kill 0 2>/dev/null || true
 
     if [[ -n "$FEATURE_LIST" && -f "$FEATURE_LIST" ]]; then
         python3 "$SCRIPTS_DIR/update-feature-status.py" \
@@ -747,7 +767,7 @@ feature_id, session_id, state_dir = sys.argv[1], sys.argv[2], sys.argv[3]
 data = {
     'feature_id': feature_id,
     'session_id': session_id,
-    'started_at': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
+    'started_at': datetime.now(datetime.UTC).strftime('%Y-%m-%dT%H:%M:%SZ')
 }
 target = os.path.join(state_dir, 'current-session.json')
 tmp = target + '.tmp'
@@ -790,6 +810,7 @@ show_help() {
     echo "  run [feature-list.json]                 Run all features sequentially"
     echo "  run <feature-id> [options]              Run a single feature"
     echo "  status [feature-list.json]               Show pipeline status"
+    echo "  test-cli                                 Test AI CLI: show detected CLI, version, and model"
     echo "  reset                                    Clear all state and start fresh"
     echo "  help                                     Show this help message"
     echo ""
@@ -805,6 +826,7 @@ show_help() {
     echo "  MAX_RETRIES           Max retries per feature (default: 3)"
     echo "  SESSION_TIMEOUT       Session timeout in seconds (default: 0 = no limit)"
     echo "  AI_CLI                AI CLI command name (auto-detected: cbc or claude)"
+    echo "  MODEL                 AI model ID (e.g. claude-opus-4.6, claude-sonnet-4.6, claude-haiku-4.5)"
     echo "  HEARTBEAT_INTERVAL    Heartbeat log interval in seconds (default: 30)"
     echo "  HEARTBEAT_STALE_THRESHOLD  Heartbeat stale threshold in seconds (default: 600)"
     echo "  LOG_CLEANUP_ENABLED   Run log cleanup before execution (default: 1)"
@@ -820,6 +842,8 @@ show_help() {
     echo "  ./run.sh run F-007 --clean --mode standard             # Clean + run standard"
     echo "  ./run.sh status                                        # Show pipeline status"
     echo "  MAX_RETRIES=5 SESSION_TIMEOUT=7200 ./run.sh run        # Custom config"
+    echo "  MODEL=claude-sonnet-4.6 ./run.sh run                    # Use Sonnet model"
+    echo "  MODEL=claude-haiku-4.5 ./run.sh test-cli                # Test with Haiku"
 }
 
 case "${1:-run}" in
@@ -842,6 +866,64 @@ case "${1:-run}" in
             --feature-list "${2:-feature-list.json}" \
             --state-dir "$STATE_DIR" \
             --action status
+        ;;
+    test-cli)
+        echo ""
+        echo "============================================"
+        echo "  Dev-Pipeline AI CLI Test"
+        echo "============================================"
+        echo ""
+        echo "  Detected CLI:    $CLI_CMD"
+        echo "  Platform:        $PLATFORM"
+        if [[ -n "$MODEL" ]]; then
+            echo "  Requested Model: $MODEL"
+        fi
+
+        # Get CLI version (first line only)
+        cli_version=$("$CLI_CMD" -v 2>&1 | head -1 || echo "unknown")
+        echo "  CLI Version:     $cli_version"
+        echo ""
+        echo "  Querying AI model (headless mode)..."
+
+        test_prompt="What AI assistant/platform are you and what model are you running? Reply in one line, e.g. \"I'm Claude Code Claude Opnus x.x\".No extra text."
+
+        local_model_flag=""
+        if [[ -n "$MODEL" ]]; then
+            local_model_flag="--model $MODEL"
+        fi
+
+        # Run headless query with 30s timeout (background + kill pattern for macOS)
+        tmpfile=$(mktemp)
+        (
+            unset CLAUDECODE
+            case "$CLI_CMD" in
+                *claude*)
+                    "$CLI_CMD" --print -p "$test_prompt" --dangerously-skip-permissions --no-session-persistence $local_model_flag > "$tmpfile" 2>/dev/null
+                    ;;
+                *)
+                    echo "$test_prompt" | "$CLI_CMD" --print -y $local_model_flag > "$tmpfile" 2>/dev/null
+                    ;;
+            esac
+        ) &
+        query_pid=$!
+        ( sleep 30 && kill "$query_pid" 2>/dev/null ) &
+        timer_pid=$!
+        wait "$query_pid" 2>/dev/null
+        kill "$timer_pid" 2>/dev/null
+        wait "$timer_pid" 2>/dev/null || true
+
+        model_reply=$(cat "$tmpfile" 2>/dev/null | head -3)
+        rm -f "$tmpfile"
+
+        if [[ -z "$model_reply" ]]; then
+            model_reply="(no response — CLI may require auth or is unavailable)"
+        fi
+
+        echo ""
+        echo "  AI Response:     $model_reply"
+        echo ""
+        echo "============================================"
+        echo ""
         ;;
     reset)
         log_warn "Resetting pipeline state..."

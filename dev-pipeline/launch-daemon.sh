@@ -191,6 +191,11 @@ cmd_start() {
         echo ""
     } >> "$LOG_FILE"
 
+    # Unset CLAUDECODE to allow spawning nested Claude Code sessions.
+    # When this daemon is launched from within a Claude Code session, the env var
+    # is inherited and blocks child claude processes with "nested sessions" error.
+    unset CLAUDECODE 2>/dev/null || true
+
     # Launch with nohup + disown for full detachment
     if [[ -n "$env_cmd" ]]; then
         nohup $env_cmd "$RUN_SCRIPT" run "$feature_list" >> "$LOG_FILE" 2>&1 &
@@ -269,8 +274,9 @@ cmd_stop() {
 
     log_info "Stopping pipeline (PID: $pid)..."
 
-    # Send SIGTERM for graceful shutdown (triggers run.sh cleanup trap)
-    kill -TERM "$pid" 2>/dev/null || true
+    # Kill the entire process group to include child processes (claude-internal, etc.)
+    # First try SIGTERM to the process group (negative PID)
+    kill -TERM -- -"$pid" 2>/dev/null || kill -TERM "$pid" 2>/dev/null || true
 
     # Wait up to 30 seconds for graceful exit
     local waited=0
@@ -282,10 +288,10 @@ cmd_stop() {
         waited=$((waited + 1))
     done
 
-    # Force kill if still alive
+    # Force kill if still alive (process group first, then individual)
     if kill -0 "$pid" 2>/dev/null; then
         log_warn "Process did not exit after 30s, sending SIGKILL..."
-        kill -9 "$pid" 2>/dev/null || true
+        kill -9 -- -"$pid" 2>/dev/null || kill -9 "$pid" 2>/dev/null || true
         sleep 1
     fi
 

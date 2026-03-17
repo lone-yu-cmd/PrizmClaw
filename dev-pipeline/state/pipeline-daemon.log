@@ -1,0 +1,420 @@
+
+================================================================
+  Pipeline Daemon Started: 2026-03-17T09:17:53Z
+  Feature list: /Users/wylonyu/selfProjects/PrizmClaw/feature-list.json
+================================================================
+
+[0;34m[INFO][0m    2026-03-17 17:17:55 Initializing pipeline state...
+[0;32m[SUCCESS][0m 2026-03-17 17:17:56 Pipeline initialized with 21 features
+
+[1m════════════════════════════════════════════════════[0m
+[1m          Dev-Pipeline Runner Started[0m
+[1m════════════════════════════════════════════════════[0m
+[0;34m[INFO][0m    2026-03-17 17:17:56 Feature list: /Users/wylonyu/selfProjects/PrizmClaw/feature-list.json
+[0;34m[INFO][0m    2026-03-17 17:17:56 Max retries per feature: 3
+[0;34m[INFO][0m    2026-03-17 17:17:56 Session timeout: none
+[0;34m[INFO][0m    2026-03-17 17:17:56 AI CLI: claude-internal (platform: claude)
+[1m════════════════════════════════════════════════════[0m
+
+
+[1m────────────────────────────────────────────────────[0m
+[0;34m[INFO][0m    2026-03-17 17:17:56 Feature: [1mF-015[0m — AI CLI Backend Switcher
+[0;34m[INFO][0m    2026-03-17 17:17:56 Retry: 0 / 3
+[1m────────────────────────────────────────────────────[0m
+<string>:8: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+[0;34m[INFO][0m    2026-03-17 17:17:57 Spawning AI CLI session: F-015-20260317171756
+[0;34m[INFO][0m    2026-03-17 17:18:00 Session log: 4 lines, 0KB
+[1;33m[WARN][0m    2026-03-17 17:18:00 Session ended without status file — treating as crashed
+[0;34m[INFO][0m    2026-03-17 17:18:00 Session result: crashed
+[0;34m[INFO][0m    2026-03-17 17:18:00 Pausing 5s before next feature...
+
+[1m────────────────────────────────────────────────────[0m
+[0;34m[INFO][0m    2026-03-17 17:18:05 Feature: [1mF-015[0m — AI CLI Backend Switcher
+[0;34m[INFO][0m    2026-03-17 17:18:05 Retry: 1 / 3
+[1m────────────────────────────────────────────────────[0m
+<string>:8: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+[0;34m[INFO][0m    2026-03-17 17:18:05 Spawning AI CLI session: F-015-20260317171805
+[0;34m[INFO][0m    2026-03-17 17:18:08 Session log: 4 lines, 0KB
+[1;33m[WARN][0m    2026-03-17 17:18:08 Session ended without status file — treating as crashed
+[0;34m[INFO][0m    2026-03-17 17:18:08 Session result: crashed
+[0;34m[INFO][0m    2026-03-17 17:18:08 Pausing 5s before next feature...
+
+[1m────────────────────────────────────────────────────[0m
+[0;34m[INFO][0m    2026-03-17 17:18:13 Feature: [1mF-015[0m — AI CLI Backend Switcher
+[0;34m[INFO][0m    2026-03-17 17:18:13 Retry: 2 / 3
+[1m────────────────────────────────────────────────────[0m
+<string>:8: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+[0;34m[INFO][0m    2026-03-17 17:18:13 Spawning AI CLI session: F-015-20260317171813
+[0;34m[INFO][0m    2026-03-17 17:18:16 Session log: 4 lines, 0KB
+[1;33m[WARN][0m    2026-03-17 17:18:16 Session ended without status file — treating as crashed
+[0;34m[INFO][0m    2026-03-17 17:18:16 Session result: crashed
+[0;34m[INFO][0m    2026-03-17 17:18:16 Pausing 5s before next feature...
+
+[1m────────────────────────────────────────────────────[0m
+[0;34m[INFO][0m    2026-03-17 17:18:22 Feature: [1mF-016[0m — Telegram Command Bug Fixes
+[0;34m[INFO][0m    2026-03-17 17:18:22 Retry: 0 / 3
+[1m────────────────────────────────────────────────────[0m
+<string>:8: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+[0;34m[INFO][0m    2026-03-17 17:18:22 Spawning AI CLI session: F-016-20260317171822
+[0;34m[INFO][0m    2026-03-17 17:18:25 Session log: 4 lines, 0KB
+[1;33m[WARN][0m    2026-03-17 17:18:25 Session ended without status file — treating as crashed
+[0;34m[INFO][0m    2026-03-17 17:18:25 Session result: crashed
+[0;34m[INFO][0m    2026-03-17 17:18:25 Pausing 5s before next feature...
+
+[1m────────────────────────────────────────────────────[0m
+[0;34m[INFO][0m    2026-03-17 17:18:31 Feature: [1mF-016[0m — Telegram Command Bug Fixes
+[0;34m[INFO][0m    2026-03-17 17:18:31 Retry: 1 / 3
+[1m────────────────────────────────────────────────────[0m
+<string>:8: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+[0;34m[INFO][0m    2026-03-17 17:18:31 Spawning AI CLI session: F-016-20260317171831
+[0;34m[INFO][0m    2026-03-17 17:18:34 Session log: 4 lines, 0KB
+[1;33m[WARN][0m    2026-03-17 17:18:34 Session ended without status file — treating as crashed
+[0;34m[INFO][0m    2026-03-17 17:18:34 Session result: crashed
+[0;34m[INFO][0m    2026-03-17 17:18:34 Pausing 5s before next feature...
+
+[1m────────────────────────────────────────────────────[0m
+[0;34m[INFO][0m    2026-03-17 17:18:39 Feature: [1mF-016[0m — Telegram Command Bug Fixes
+[0;34m[INFO][0m    2026-03-17 17:18:39 Retry: 2 / 3
+[1m────────────────────────────────────────────────────[0m
+<string>:8: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+[0;34m[INFO][0m    2026-03-17 17:18:40 Spawning AI CLI session: F-016-20260317171839
+[0;34m[INFO][0m    2026-03-17 17:18:43 Session log: 4 lines, 0KB
+[1;33m[WARN][0m    2026-03-17 17:18:43 Session ended without status file — treating as crashed
+[0;34m[INFO][0m    2026-03-17 17:18:43 Session result: crashed
+[0;34m[INFO][0m    2026-03-17 17:18:43 Pausing 5s before next feature...
+
+[1m────────────────────────────────────────────────────[0m
+[0;34m[INFO][0m    2026-03-17 17:18:49 Feature: [1mF-017[0m — Runtime Config Manager
+[0;34m[INFO][0m    2026-03-17 17:18:49 Retry: 0 / 3
+[1m────────────────────────────────────────────────────[0m
+<string>:8: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+[0;34m[INFO][0m    2026-03-17 17:18:49 Spawning AI CLI session: F-017-20260317171849
+[0;34m[INFO][0m    2026-03-17 17:18:51 Session log: 4 lines, 0KB
+[1;33m[WARN][0m    2026-03-17 17:18:51 Session ended without status file — treating as crashed
+[0;34m[INFO][0m    2026-03-17 17:18:51 Session result: crashed
+[0;34m[INFO][0m    2026-03-17 17:18:51 Pausing 5s before next feature...
+
+[1m────────────────────────────────────────────────────[0m
+[0;34m[INFO][0m    2026-03-17 17:18:56 Feature: [1mF-017[0m — Runtime Config Manager
+[0;34m[INFO][0m    2026-03-17 17:18:56 Retry: 1 / 3
+[1m────────────────────────────────────────────────────[0m
+<string>:8: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+[0;34m[INFO][0m    2026-03-17 17:18:57 Spawning AI CLI session: F-017-20260317171856
+[0;34m[INFO][0m    2026-03-17 17:19:00 Session log: 4 lines, 0KB
+[1;33m[WARN][0m    2026-03-17 17:19:00 Session ended without status file — treating as crashed
+[0;34m[INFO][0m    2026-03-17 17:19:00 Session result: crashed
+[0;34m[INFO][0m    2026-03-17 17:19:00 Pausing 5s before next feature...
+
+[1m────────────────────────────────────────────────────[0m
+[0;34m[INFO][0m    2026-03-17 17:19:05 Feature: [1mF-017[0m — Runtime Config Manager
+[0;34m[INFO][0m    2026-03-17 17:19:05 Retry: 2 / 3
+[1m────────────────────────────────────────────────────[0m
+<string>:8: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+[0;34m[INFO][0m    2026-03-17 17:19:06 Spawning AI CLI session: F-017-20260317171905
+[0;34m[INFO][0m    2026-03-17 17:19:08 Session log: 4 lines, 0KB
+[1;33m[WARN][0m    2026-03-17 17:19:08 Session ended without status file — treating as crashed
+[0;34m[INFO][0m    2026-03-17 17:19:08 Session result: crashed
+[0;34m[INFO][0m    2026-03-17 17:19:08 Pausing 5s before next feature...
+
+[1m────────────────────────────────────────────────────[0m
+[0;34m[INFO][0m    2026-03-17 17:19:14 Feature: [1mF-018[0m — Web-Telegram Bidirectional Sync
+[0;34m[INFO][0m    2026-03-17 17:19:14 Retry: 0 / 3
+[1m────────────────────────────────────────────────────[0m
+<string>:8: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+[0;34m[INFO][0m    2026-03-17 17:19:14 Spawning AI CLI session: F-018-20260317171914
+[0;34m[INFO][0m    2026-03-17 17:19:17 Session log: 4 lines, 0KB
+[1;33m[WARN][0m    2026-03-17 17:19:17 Session ended without status file — treating as crashed
+[0;34m[INFO][0m    2026-03-17 17:19:17 Session result: crashed
+[0;34m[INFO][0m    2026-03-17 17:19:17 Pausing 5s before next feature...
+
+[1;33m[WARN][0m    2026-03-17 17:19:22 Received interrupt signal. Saving state...
+{
+  "action": "pause",
+  "status": "paused",
+  "paused_at": "2026-03-17T09:19:22Z"
+}
+[0;34m[INFO][0m    2026-03-17 17:19:22 Pipeline paused. Run './run.sh run' to resume.
+
+================================================================
+  Pipeline Daemon Started: 2026-03-17T09:20:59Z
+  Feature list: /Users/wylonyu/selfProjects/PrizmClaw/feature-list.json
+================================================================
+
+[0;34m[INFO][0m    2026-03-17 17:21:00 Resuming existing pipeline...
+
+[1m════════════════════════════════════════════════════[0m
+[1m          Dev-Pipeline Runner Started[0m
+[1m════════════════════════════════════════════════════[0m
+[0;34m[INFO][0m    2026-03-17 17:21:00 Feature list: /Users/wylonyu/selfProjects/PrizmClaw/feature-list.json
+[0;34m[INFO][0m    2026-03-17 17:21:00 Max retries per feature: 3
+[0;34m[INFO][0m    2026-03-17 17:21:00 Session timeout: none
+[0;34m[INFO][0m    2026-03-17 17:21:00 AI CLI: claude-internal (platform: claude)
+[1m════════════════════════════════════════════════════[0m
+
+
+[1m────────────────────────────────────────────────────[0m
+[0;34m[INFO][0m    2026-03-17 17:21:01 Feature: [1mF-015[0m — AI CLI Backend Switcher
+[0;34m[INFO][0m    2026-03-17 17:21:01 Retry: 0 / 3
+[1m────────────────────────────────────────────────────[0m
+<string>:8: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+[0;34m[INFO][0m    2026-03-17 17:21:01 Spawning AI CLI session: F-015-20260317172101
+[0;34m[INFO][0m    2026-03-17 17:21:03 Session log: 2 lines, 0KB
+[1;33m[WARN][0m    2026-03-17 17:21:03 Session ended without status file — treating as crashed
+[0;34m[INFO][0m    2026-03-17 17:21:03 Session result: crashed
+[0;34m[INFO][0m    2026-03-17 17:21:03 Pausing 5s before next feature...
+
+[1m────────────────────────────────────────────────────[0m
+[0;34m[INFO][0m    2026-03-17 17:21:09 Feature: [1mF-015[0m — AI CLI Backend Switcher
+[0;34m[INFO][0m    2026-03-17 17:21:09 Retry: 1 / 3
+[1m────────────────────────────────────────────────────[0m
+<string>:8: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+[0;34m[INFO][0m    2026-03-17 17:21:09 Spawning AI CLI session: F-015-20260317172109
+[0;34m[INFO][0m    2026-03-17 17:21:12 Session log: 2 lines, 0KB
+[1;33m[WARN][0m    2026-03-17 17:21:12 Session ended without status file — treating as crashed
+[0;34m[INFO][0m    2026-03-17 17:21:12 Session result: crashed
+[0;34m[INFO][0m    2026-03-17 17:21:12 Pausing 5s before next feature...
+
+[1m────────────────────────────────────────────────────[0m
+[0;34m[INFO][0m    2026-03-17 17:21:17 Feature: [1mF-015[0m — AI CLI Backend Switcher
+[0;34m[INFO][0m    2026-03-17 17:21:17 Retry: 2 / 3
+[1m────────────────────────────────────────────────────[0m
+<string>:8: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+[0;34m[INFO][0m    2026-03-17 17:21:17 Spawning AI CLI session: F-015-20260317172117
+[0;34m[INFO][0m    2026-03-17 17:21:20 Session log: 2 lines, 0KB
+[1;33m[WARN][0m    2026-03-17 17:21:20 Session ended without status file — treating as crashed
+[0;34m[INFO][0m    2026-03-17 17:21:20 Session result: crashed
+[0;34m[INFO][0m    2026-03-17 17:21:20 Pausing 5s before next feature...
+
+[1m────────────────────────────────────────────────────[0m
+[0;34m[INFO][0m    2026-03-17 17:21:25 Feature: [1mF-016[0m — Telegram Command Bug Fixes
+[0;34m[INFO][0m    2026-03-17 17:21:25 Retry: 0 / 3
+[1m────────────────────────────────────────────────────[0m
+<string>:8: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+[0;34m[INFO][0m    2026-03-17 17:21:26 Spawning AI CLI session: F-016-20260317172125
+
+[1;33m[WARN][0m    2026-03-17 17:21:26 Received interrupt signal. Saving state...
+{
+  "action": "pause",
+  "status": "paused",
+  "paused_at": "2026-03-17T09:21:26Z"
+}
+[0;34m[INFO][0m    2026-03-17 17:21:26 Pipeline paused. Run './run.sh run' to resume.
+
+================================================================
+  Pipeline Daemon Started: 2026-03-17T09:22:04Z
+  Feature list: /Users/wylonyu/selfProjects/PrizmClaw/feature-list.json
+================================================================
+
+[0;34m[INFO][0m    2026-03-17 17:22:06 Resuming existing pipeline...
+
+[1m════════════════════════════════════════════════════[0m
+[1m          Dev-Pipeline Runner Started[0m
+[1m════════════════════════════════════════════════════[0m
+[0;34m[INFO][0m    2026-03-17 17:22:06 Feature list: /Users/wylonyu/selfProjects/PrizmClaw/feature-list.json
+[0;34m[INFO][0m    2026-03-17 17:22:06 Max retries per feature: 3
+[0;34m[INFO][0m    2026-03-17 17:22:06 Session timeout: none
+[0;34m[INFO][0m    2026-03-17 17:22:06 AI CLI: claude-internal (platform: claude)
+[1m════════════════════════════════════════════════════[0m
+
+
+[1m────────────────────────────────────────────────────[0m
+[0;34m[INFO][0m    2026-03-17 17:22:06 Feature: [1mF-015[0m — AI CLI Backend Switcher
+[0;34m[INFO][0m    2026-03-17 17:22:06 Retry: 0 / 3
+[1m────────────────────────────────────────────────────[0m
+<string>:8: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+[0;34m[INFO][0m    2026-03-17 17:22:06 Spawning AI CLI session: F-015-20260317172206
+[0;34m[INFO][0m    2026-03-17 17:22:09 Session log: 2 lines, 0KB
+[1;33m[WARN][0m    2026-03-17 17:22:09 Session ended without status file — treating as crashed
+[0;34m[INFO][0m    2026-03-17 17:22:09 Session result: crashed
+[0;34m[INFO][0m    2026-03-17 17:22:09 Pausing 5s before next feature...
+
+[1m────────────────────────────────────────────────────[0m
+[0;34m[INFO][0m    2026-03-17 17:22:14 Feature: [1mF-015[0m — AI CLI Backend Switcher
+[0;34m[INFO][0m    2026-03-17 17:22:14 Retry: 1 / 3
+[1m────────────────────────────────────────────────────[0m
+<string>:8: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+[0;34m[INFO][0m    2026-03-17 17:22:15 Spawning AI CLI session: F-015-20260317172214
+[0;34m[INFO][0m    2026-03-17 17:22:17 Session log: 2 lines, 0KB
+[1;33m[WARN][0m    2026-03-17 17:22:17 Session ended without status file — treating as crashed
+[0;34m[INFO][0m    2026-03-17 17:22:17 Session result: crashed
+[0;34m[INFO][0m    2026-03-17 17:22:17 Pausing 5s before next feature...
+
+[1m────────────────────────────────────────────────────[0m
+[0;34m[INFO][0m    2026-03-17 17:22:22 Feature: [1mF-015[0m — AI CLI Backend Switcher
+[0;34m[INFO][0m    2026-03-17 17:22:22 Retry: 2 / 3
+[1m────────────────────────────────────────────────────[0m
+<string>:8: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+[0;34m[INFO][0m    2026-03-17 17:22:23 Spawning AI CLI session: F-015-20260317172222
+[0;34m[INFO][0m    2026-03-17 17:22:25 Session log: 2 lines, 0KB
+[1;33m[WARN][0m    2026-03-17 17:22:25 Session ended without status file — treating as crashed
+[0;34m[INFO][0m    2026-03-17 17:22:25 Session result: crashed
+[0;34m[INFO][0m    2026-03-17 17:22:26 Pausing 5s before next feature...
+
+[1m────────────────────────────────────────────────────[0m
+[0;34m[INFO][0m    2026-03-17 17:22:31 Feature: [1mF-016[0m — Telegram Command Bug Fixes
+[0;34m[INFO][0m    2026-03-17 17:22:31 Retry: 0 / 3
+[1m────────────────────────────────────────────────────[0m
+<string>:8: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+[0;34m[INFO][0m    2026-03-17 17:22:31 Spawning AI CLI session: F-016-20260317172231
+
+[1;33m[WARN][0m    2026-03-17 17:22:32 Received interrupt signal. Saving state...
+{
+  "action": "pause",
+  "status": "paused",
+  "paused_at": "2026-03-17T09:22:33Z"
+}
+[0;34m[INFO][0m    2026-03-17 17:22:33 Pipeline paused. Run './run.sh run' to resume.
+
+================================================================
+  Pipeline Daemon Started: 2026-03-17T09:25:31Z
+  Feature list: /Users/wylonyu/selfProjects/PrizmClaw/feature-list.json
+================================================================
+
+[0;34m[INFO][0m    2026-03-17 17:25:33 Resuming existing pipeline...
+
+[1m════════════════════════════════════════════════════[0m
+[1m          Dev-Pipeline Runner Started[0m
+[1m════════════════════════════════════════════════════[0m
+[0;34m[INFO][0m    2026-03-17 17:25:33 Feature list: /Users/wylonyu/selfProjects/PrizmClaw/feature-list.json
+[0;34m[INFO][0m    2026-03-17 17:25:33 Max retries per feature: 3
+[0;34m[INFO][0m    2026-03-17 17:25:33 Session timeout: none
+[0;34m[INFO][0m    2026-03-17 17:25:33 AI CLI: claude-internal (platform: claude)
+[1m════════════════════════════════════════════════════[0m
+
+
+[1m────────────────────────────────────────────────────[0m
+[0;34m[INFO][0m    2026-03-17 17:25:33 Feature: [1mF-015[0m — AI CLI Backend Switcher
+[0;34m[INFO][0m    2026-03-17 17:25:33 Retry: 0 / 3
+[1m────────────────────────────────────────────────────[0m
+<string>:8: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+[0;34m[INFO][0m    2026-03-17 17:25:33 Spawning AI CLI session: F-015-20260317172533
+[0;34m[INFO][0m    2026-03-17 17:25:36 Session log: 2 lines, 0KB
+[1;33m[WARN][0m    2026-03-17 17:25:36 Session ended without status file — treating as crashed
+[0;34m[INFO][0m    2026-03-17 17:25:36 Session result: crashed
+[0;34m[INFO][0m    2026-03-17 17:25:36 Pausing 5s before next feature...
+
+[1m────────────────────────────────────────────────────[0m
+[0;34m[INFO][0m    2026-03-17 17:25:42 Feature: [1mF-015[0m — AI CLI Backend Switcher
+[0;34m[INFO][0m    2026-03-17 17:25:42 Retry: 1 / 3
+[1m────────────────────────────────────────────────────[0m
+<string>:8: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+[0;34m[INFO][0m    2026-03-17 17:25:42 Spawning AI CLI session: F-015-20260317172542
+[0;34m[INFO][0m    2026-03-17 17:25:45 Session log: 2 lines, 0KB
+[1;33m[WARN][0m    2026-03-17 17:25:45 Session ended without status file — treating as crashed
+[0;34m[INFO][0m    2026-03-17 17:25:45 Session result: crashed
+[0;34m[INFO][0m    2026-03-17 17:25:46 Pausing 5s before next feature...
+
+[1m────────────────────────────────────────────────────[0m
+[0;34m[INFO][0m    2026-03-17 17:25:51 Feature: [1mF-015[0m — AI CLI Backend Switcher
+[0;34m[INFO][0m    2026-03-17 17:25:51 Retry: 2 / 3
+[1m────────────────────────────────────────────────────[0m
+<string>:8: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+[0;34m[INFO][0m    2026-03-17 17:25:52 Spawning AI CLI session: F-015-20260317172551
+[0;34m[INFO][0m    2026-03-17 17:25:55 Session log: 2 lines, 0KB
+[1;33m[WARN][0m    2026-03-17 17:25:55 Session ended without status file — treating as crashed
+[0;34m[INFO][0m    2026-03-17 17:25:55 Session result: crashed
+[0;34m[INFO][0m    2026-03-17 17:25:55 Pausing 5s before next feature...
+
+[1m────────────────────────────────────────────────────[0m
+[0;34m[INFO][0m    2026-03-17 17:26:00 Feature: [1mF-016[0m — Telegram Command Bug Fixes
+[0;34m[INFO][0m    2026-03-17 17:26:00 Retry: 0 / 3
+[1m────────────────────────────────────────────────────[0m
+<string>:8: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+[0;34m[INFO][0m    2026-03-17 17:26:00 Spawning AI CLI session: F-016-20260317172600
+[0;34m[INFO][0m    2026-03-17 17:26:03 Session log: 2 lines, 0KB
+[1;33m[WARN][0m    2026-03-17 17:26:03 Session ended without status file — treating as crashed
+[0;34m[INFO][0m    2026-03-17 17:26:03 Session result: crashed
+[0;34m[INFO][0m    2026-03-17 17:26:04 Pausing 5s before next feature...
+
+[1m────────────────────────────────────────────────────[0m
+[0;34m[INFO][0m    2026-03-17 17:26:09 Feature: [1mF-016[0m — Telegram Command Bug Fixes
+[0;34m[INFO][0m    2026-03-17 17:26:09 Retry: 1 / 3
+[1m────────────────────────────────────────────────────[0m
+<string>:8: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+[0;34m[INFO][0m    2026-03-17 17:26:09 Spawning AI CLI session: F-016-20260317172609
+
+[1;33m[WARN][0m    2026-03-17 17:26:09 Received interrupt signal. Saving state...
+{
+  "action": "pause",
+  "status": "paused",
+  "paused_at": "2026-03-17T09:26:10Z"
+}
+[0;34m[INFO][0m    2026-03-17 17:26:10 Pipeline paused. Run './run.sh run' to resume.
+
+================================================================
+  Pipeline Daemon Started: 2026-03-17T09:28:08Z
+  Feature list: /Users/wylonyu/selfProjects/PrizmClaw/feature-list.json
+================================================================
+
+[0;34m[INFO][0m    2026-03-17 17:28:09 Resuming existing pipeline...
+
+[1m════════════════════════════════════════════════════[0m
+[1m          Dev-Pipeline Runner Started[0m
+[1m════════════════════════════════════════════════════[0m
+[0;34m[INFO][0m    2026-03-17 17:28:09 Feature list: /Users/wylonyu/selfProjects/PrizmClaw/feature-list.json
+[0;34m[INFO][0m    2026-03-17 17:28:09 Max retries per feature: 3
+[0;34m[INFO][0m    2026-03-17 17:28:09 Session timeout: none
+[0;34m[INFO][0m    2026-03-17 17:28:09 AI CLI: claude-internal (platform: claude)
+[1m════════════════════════════════════════════════════[0m
+
+
+[1m────────────────────────────────────────────────────[0m
+[0;34m[INFO][0m    2026-03-17 17:28:09 Feature: [1mF-015[0m — AI CLI Backend Switcher
+[0;34m[INFO][0m    2026-03-17 17:28:09 Retry: 0 / 3
+[1m────────────────────────────────────────────────────[0m
+<string>:8: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+[0;34m[INFO][0m    2026-03-17 17:28:10 Spawning AI CLI session: F-015-20260317172809
+  [0;32m▶[0m [0;34m[HEARTBEAT][0m 0m30s | log: 197KB | msgs: 0 | 0 tool calls
+  [0;32m▶[0m [0;34m[HEARTBEAT][0m 1m0s | log: 298KB | msgs: 0 | 0 tool calls
+  [0;32m▶[0m [0;34m[HEARTBEAT][0m 1m30s | log: 326KB | msgs: 0 | 0 tool calls
+  [1;33m⏸[0m [0;34m[HEARTBEAT][0m 2m0s | log: 326KB | msgs: 0 | 0 tool calls
+  [0;32m▶[0m [0;34m[HEARTBEAT][0m 2m30s | log: 350KB | msgs: 0 | 0 tool calls
+  [0;32m▶[0m [0;34m[HEARTBEAT][0m 3m0s | log: 354KB | msgs: 0 | 0 tool calls
+  [0;32m▶[0m [0;34m[HEARTBEAT][0m 3m30s | log: 370KB | msgs: 0 | 0 tool calls
+[0;34m[INFO][0m    2026-03-17 17:31:55 Session log: 59 lines, 372KB
+[1;33m[WARN][0m    2026-03-17 17:31:55 Session ended without status file — treating as crashed
+[0;34m[INFO][0m    2026-03-17 17:31:55 Session result: crashed
+[0;34m[INFO][0m    2026-03-17 17:31:55 Pausing 5s before next feature...
+
+[1m────────────────────────────────────────────────────[0m
+[0;34m[INFO][0m    2026-03-17 17:32:01 Feature: [1mF-015[0m — AI CLI Backend Switcher
+[0;34m[INFO][0m    2026-03-17 17:32:01 Retry: 1 / 3
+[1m────────────────────────────────────────────────────[0m
+<string>:8: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+[0;34m[INFO][0m    2026-03-17 17:32:01 Spawning AI CLI session: F-015-20260317173201
+  [0;32m▶[0m [0;34m[HEARTBEAT][0m 0m30s | log: 26KB | msgs: 0 | 0 tool calls
+  [0;32m▶[0m [0;34m[HEARTBEAT][0m 1m0s | log: 177KB | msgs: 0 | 0 tool calls
+  [0;32m▶[0m [0;34m[HEARTBEAT][0m 1m30s | log: 280KB | msgs: 0 | 0 tool calls
+  [1;33m⏸[0m [0;34m[HEARTBEAT][0m 2m0s | log: 280KB | msgs: 0 | 0 tool calls
+  [1;33m⏸[0m [0;34m[HEARTBEAT][0m 2m30s | log: 280KB | msgs: 0 | 0 tool calls
+  [1;33m⏸[0m [0;34m[HEARTBEAT][0m 3m0s | log: 280KB | msgs: 0 | 0 tool calls
+  [1;33m⏸[0m [0;34m[HEARTBEAT][0m 3m30s | log: 280KB | msgs: 0 | 0 tool calls
+  [1;33m⏸[0m [0;34m[HEARTBEAT][0m 4m0s | log: 280KB | msgs: 0 | 0 tool calls
+[0;34m[INFO][0m    2026-03-17 17:36:26 Session log: 58 lines, 281KB
+[1;33m[WARN][0m    2026-03-17 17:36:26 Session ended without status file — treating as crashed
+[0;34m[INFO][0m    2026-03-17 17:36:26 Session result: crashed
+[0;34m[INFO][0m    2026-03-17 17:36:26 Pausing 5s before next feature...
+
+[1m────────────────────────────────────────────────────[0m
+[0;34m[INFO][0m    2026-03-17 17:36:31 Feature: [1mF-015[0m — AI CLI Backend Switcher
+[0;34m[INFO][0m    2026-03-17 17:36:31 Retry: 2 / 3
+[1m────────────────────────────────────────────────────[0m
+<string>:8: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+[0;34m[INFO][0m    2026-03-17 17:36:32 Spawning AI CLI session: F-015-20260317173631
+  [0;32m▶[0m [0;34m[HEARTBEAT][0m 0m30s | log: 12KB | msgs: 0 | 0 tool calls
+  [0;32m▶[0m [0;34m[HEARTBEAT][0m 1m0s | log: 184KB | msgs: 0 | 0 tool calls
+
+[1;33m[WARN][0m    2026-03-17 17:38:02 Received interrupt signal. Saving state...
+{
+  "action": "pause",
+  "status": "paused",
+  "paused_at": "2026-03-17T09:38:02Z"
+}
+[0;34m[INFO][0m    2026-03-17 17:38:02 Pipeline paused. Run './run.sh run' to resume.
+  [0;32m▶[0m [0;34m[HEARTBEAT][0m 1m30s | log: 322KB | msgs: 0 | 0 tool calls
+  [0;32m▶[0m [0;34m[HEARTBEAT][0m 2m0s | log: 324KB | msgs: 0 | 0 tool calls
+  [1;33m⏸[0m [0;34m[HEARTBEAT][0m 2m30s | log: 324KB | msgs: 0 | 0 tool calls
+  [1;33m⏸[0m [0;34m[HEARTBEAT][0m 3m0s | log: 324KB | msgs: 0 | 0 tool calls
+  [0;32m▶[0m [0;34m[HEARTBEAT][0m 3m30s | log: 346KB | msgs: 0 | 0 tool calls
+  [0;32m▶[0m [0;34m[HEARTBEAT][0m 4m0s | log: 351KB | msgs: 0 | 0 tool calls
+  [0;32m▶[0m [0;34m[HEARTBEAT][0m 4m30s | log: 357KB | msgs: 0 | 0 tool calls

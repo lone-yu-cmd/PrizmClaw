@@ -109,10 +109,15 @@ def now_iso():
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def load_feature_status(state_dir, feature_id):
+def load_feature_status(state_dir, feature_id, feature_list_status=None):
     """Load the status.json for a feature.
 
     If the file does not exist, return a default pending status.
+
+    If feature_list_status is a terminal status (completed, failed, skipped),
+    it overrides the status field from status.json. This makes feature-list.json
+    the single source of truth for terminal statuses, while all other fields
+    (retry_count, sessions, etc.) still come from status.json.
     """
     status_path = os.path.join(
         state_dir, "features", feature_id, "status.json"
@@ -134,7 +139,7 @@ def load_feature_status(state_dir, feature_id):
     if err:
         # If we can't read it, treat as pending
         now = now_iso()
-        return {
+        data = {
             "feature_id": feature_id,
             "status": "pending",
             "retry_count": 0,
@@ -145,6 +150,9 @@ def load_feature_status(state_dir, feature_id):
             "created_at": now,
             "updated_at": now,
         }
+    # feature-list.json wins for terminal statuses
+    if feature_list_status in TERMINAL_STATUSES:
+        data["status"] = feature_list_status
     return data
 
 
@@ -303,7 +311,7 @@ def action_get_next(feature_list_data, state_dir):
         fid = feature.get("id")
         if not fid:
             continue
-        fs = load_feature_status(state_dir, fid)
+        fs = load_feature_status(state_dir, fid, feature.get("status"))
         status_map[fid] = fs.get("status", "pending")
         status_data_map[fid] = fs
 
@@ -574,7 +582,7 @@ def _format_duration(seconds):
         return "{}h{}m".format(h, m)
 
 
-def _estimate_remaining_time(features, state_dir, counts):
+def _estimate_remaining_time(features, state_dir, counts, feature_list_data=None):
     """基于已完成 Feature 的历史耗时，按 complexity 加权预估剩余时间。
 
     策略:
@@ -587,6 +595,13 @@ def _estimate_remaining_time(features, state_dir, counts):
     """
     # complexity 权重（用于没有历史数据时的估算）
     COMPLEXITY_WEIGHT = {"low": 1.0, "medium": 2.0, "high": 4.0}
+
+    # Build feature-list status map for terminal status override
+    fl_status_map = {}
+    if feature_list_data:
+        for f in feature_list_data.get("features", []):
+            if isinstance(f, dict) and f.get("id"):
+                fl_status_map[f["id"]] = f.get("status")
 
     # 按 complexity 分组收集已完成 Feature 的耗时
     duration_by_complexity = {}  # complexity -> [duration_seconds]
@@ -608,7 +623,7 @@ def _estimate_remaining_time(features, state_dir, counts):
         fid = feature.get("id")
         if not fid:
             continue
-        fs = load_feature_status(state_dir, fid)
+        fs = load_feature_status(state_dir, fid, fl_status_map.get(fid))
         if fs.get("status") != "completed":
             continue
         duration = _calc_feature_duration(state_dir, fid)
@@ -638,7 +653,7 @@ def _estimate_remaining_time(features, state_dir, counts):
         fid = feature.get("id")
         if not fid:
             continue
-        fs = load_feature_status(state_dir, fid)
+        fs = load_feature_status(state_dir, fid, fl_status_map.get(fid))
         fstatus = fs.get("status", "pending")
         if fstatus in TERMINAL_STATUSES:
             continue
@@ -694,7 +709,7 @@ def action_status(feature_list_data, state_dir):
         fid = feature.get("id")
         if not fid:
             continue
-        fs = load_feature_status(state_dir, fid)
+        fs = load_feature_status(state_dir, fid, feature.get("status"))
         status_map[fid] = fs.get("status", "pending")
 
     for feature in features:
@@ -705,7 +720,7 @@ def action_status(feature_list_data, state_dir):
         if not fid:
             continue
 
-        fs = load_feature_status(state_dir, fid)
+        fs = load_feature_status(state_dir, fid, feature.get("status"))
         fstatus = fs.get("status", "pending")
         retry_count = fs.get("retry_count", 0)
         max_retries_val = fs.get("max_retries", 3)
@@ -797,7 +812,7 @@ def action_status(feature_list_data, state_dir):
 
     # 预估剩余时间
     est_remaining, confidence = _estimate_remaining_time(
-        features, state_dir, counts
+        features, state_dir, counts, feature_list_data
     )
 
     summary_line = "Total: {} features | Completed: {} | In Progress: {}".format(

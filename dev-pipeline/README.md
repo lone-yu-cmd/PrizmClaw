@@ -33,6 +33,7 @@ python3 dev-pipeline/scripts/init-pipeline.py \
 |---------|-------------|
 | `./run.sh run [feature-list.json] [options]` | Start or resume the pipeline. Processes features sequentially by dependency order. |
 | `./run.sh status [feature-list.json]` | Display current pipeline status: completed, pending, blocked, failed features. |
+| `./run.sh test-cli` | Test AI CLI detection: show detected CLI, version, platform, and query the AI model identity. |
 | `./run.sh reset` | Clear all runtime state in `state/`. Pipeline starts fresh on next `run`. |
 | `./run.sh help` | Show usage help. |
 | `./retry-feature.sh <feature-id> [feature-list.json]` | Retry a single failed feature. Runs one session then exits. |
@@ -97,7 +98,9 @@ What is always reset (with or without `--clean`):
 | `MAX_RETRIES` | `3` | Maximum retry attempts per feature before marking as failed. |
 | `SESSION_TIMEOUT` | `0` (no limit) | Timeout in seconds per AI CLI session. 0 = no timeout. |
 | `AI_CLI` | auto-detect | AI CLI command name. Auto-detects `cbc` or `claude`. Set to override. |
+| `MODEL` | (none) | AI model ID for the session. Passed as `--model` to the CLI. See [Model Selection](#model-selection). |
 | `CODEBUDDY_CLI` | (deprecated) | Legacy alias for `AI_CLI`. Prefer `AI_CLI`. |
+| `VERBOSE` | `0` | Set to `1` to enable `--verbose` on AI CLI (shows subagent output). |
 | `HEARTBEAT_INTERVAL` | `30` | Seconds between heartbeat log output while a session is running. |
 | `HEARTBEAT_STALE_THRESHOLD` | `600` | Seconds before a session is considered stale/stuck. |
 | `LOG_CLEANUP_ENABLED` | `1` | Run log cleanup before pipeline execution (`1`=enabled, `0`=disabled). |
@@ -115,6 +118,93 @@ SESSION_TIMEOUT=7200 ./dev-pipeline/run.sh run feature-list.json
 # Keep only recent logs and cap total log size
 LOG_RETENTION_DAYS=7 LOG_MAX_TOTAL_MB=512 ./dev-pipeline/run.sh run feature-list.json
 ```
+
+### AI CLI Configuration
+
+The pipeline auto-detects which AI CLI to use. Detection priority:
+
+1. `AI_CLI` environment variable (highest)
+2. `.prizmkit/config.json` → `ai_cli` field
+3. `CODEBUDDY_CLI` environment variable (legacy)
+4. Auto-detect: `cbc` in PATH → `claude` in PATH (lowest)
+
+To permanently configure a project to use a specific CLI, create `.prizmkit/config.json`:
+
+```json
+{
+  "ai_cli": "claude-internal",
+  "platform": "claude"
+}
+```
+
+Or override per-invocation:
+
+```bash
+AI_CLI=claude-internal ./dev-pipeline/run.sh run feature-list.json
+```
+
+### Model Selection
+
+Use the `MODEL` environment variable to specify which AI model to use. The value is passed as `--model <id>` to the CLI.
+
+```bash
+# Run pipeline with Sonnet (faster, cheaper)
+MODEL=claude-sonnet-4.6 ./dev-pipeline/run.sh run feature-list.json
+
+# Run pipeline with Opus (most capable)
+MODEL=claude-opus-4.6 ./dev-pipeline/run.sh run feature-list.json
+
+# Retry a feature with a specific model
+MODEL=claude-opus-4.6 ./dev-pipeline/retry-feature.sh F-007
+
+# Test which model the CLI is using
+MODEL=claude-sonnet-4.6 ./dev-pipeline/run.sh test-cli
+```
+
+Common model IDs (for `cbc`):
+
+| Model ID | Description |
+|----------|-------------|
+| `claude-opus-4.6` | Most capable, slower, higher cost |
+| `claude-sonnet-4.6` | Balanced speed/capability (recommended for pipeline) |
+| `claude-haiku-4.5` | Fastest, cheapest, less capable |
+
+> **Note**: `--model` support depends on the CLI. `cbc` fully supports it. `claude-internal` does not support `--model` in headless mode (only interactive `/model` command). If `MODEL` is set but the CLI doesn't support it, the flag is silently ignored.
+
+### Testing AI CLI (`test-cli`)
+
+Use `test-cli` to verify which CLI, version, and model the pipeline will use:
+
+```bash
+# Basic test — uses auto-detected CLI and default model
+./dev-pipeline/run.sh test-cli
+
+# Test with a specific model
+MODEL=claude-sonnet-4.6 ./dev-pipeline/run.sh test-cli
+
+# Test with a specific CLI
+AI_CLI=cbc ./dev-pipeline/run.sh test-cli
+```
+
+Example output:
+
+```
+============================================
+  Dev-Pipeline AI CLI Test
+============================================
+
+  Detected CLI:    cbc
+  Platform:        codebuddy
+  CLI Version:     2.62.1
+
+  Querying AI model (headless mode)...
+
+  AI Response:     I'm CodeBuddy, running Claude Opus 4.6
+
+============================================
+```
+
+The test sends a one-line prompt asking the AI to identify itself, with a 30-second timeout. If the CLI requires authentication or is unavailable, it shows a fallback message.
 
 ## How It Works
 

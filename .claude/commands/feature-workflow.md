@@ -142,12 +142,19 @@ Add new features to an existing project (incremental mode).
    Proceed? (Y/n)
    ```
 
-2. **run the `/dev-pipeline-launcher` command**:
+2. **Ask execution mode**: Before invoking the launcher, present the choice:
+   - **(1) Background daemon (recommended)**: Runs detached, survives session closure.
+   - **(2) Foreground in session**: Runs in current session with visible output. Stops if session times out.
+   - **(3) Manual — show commands**: Display commands only, no execution.
+
+   Pass the chosen mode to `dev-pipeline-launcher`.
+
+3. **run the `/dev-pipeline-launcher` command**:
    - The launcher handles all prerequisites checks
    - Starts `launch-daemon.sh` in background
    - Returns PID and log file location
 
-3. **Verify launch success**:
+4. **Verify launch success**:
    - Confirm pipeline is running
    - Record PID and log path for Phase 3
 

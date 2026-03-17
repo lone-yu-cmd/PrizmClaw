@@ -79,6 +79,11 @@ spawn_and_wait_session() {
         stream_json_flag="--output-format stream-json"
     fi
 
+    local model_flag=""
+    if [[ -n "${MODEL:-}" ]]; then
+        model_flag="--model $MODEL"
+    fi
+
     case "$CLI_CMD" in
         *claude*)
             "$CLI_CMD" \
@@ -87,6 +92,7 @@ spawn_and_wait_session() {
                 --yes \
                 $verbose_flag \
                 $stream_json_flag \
+                $model_flag \
                 > "$session_log" 2>&1 &
             ;;
         *)
@@ -95,6 +101,7 @@ spawn_and_wait_session() {
                 -y \
                 $verbose_flag \
                 $stream_json_flag \
+                $model_flag \
                 < "$bootstrap_prompt" \
                 > "$session_log" 2>&1 &
             ;;
@@ -190,6 +197,9 @@ spawn_and_wait_session() {
 cleanup() {
     echo ""
     log_warn "Received interrupt signal. Saving state..."
+
+    # Kill all child processes (claude-internal, heartbeat, progress parser, etc.)
+    kill 0 2>/dev/null || true
 
     if [[ -n "$BUG_LIST" && -f "$BUG_LIST" ]]; then
         python3 "$SCRIPTS_DIR/update-bug-status.py" \
@@ -530,7 +540,7 @@ bug_id, session_id, state_dir = sys.argv[1], sys.argv[2], sys.argv[3]
 data = {
     'bug_id': bug_id,
     'session_id': session_id,
-    'started_at': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
+    'started_at': datetime.now(datetime.UTC).strftime('%Y-%m-%dT%H:%M:%SZ')
 }
 target = os.path.join(state_dir, 'current-session.json')
 tmp = target + '.tmp'

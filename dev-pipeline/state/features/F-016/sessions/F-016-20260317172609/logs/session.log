@@ -1,0 +1,2 @@
+Error: When using --print, --output-format=stream-json requires --verbose
+Application error: CLI exited with code 1

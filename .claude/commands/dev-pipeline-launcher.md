@@ -98,9 +98,34 @@ Detect user intent from their message, then follow the corresponding workflow:
      --action status 2>/dev/null
    ```
 
-4. **Ask user to confirm**: "Ready to launch the pipeline? It will process N features in the background."
+4. **Ask execution mode**: Present the user with a choice before launching:
+   - **(1) Background daemon (recommended)**: Pipeline runs fully detached via `launch-daemon.sh`. Survives session closure.
+   - **(2) Foreground in session**: Pipeline runs in the current session via `run.sh run`. Visible output but will stop if session times out.
+   - **(3) Manual — show commands**: Display the exact commands the user can run themselves. No execution.
 
-5. **Launch**:
+   Default to option 1 if user says "just run it" or doesn't specify.
+
+   **If option 2 (foreground)**:
+   ```bash
+   dev-pipeline/run.sh run feature-list.json
+   ```
+   Note: This will block the session. Warn user about timeout risk.
+
+   **If option 3 (manual)**: Print commands and stop. Do not execute anything.
+   ```
+   # To run in background (recommended):
+   dev-pipeline/launch-daemon.sh start feature-list.json
+
+   # To run in foreground:
+   dev-pipeline/run.sh run feature-list.json
+
+   # To check status:
+   dev-pipeline/launch-daemon.sh status
+   ```
+
+5. **Ask user to confirm**: "Ready to launch the pipeline? It will process N features in the background."
+
+6. **Launch**:
    ```bash
    dev-pipeline/launch-daemon.sh start feature-list.json
    ```
@@ -109,18 +134,18 @@ Detect user intent from their message, then follow the corresponding workflow:
    dev-pipeline/launch-daemon.sh start feature-list.json --env "SESSION_TIMEOUT=7200 MAX_RETRIES=5"
    ```
 
-6. **Verify launch**:
+7. **Verify launch**:
    ```bash
    dev-pipeline/launch-daemon.sh status
    ```
 
-7. **Start log monitoring** -- Use the Bash tool with `run_in_background: true`:
+8. **Start log monitoring** -- Use the Bash tool with `run_in_background: true`:
    ```bash
    tail -f dev-pipeline/state/pipeline-daemon.log
    ```
    This runs in background so you can continue interacting with the user.
 
-8. **Report to user**:
+9. **Report to user**:
    - Pipeline PID
    - Log file location
    - "You can ask me 'pipeline status' or 'show logs' at any time"
