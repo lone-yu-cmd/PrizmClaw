@@ -134,9 +134,24 @@ cmd_start() {
     local start_time
     start_time=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
 
+    # Rotate log if over 50 MB
+    if [[ -f "$LOG_FILE" ]]; then
+        local log_bytes
+        log_bytes=$(wc -c < "$LOG_FILE" 2>/dev/null | tr -d ' ')
+        if [[ "$log_bytes" -gt 52428800 ]]; then
+            mv "$LOG_FILE" "${LOG_FILE}.$(date -u '+%Y%m%dT%H%M%S').bak"
+            log_info "Log rotated (was $((log_bytes / 1048576))MB): ${LOG_FILE}.bak"
+        fi
+    fi
+
     log_info "Launching bugfix pipeline..."
     log_info "Bug fix list: $bug_list"
     log_info "Log file: $LOG_FILE"
+
+    # Unset CLAUDECODE to allow spawning nested Claude Code sessions.
+    # When this daemon is launched from within a Claude Code session, the env var
+    # is inherited and blocks child claude processes with "nested sessions" error.
+    unset CLAUDECODE 2>/dev/null || true
 
     {
         echo ""
@@ -415,6 +430,14 @@ Examples:
   ./launch-bugfix-daemon.sh logs --follow                 # Live log tailing
   ./launch-bugfix-daemon.sh stop                          # Graceful shutdown
   ./launch-bugfix-daemon.sh restart                       # Stop + start
+
+Environment Variables (pass via --env):
+  MAX_RETRIES           Max retries per bug (default: 3)
+  SESSION_TIMEOUT       Session timeout in seconds (default: 0 = no limit)
+  VERBOSE               Set to 1 for verbose AI CLI output
+  HEARTBEAT_INTERVAL    Heartbeat log interval in seconds (default: 30)
+  DEV_BRANCH            Custom dev branch name (default: auto-generated)
+  AUTO_PUSH             Auto-push to remote after successful bug fix (default: 0, set 1 to enable)
 HELP
 }
 

@@ -6,7 +6,18 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo 'PRIZMKIT_DOC_UPDATE_REQUIRED: Before committing, you MUST update .prizm-docs/ per Prizm auto-update protocol. Steps: 1) Run git diff --cached --name-status. 2) Map changed files to modules via root.prizm MODULE_INDEX. 3) Read and update affected .prizm files (only changed sections). 4) Append to changelog.prizm. 5) Stage .prizm files with git add .prizm-docs/. 6) Then proceed with commit using prizmkit-committer workflow. RULES: Never rewrite entire .prizm files. Never add prose. Only update affected sections.'"
+            "command": "SRC=$(git diff --cached --name-only 2>/dev/null | grep -cE '\\.(ts|tsx|js|jsx|py|go|rs|java)$'); if [ \"$SRC\" -gt 0 ]; then PRIZM=$(git diff --cached --name-only 2>/dev/null | grep -c '^\\.prizm-docs/'); if [ \"$PRIZM\" -gt 0 ]; then echo \"PRIZMKIT_DOC_STATUS: $SRC source file(s) staged | .prizm-docs/ updated ($PRIZM file(s))\"; else echo \"PRIZMKIT_DOC_STATUS: $SRC source file(s) staged | .prizm-docs/ NOT UPDATED — update if this is a feature change\"; fi; fi"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "TOOL_INPUT=\"${CLAUDE_TOOL_INPUT:-${CODEBUDDY_TOOL_INPUT:-}}\"; if echo \"$TOOL_INPUT\" | grep -qE 'git (commit|merge|rebase)' 2>/dev/null; then DRIFT=$(sh .prizmkit/scripts/diff-prizm-docs.sh 2>/dev/null); if [ -n \"$DRIFT\" ]; then echo \"PRIZMKIT_DRIFT_DETECTED: prizm-docs structural differences found:\"; echo \"$DRIFT\"; echo \"Please update affected .prizm-docs/ files.\"; fi; fi"
           }
         ]
       }

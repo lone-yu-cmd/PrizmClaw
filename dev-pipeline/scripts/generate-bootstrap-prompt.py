@@ -19,10 +19,12 @@ import os
 import re
 import sys
 
-from utils import load_json_file
+from utils import load_json_file, setup_logging
 
 
 DEFAULT_MAX_RETRIES = 3
+
+LOGGER = setup_logging("generate-bootstrap-prompt")
 
 
 def parse_args():
@@ -82,7 +84,7 @@ def parse_args():
     )
     parser.add_argument(
         "--mode",
-        choices=["lite", "standard", "full"],
+        choices=["lite", "standard", "full", "self-evolve"],
         default=None,
         help="Override pipeline mode (default: auto-detect from complexity)",
     )
@@ -274,14 +276,35 @@ def process_mode_blocks(content, pipeline_mode, init_done):
     """Process pipeline mode and init conditional blocks.
 
     Keeps the block matching the current mode, removes the others.
+    For self-evolve mode: keeps SELF_EVOLVE blocks AND FULL blocks
+    (since self-evolve is full + framework guardrails).
     """
+    is_self_evolve = pipeline_mode == "self-evolve"
+
+    # Step 1: Handle SELF_EVOLVE conditional blocks first
+    se_open = "{{IF_MODE_SELF_EVOLVE}}"
+    se_close = "{{END_IF_MODE_SELF_EVOLVE}}"
+    if is_self_evolve:
+        # Keep content, remove tags
+        content = content.replace(se_open + "\n", "")
+        content = content.replace(se_open, "")
+        content = content.replace(se_close + "\n", "")
+        content = content.replace(se_close, "")
+    else:
+        # Remove entire SELF_EVOLVE blocks
+        pattern = re.escape(se_open) + r".*?" + re.escape(se_close) + r"\n?"
+        content = re.sub(pattern, "", content, flags=re.DOTALL)
+
+    # Step 2: Handle lite/standard/full blocks
+    # self-evolve inherits full mode for the standard tier blocks
+    effective_mode = "full" if is_self_evolve else pipeline_mode
     modes = ["lite", "standard", "full"]
 
     for mode in modes:
         tag_open = "{{{{IF_MODE_{}}}}}".format(mode.upper())
         tag_close = "{{{{END_IF_MODE_{}}}}}".format(mode.upper())
 
-        if mode == pipeline_mode:
+        if mode == effective_mode:
             # Keep content, remove tags
             content = content.replace(tag_open + "\n", "")
             content = content.replace(tag_open, "")
@@ -321,16 +344,16 @@ def detect_init_status(project_root):
 def detect_existing_artifacts(project_root, feature_slug):
     """Check which planning artifacts already exist for this feature.
 
-    Returns a dict with keys: has_spec, has_plan, has_tasks, all_complete.
+    Returns a dict with keys: has_spec, has_plan, all_complete.
+    Tasks are now part of plan.md (Tasks section), not a separate file.
     """
     specs_dir = os.path.join(project_root, ".prizmkit", "specs", feature_slug)
     result = {
         "has_spec": os.path.isfile(os.path.join(specs_dir, "spec.md")),
         "has_plan": os.path.isfile(os.path.join(specs_dir, "plan.md")),
-        "has_tasks": os.path.isfile(os.path.join(specs_dir, "tasks.md")),
     }
     result["all_complete"] = all([
-        result["has_spec"], result["has_plan"], result["has_tasks"]
+        result["has_spec"], result["has_plan"]
     ])
     return result
 
@@ -359,10 +382,17 @@ def build_replacements(args, feature, features, global_context, script_dir):
 
     # Auto-detect platform if not set
     if not platform:
-        if os.path.isdir(os.path.join(project_root, ".claude", "agents")):
+        has_claude = os.path.isdir(os.path.join(project_root, ".claude", "agents"))
+        has_codebuddy = os.path.isdir(os.path.join(project_root, ".codebuddy", "agents"))
+        if has_claude:
             platform = "claude"
-        else:
+        elif has_codebuddy:
             platform = "codebuddy"
+        else:
+            raise RuntimeError(
+                "PrizmKit agents not found. Neither .claude/agents/ nor .codebuddy/agents/ exists. "
+                "Run `npx prizmkit install` first, or set PRIZMKIT_PLATFORM=claude|codebuddy explicitly."
+            )
 
     if platform == "claude":
         # Claude Code: agents in .claude/agents/, no native team config
@@ -378,18 +408,26 @@ def build_replacements(args, feature, features, global_context, script_dir):
         )
 
     # Agent definitions are .md files in the platform-specific agents dir
-    coordinator_subagent = os.path.join(
-        agents_dir, "prizm-dev-team-coordinator.md",
-    )
-    pm_subagent = os.path.join(
-        agents_dir, "prizm-dev-team-pm.md",
-    )
     dev_subagent = os.path.join(
         agents_dir, "prizm-dev-team-dev.md",
     )
     reviewer_subagent = os.path.join(
         agents_dir, "prizm-dev-team-reviewer.md",
     )
+
+    # Verify agent files actually exist — missing files cause confusing
+    # errors when the AI session tries to read them later.
+    for agent_path, agent_name in [
+        (dev_subagent, "dev agent"),
+        (reviewer_subagent, "reviewer agent"),
+    ]:
+        if not os.path.isfile(agent_path):
+            LOGGER.warning(
+                "Agent file not found: %s (%s). "
+                "Subagent spawning may fail. "
+                "Run `npx prizmkit install` to reinstall agent definitions.",
+                agent_path, agent_name,
+            )
     # Validator scripts - check if they exist in .codebuddy/scripts/, otherwise use dev-pipeline/scripts/
     validator_scripts_dir = os.path.join(project_root, "dev-pipeline", "scripts")
     init_script_path = os.path.join(validator_scripts_dir, "init-dev-team.py")
@@ -418,6 +456,8 @@ def build_replacements(args, feature, features, global_context, script_dir):
     else:
         pipeline_mode = determine_pipeline_mode(complexity)
 
+    is_self_evolve = pipeline_mode == "self-evolve"
+
     # Auto-detect resume: if all planning artifacts exist and resume_phase
     # is "null" (fresh start), skip to Phase 6
     effective_resume = args.resume_phase
@@ -443,8 +483,6 @@ def build_replacements(args, feature, features, global_context, script_dir):
         ),
         "{{GLOBAL_CONTEXT}}": format_global_context(global_context),
         "{{TEAM_CONFIG_PATH}}": team_config_path,
-        "{{COORDINATOR_SUBAGENT_PATH}}": coordinator_subagent,
-        "{{PM_SUBAGENT_PATH}}": pm_subagent,
         "{{DEV_SUBAGENT_PATH}}": dev_subagent,
         "{{REVIEWER_SUBAGENT_PATH}}": reviewer_subagent,
         "{{VALIDATOR_SCRIPTS_DIR}}": validator_scripts_dir,
@@ -457,8 +495,8 @@ def build_replacements(args, feature, features, global_context, script_dir):
         "{{INIT_DONE}}": "true" if init_done else "false",
         "{{HAS_SPEC}}": "true" if artifacts["has_spec"] else "false",
         "{{HAS_PLAN}}": "true" if artifacts["has_plan"] else "false",
-        "{{HAS_TASKS}}": "true" if artifacts["has_tasks"] else "false",
         "{{ARTIFACTS_COMPLETE}}": "true" if artifacts["all_complete"] else "false",
+        "{{IS_SELF_EVOLVE}}": "true" if is_self_evolve else "false",
     }
 
     return replacements, effective_resume
@@ -498,6 +536,12 @@ def write_output(output_path, content):
     return None
 
 
+def emit_failure(message):
+    """Emit standardized failure JSON and exit."""
+    print(json.dumps({"success": False, "error": message}, indent=2, ensure_ascii=False))
+    sys.exit(1)
+
+
 def main():
     args = parse_args()
 
@@ -524,6 +568,7 @@ def main():
             "lite": "bootstrap-tier1.md",
             "standard": "bootstrap-tier2.md",
             "full": "bootstrap-tier3.md",
+            "self-evolve": "bootstrap-tier3.md",
         }
         _tier_file = _tier_file_map.get(_mode, "bootstrap-tier2.md")
         _tier_path = os.path.join(script_dir, "..", "templates", _tier_file)
@@ -538,38 +583,22 @@ def main():
     # Load template
     template_content, err = read_text_file(template_path)
     if err:
-        output = {"success": False, "error": "Template error: {}".format(err)}
-        print(json.dumps(output, indent=2, ensure_ascii=False))
-        sys.exit(1)
+        emit_failure("Template error: {}".format(err))
 
     # Load feature list
     feature_list_data, err = load_json_file(args.feature_list)
     if err:
-        output = {"success": False, "error": "Feature list error: {}".format(err)}
-        print(json.dumps(output, indent=2, ensure_ascii=False))
-        sys.exit(1)
+        emit_failure("Feature list error: {}".format(err))
 
     # Extract features array
     features = feature_list_data.get("features")
     if not isinstance(features, list):
-        output = {
-            "success": False,
-            "error": "Feature list does not contain a 'features' array",
-        }
-        print(json.dumps(output, indent=2, ensure_ascii=False))
-        sys.exit(1)
+        emit_failure("Feature list does not contain a 'features' array")
 
     # Find the target feature
     feature = find_feature(features, args.feature_id)
     if feature is None:
-        output = {
-            "success": False,
-            "error": "Feature '{}' not found in feature list".format(
-                args.feature_id
-            ),
-        }
-        print(json.dumps(output, indent=2, ensure_ascii=False))
-        sys.exit(1)
+        emit_failure("Feature '{}' not found in feature list".format(args.feature_id))
 
     # Extract global context
     global_context = feature_list_data.get("global_context", {})
@@ -592,9 +621,7 @@ def main():
     # Write the output
     err = write_output(args.output, rendered)
     if err:
-        output = {"success": False, "error": err}
-        print(json.dumps(output, indent=2, ensure_ascii=False))
-        sys.exit(1)
+        emit_failure(err)
 
     # Success
     output = {
@@ -606,4 +633,12 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        emit_failure("generate-bootstrap-prompt interrupted")
+    except SystemExit:
+        raise
+    except Exception as exc:
+        LOGGER.exception("Unhandled exception in generate-bootstrap-prompt")
+        emit_failure("Unexpected error: {}".format(str(exc)))

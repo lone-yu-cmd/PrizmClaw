@@ -1,0 +1,13 @@
+MODULE: routes
+FILES: 1
+RESPONSIBILITY: HTTP API routing for chat, streaming events, screenshot capture, system exec, and session reset
+KEY_FILES:
+- src/routes/api-routes.js: /api endpoints and SSE event stream wiring
+INTERFACES:
+- createApiRouter({realtimeHub}): express.Router
+DEPENDENCIES:
+- express.Router: route and middleware container
+- src/services/chat-service.js: chat, session context, reset operations
+- src/services/screenshot-service.js: screenshot endpoint backend
+- src/services/system-exec-service.js: system command execution endpoint
+UPDATED: 2026-03-19

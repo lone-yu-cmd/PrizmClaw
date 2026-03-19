@@ -15,7 +15,7 @@
     },
     "status": {
       "type": "string",
-      "enum": ["success", "partial", "failed"]
+      "enum": ["success", "partial", "failed", "commit_missing", "docs_missing", "merge_conflict"]
     },
     "completed_phases": {
       "type": "array",
@@ -58,6 +58,12 @@
     "can_resume": {
       "type": "boolean"
     },
+    "docs_maintained": {
+      "type": "boolean"
+    },
+    "retrospective_done": {
+      "type": "boolean"
+    },
     "resume_from_phase": {
       "type": ["integer", "null"]
     },
@@ -66,7 +72,7 @@
       "properties": {
         "spec_path": { "type": "string" },
         "plan_path": { "type": "string" },
-        "tasks_path": { "type": "string" }
+        "context_snapshot_path": { "type": "string" }
       }
     },
     "timestamp": {

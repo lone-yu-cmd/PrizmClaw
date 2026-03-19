@@ -1,0 +1,14 @@
+---
+description: PrizmKit commit workflow rules
+alwaysApply: true
+enabled: true
+updatedAt: 2026-03-19T14:57:03.940Z
+provider: 
+---
+
+Before any git commit in this project:
+1. Run `/prizmkit-retrospective` to sync `.prizm-docs/` (memory maintenance)
+2. Use Conventional Commits format: type(scope): description
+3. Bug fixes use `fix()` prefix, not `feat()`
+4. Bug fixes run retrospective with structural sync only (Job 1)
+5. Use `/prizmkit-committer` command for the pure commit workflow

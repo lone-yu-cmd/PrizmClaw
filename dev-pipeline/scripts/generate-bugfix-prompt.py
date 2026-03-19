@@ -19,10 +19,12 @@ import os
 import re
 import sys
 
-from utils import load_json_file
+from utils import load_json_file, setup_logging
 
 
 DEFAULT_MAX_RETRIES = 3
+
+LOGGER = setup_logging("generate-bugfix-prompt")
 
 
 def parse_args():
@@ -309,6 +311,12 @@ def write_output(output_path, content):
     return None
 
 
+def emit_failure(message):
+    """Emit standardized failure JSON and exit."""
+    print(json.dumps({"success": False, "error": message}, indent=2, ensure_ascii=False))
+    sys.exit(1)
+
+
 def main():
     args = parse_args()
 
@@ -326,36 +334,22 @@ def main():
     # Load template
     template_content, err = read_text_file(template_path)
     if err:
-        output = {"success": False, "error": "Template error: {}".format(err)}
-        print(json.dumps(output, indent=2, ensure_ascii=False))
-        sys.exit(1)
+        emit_failure("Template error: {}".format(err))
 
     # Load bug fix list
     bug_list_data, err = load_json_file(args.bug_list)
     if err:
-        output = {"success": False, "error": "Bug list error: {}".format(err)}
-        print(json.dumps(output, indent=2, ensure_ascii=False))
-        sys.exit(1)
+        emit_failure("Bug list error: {}".format(err))
 
     # Extract bugs array
     bugs = bug_list_data.get("bugs")
     if not isinstance(bugs, list):
-        output = {
-            "success": False,
-            "error": "Bug fix list does not contain a 'bugs' array",
-        }
-        print(json.dumps(output, indent=2, ensure_ascii=False))
-        sys.exit(1)
+        emit_failure("Bug fix list does not contain a 'bugs' array")
 
     # Find the target bug
     bug = find_bug(bugs, args.bug_id)
     if bug is None:
-        output = {
-            "success": False,
-            "error": "Bug '{}' not found in bug fix list".format(args.bug_id),
-        }
-        print(json.dumps(output, indent=2, ensure_ascii=False))
-        sys.exit(1)
+        emit_failure("Bug '{}' not found in bug fix list".format(args.bug_id))
 
     # Extract global context
     global_context = bug_list_data.get("global_context", {})
@@ -371,9 +365,7 @@ def main():
     # Write the output
     err = write_output(args.output, rendered)
     if err:
-        output = {"success": False, "error": err}
-        print(json.dumps(output, indent=2, ensure_ascii=False))
-        sys.exit(1)
+        emit_failure(err)
 
     # Success
     output = {
@@ -385,4 +377,12 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        emit_failure("generate-bugfix-prompt interrupted")
+    except SystemExit:
+        raise
+    except Exception as exc:
+        LOGGER.exception("Unhandled exception in generate-bugfix-prompt")
+        emit_failure("Unexpected error: {}".format(str(exc)))

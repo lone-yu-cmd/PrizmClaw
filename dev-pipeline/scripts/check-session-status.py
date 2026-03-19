@@ -13,8 +13,12 @@ import argparse
 import json
 import sys
 
+from utils import setup_logging
+
 
 REQUIRED_FIELDS = ["session_id", "feature_id", "status", "timestamp"]
+
+LOGGER = setup_logging("check-session-status")
 
 
 def parse_args():
@@ -61,7 +65,8 @@ def validate_required_fields(data):
 def determine_status(data):
     """Determine the single-line status string from the parsed data.
 
-    Returns one of: success, partial_resumable, partial_not_resumable, failed.
+    Returns one of: success, partial_resumable, partial_not_resumable,
+    failed, commit_missing, docs_missing, merge_conflict.
     """
     status = data.get("status", "")
 
@@ -75,6 +80,12 @@ def determine_status(data):
             return "partial_not_resumable"
     elif status == "failed":
         return "failed"
+    elif status == "commit_missing":
+        return "commit_missing"
+    elif status == "docs_missing":
+        return "docs_missing"
+    elif status == "merge_conflict":
+        return "merge_conflict"
     else:
         # Unknown status value — treat as crashed
         return "crashed"
@@ -155,4 +166,40 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        detail = {
+            "status": "crashed",
+            "feature_id": None,
+            "completed_phases": [],
+            "checkpoint_reached": None,
+            "tasks_completed": 0,
+            "tasks_total": 0,
+            "error_count": 1,
+            "can_resume": False,
+            "resume_from_phase": None,
+            "internal_error": "Interrupted",
+        }
+        sys.stderr.write(json.dumps(detail, indent=2, ensure_ascii=False) + "\n")
+        print("crashed")
+        sys.exit(0)
+    except SystemExit:
+        raise
+    except Exception as exc:
+        LOGGER.exception("Unhandled exception in check-session-status")
+        detail = {
+            "status": "crashed",
+            "feature_id": None,
+            "completed_phases": [],
+            "checkpoint_reached": None,
+            "tasks_completed": 0,
+            "tasks_total": 0,
+            "error_count": 1,
+            "can_resume": False,
+            "resume_from_phase": None,
+            "internal_error": str(exc),
+        }
+        sys.stderr.write(json.dumps(detail, indent=2, ensure_ascii=False) + "\n")
+        print("crashed")
+        sys.exit(0)

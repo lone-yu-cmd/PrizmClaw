@@ -1,0 +1,22 @@
+MODULE: utils
+FILES: 4
+RESPONSIBILITY: Shared utility helpers for logging, file formatting, heartbeat lifecycle, and Telegram MarkdownV2 conversion
+KEY_FILES:
+- src/utils/logger.js: centralized pino logger factory/instance
+- src/utils/file-utils.js: file size/date/content helpers for file manager commands
+- src/utils/heartbeat-manager.js: reusable heartbeat timer and manager abstraction
+- src/utils/markdown-v2-formatter.js: markdown escaping and segmentation for Telegram limits
+INTERFACES:
+- logger: pino.Logger
+- formatFileSize(bytes): string
+- formatDate(date): string
+- isBinaryContent(buffer, sampleSize?): boolean
+- startHeartbeat(options): stopFn
+- createHeartbeatManager(): {start,stop,isRunning}
+- escapeMarkdownV2(text): string
+- convertToMarkdownV2(markdown): string
+- splitRespectingCodeBlocks(text, maxLength?): string[]
+DEPENDENCIES:
+- pino: structured logging backend
+- node runtime timers and Buffer APIs
+UPDATED: 2026-03-19

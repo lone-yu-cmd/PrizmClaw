@@ -57,7 +57,7 @@ function formatVersionInfo(version, currentVersion) {
  */
 export const planMeta = {
   name: 'plan',
-  aliases: ['p'],
+  aliases: [],
   description: '管理计划文件',
   usage: '/plan <action> [type] [version]',
   examples: [

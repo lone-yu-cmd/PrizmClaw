@@ -1,17 +1,15 @@
 ---
 name: dev-pipeline-launcher
-description: Launch and manage the dev-pipeline from within a cbc session. Start pipeline in background, monitor logs, check status, stop pipeline. Invoke when user wants to start building features, run the pipeline, or check pipeline progress. (project)
+description: "Launch and manage the dev-pipeline from within an AI CLI session. Start pipeline in background, monitor logs, check status, stop pipeline. Use this skill whenever the user wants to start building features, run the pipeline, check pipeline progress, retry features, or stop the pipeline. Trigger on: 'run pipeline', 'start pipeline', 'start building', 'pipeline status', 'stop pipeline', 'retry feature', '启动流水线', '开始实现', '流水线状态', '停止流水线'. (project)"
 ---
 
 # Dev-Pipeline Launcher
 
-Launch the autonomous development pipeline from within a cbc conversation. The pipeline runs as a fully detached background process -- closing the cbc session does NOT stop the pipeline.
+Launch the autonomous development pipeline from within an AI CLI conversation. The pipeline runs as a fully detached background process -- closing the AI CLI session does NOT stop the pipeline.
 
-### Mandatory Execution Mode (MUST)
+### Execution Mode
 
-- Always use daemon mode via `dev-pipeline/launch-daemon.sh` for start/stop/status/log actions.
-- NEVER run `dev-pipeline/run.sh run ...` directly from this skill.
-- Reason: foreground `run.sh` can be terminated by AI CLI command timeout (e.g. cbc 120s), while daemon mode survives session timeout.
+Always use daemon mode via `dev-pipeline/launch-daemon.sh` for start/stop/status/log actions. Foreground `run.sh` can be terminated by AI CLI session timeout, while daemon mode survives session closure — this prevents half-finished features that leave the codebase in an inconsistent state.
 
 ### When to Use
 
@@ -49,11 +47,12 @@ Before any action, validate:
 
 1. **dev-pipeline exists**: Confirm `dev-pipeline/launch-daemon.sh` is present and executable
 2. **For start**: `feature-list.json` must exist in project root (or user-specified path)
-3. **Dependencies**: `jq`, `python3`, `cbc` must be in PATH
+3. **Dependencies**: `jq`, `python3`, AI CLI (`cbc` or `claude`) must be in PATH
+4. **Python version**: Requires Python 3.8+ for dev-pipeline scripts
 
 Quick check:
 ```bash
-command -v jq && command -v python3 && command -v cbc && echo "All dependencies OK"
+command -v jq && command -v python3 && (command -v cbc || command -v claude) && echo "All dependencies OK"
 ```
 
 If `feature-list.json` is missing, inform user:
@@ -98,9 +97,34 @@ Detect user intent from their message, then follow the corresponding workflow:
      --action status 2>/dev/null
    ```
 
-4. **Ask user to confirm**: "Ready to launch the pipeline? It will process N features in the background."
+4. **Ask execution mode**: Present the user with a choice before launching:
+   - **(1) Background daemon (recommended)**: Pipeline runs fully detached via `launch-daemon.sh`. Survives session closure.
+   - **(2) Foreground in session**: Pipeline runs in the current session via `run.sh run`. Visible output but will stop if session times out.
+   - **(3) Manual — show commands**: Display the exact commands the user can run themselves. No execution.
 
-5. **Launch**:
+   Default to option 1 if user says "just run it" or doesn't specify.
+
+   **If option 2 (foreground)**:
+   ```bash
+   dev-pipeline/run.sh run feature-list.json
+   ```
+   Note: This will block the session. Warn user about timeout risk.
+
+   **If option 3 (manual)**: Print commands and stop. Do not execute anything.
+   ```
+   # To run in background (recommended):
+   dev-pipeline/launch-daemon.sh start feature-list.json
+
+   # To run in foreground:
+   dev-pipeline/run.sh run feature-list.json
+
+   # To check status:
+   dev-pipeline/launch-daemon.sh status
+   ```
+
+5. **Ask user to confirm**: "Ready to launch the pipeline? It will process N features in the background."
+
+6. **Launch**:
    ```bash
    dev-pipeline/launch-daemon.sh start feature-list.json
    ```
@@ -109,18 +133,18 @@ Detect user intent from their message, then follow the corresponding workflow:
    dev-pipeline/launch-daemon.sh start feature-list.json --env "SESSION_TIMEOUT=7200 MAX_RETRIES=5"
    ```
 
-6. **Verify launch**:
+7. **Verify launch**:
    ```bash
    dev-pipeline/launch-daemon.sh status
    ```
 
-7. **Start log monitoring** -- Use the Bash tool with `run_in_background: true`:
+8. **Start log monitoring** -- Use the Bash tool with `run_in_background: true`:
    ```bash
    tail -f dev-pipeline/state/pipeline-daemon.log
    ```
    This runs in background so you can continue interacting with the user.
 
-8. **Report to user**:
+9. **Report to user**:
    - Pipeline PID
    - Log file location
    - "You can ask me 'pipeline status' or 'show logs' at any time"
@@ -227,8 +251,14 @@ When user says "从头重试 F-003" or "clean retry F-003":
 dev-pipeline/reset-feature.sh F-003 --clean --run feature-list.json
 ```
 
+Environment variables (optional):
+```bash
+SESSION_TIMEOUT=3600 dev-pipeline/retry-feature.sh F-003 feature-list.json
+```
+
 Notes:
 - `retry-feature.sh` runs exactly one feature session and exits.
+- `reset-feature.sh --clean --run` clears the feature state before retrying (fresh start).
 - Keep pipeline daemon mode for main run management (`launch-daemon.sh`).
 
 ### Error Handling
@@ -237,17 +267,19 @@ Notes:
 |-------|--------|
 | `feature-list.json` not found | Tell user to run `app-planner` skill first |
 | `jq` not installed | Suggest: `brew install jq` |
-| `cbc` not in PATH | Check CodeBuddy CLI installation |
+| `cbc`/`claude` not in PATH | Check AI CLI installation |
 | Pipeline already running | Show status, ask if user wants to stop and restart |
 | PID file stale (process dead) | `launch-daemon.sh` auto-cleans, retry start |
 | Launch failed (process died immediately) | Show last 20 lines of log: `tail -20 dev-pipeline/state/pipeline-daemon.log` |
+| Feature stuck/blocked | Use `retry-feature.sh <F-XXX>` to retry; use `reset-feature.sh <F-XXX> --clean --run` for fresh start |
 | All features blocked/failed | Show status, suggest daemon-safe recovery: `dev-pipeline/reset-feature.sh <F-XXX> --clean --run feature-list.json` |
 | Permission denied on script | Run `chmod +x dev-pipeline/launch-daemon.sh dev-pipeline/run.sh` |
 
 ### Integration Notes
 
 - **After app-planner**: This is the natural next step. When user finishes planning and has `feature-list.json`, suggest launching the pipeline.
-- **Session independence**: The pipeline runs completely detached. User can close cbc, open a new session later, and use this skill to check progress or stop the pipeline.
+- **Session independence**: The pipeline runs completely detached. User can close the AI CLI session, open a new session later, and use this skill to check progress or stop the pipeline.
 - **Single instance**: Only one pipeline can run at a time. The PID file prevents duplicates.
+- **Pipeline coexistence**: Feature and bugfix pipelines use separate state directories (`state/` vs `bugfix-state/`), so they can run simultaneously without conflict.
 - **State preservation**: Stopping and restarting the pipeline resumes from where it left off -- completed features are not re-run.
-- **HANDOFF**: After pipeline completes all features, suggest running `prizmkit-code-review` for overall review, or `prizmkit-summarize` to archive.
+- **HANDOFF**: After pipeline completes all features, suggest running `prizmkit-retrospective` for project memory update, or ask user what's next.

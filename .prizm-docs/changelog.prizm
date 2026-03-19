@@ -1,25 +1,4 @@
+PROJECT: PrizmClaw
 CHANGELOG:
-- 2026-03-09 | init | bootstrap .prizm-docs L0/L1 + assessment + platform config(codebuddy)
-- 2026-03-10 | f001-infra-setup | implement pipeline infra contracts (config/path/errors/runner/service), add TS/lint baseline, and document L2 runtime/pipeline modules
-- 2026-03-12 | f001-complete | F-001 verification complete: 29 tests pass, typecheck/lint clean, REGISTRY.md created
-- 2026-03-12 | runtime/bot | add: F-002 Telegram Pipeline Command Router with parser, registry, validator, handlers for /pipeline, /bugfix, /planner, /status, /logs, /stop
-- 2026-03-12 | runtime/bot | fix: F002-CRIT-001 validator uses parsed.subcommand as first positional when command has no subcommands
-- 2026-03-12 | runtime/services | add: F-003 plan-ingestion-service for schema validation, version management, plan registry
-- 2026-03-12 | runtime/bot | add: F-003 /plan command with status/versions/use/rollback/validate subcommands
-- 2026-03-12 | runtime/pipeline-infra | add: F-004 lock-manager and state-manager for concurrency protection and state file management
-- 2026-03-12 | runtime/services | add: F-004 pipeline-controller with unified API (start/stop/retry/runSingle/status/logs/forceUnlock)
-- 2026-03-13 | runtime/services | add: F-005 status-aggregator, log-pager, telegram-pusher for pipeline status aggregation and log streaming
-- 2026-03-13 | runtime/bot | update: F-005 /status and /logs commands enhanced with pagination, type filtering, and aggregated status display
-- 2026-03-12 | runtime/security | add: F-006 permission-guard, param-sanitizer, confirmation-manager, audit-log-service for safety and permission guard
-- 2026-03-15 | runtime/services | add: F-008 git-service and commit-service for commit workflow with pre-commit validation and audit logging
-- 2026-03-15 | runtime/bot | add: F-008 /commit and /commits commands with --amend/--force protection (admin + confirmation)
-- 2026-03-12 | runtime/pipeline-infra | add: F-001-v2 batch config validation (loadAndValidateConfig), DIRECTORY_CONVENTION, cli-entry wrapper, EXIT_CODES, Python parity update, tsconfig/eslint baseline expansion
-- 2026-03-13 | runtime/services | add: F-010 file-service for directory listing, tree building, file reading/writing, glob search with path validation
-- 2026-03-13 | runtime/bot | add: F-010 /ls, /tree, /cat, /head, /tail, /find, /upload, /download commands for file system operations
-- 2026-03-13 | runtime/security | update: F-010 path validation with symlink resolution, file size limits (50MB), overwrite confirmation
-- 2026-03-13 | runtime/services | add: F-011 ai-cli-service for AI CLI execution with process tracking, heartbeat, interrupt support
-- 2026-03-13 | runtime/utils | add: F-011 heartbeat-manager and markdown-v2-formatter for Telegram progress and output formatting
-- 2026-03-13 | runtime/bot | update: F-011 /stop extended for AI CLI task interrupt with permission check, telegram.js integrated AI CLI with streaming
-- 2026-03-13 | runtime/services | add: F-012 system-monitor-service and alert-manager-service for system metrics and threshold monitoring
-- 2026-03-13 | runtime/bot | add: F-012 /sysinfo, /ps, /kill, /monitor commands for system monitoring and process management
-- 2026-03-13 | runtime/security | update: F-012 /kill added to HIGH_RISK_COMMANDS requiring admin role and confirmation
+- 2026-03-19 | root | add: initialized prizm documentation framework
+UPDATED: 2026-03-19

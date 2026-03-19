@@ -24,9 +24,27 @@ SCRIPTS_DIR="$SCRIPT_DIR/scripts"
 SESSION_TIMEOUT=${SESSION_TIMEOUT:-0}
 HEARTBEAT_INTERVAL=${HEARTBEAT_INTERVAL:-30}
 
-# AI CLI detection
+# AI CLI detection: AI_CLI env > .prizmkit/config.json > CODEBUDDY_CLI > auto-detect
 if [[ -n "${AI_CLI:-}" ]]; then
     CLI_CMD="$AI_CLI"
+elif [[ -f ".prizmkit/config.json" ]]; then
+    _config_cli=$(python3 -c "
+import json, sys
+try:
+    with open('.prizmkit/config.json') as f:
+        d = json.load(f)
+    v = d.get('ai_cli', '')
+    if v: print(v)
+except: pass
+" 2>/dev/null || true)
+    CLI_CMD="${_config_cli:-}"
+    if [[ -z "$CLI_CMD" ]]; then
+        if [[ -n "${CODEBUDDY_CLI:-}" ]]; then CLI_CMD="$CODEBUDDY_CLI"
+        elif command -v cbc &>/dev/null; then CLI_CMD="cbc"
+        elif command -v claude &>/dev/null; then CLI_CMD="claude"
+        else echo "ERROR: No AI CLI found. Set AI_CLI or configure .prizmkit/config.json" >&2; exit 1
+        fi
+    fi
 elif [[ -n "${CODEBUDDY_CLI:-}" ]]; then
     CLI_CMD="$CODEBUDDY_CLI"
 elif command -v cbc &>/dev/null; then
@@ -34,7 +52,7 @@ elif command -v cbc &>/dev/null; then
 elif command -v claude &>/dev/null; then
     CLI_CMD="claude"
 else
-    echo "ERROR: No AI CLI found. Install CodeBuddy (cbc) or Claude Code (claude)." >&2
+    echo "ERROR: No AI CLI found. Install CodeBuddy (cbc) or Claude Code (claude), or set AI_CLI." >&2
     exit 1
 fi
 
@@ -209,20 +227,30 @@ if [[ "$USE_STREAM_JSON" == "true" ]]; then
 fi
 
 # Spawn AI CLI session
+MODEL_FLAG=""
+if [[ -n "${MODEL:-}" ]]; then
+    MODEL_FLAG="--model $MODEL"
+fi
+
+unset CLAUDECODE 2>/dev/null || true
+
 case "$CLI_CMD" in
     *claude*)
+        # Claude Code: prompt via -p argument, --dangerously-skip-permissions for auto-accept
         "$CLI_CMD" \
-            --print \
             -p "$(cat "$BOOTSTRAP_PROMPT")" \
-            --yes \
+            --dangerously-skip-permissions \
             $STREAM_JSON_FLAG \
+            $MODEL_FLAG \
             > "$SESSION_LOG" 2>&1 &
         ;;
     *)
+        # CodeBuddy (cbc) and others: prompt via stdin
         "$CLI_CMD" \
             --print \
             -y \
             $STREAM_JSON_FLAG \
+            $MODEL_FLAG \
             < "$BOOTSTRAP_PROMPT" \
             > "$SESSION_LOG" 2>&1 &
         ;;
@@ -297,6 +325,18 @@ elif [[ -f "$SESSION_STATUS_FILE" ]]; then
 else
     log_warn "Session ended without status file"
     SESSION_STATUS="crashed"
+fi
+
+if [[ "$SESSION_STATUS" == "success" ]]; then
+    PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+    if git -C "$PROJECT_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        DIRTY_FILES=$(git -C "$PROJECT_ROOT" status --porcelain 2>/dev/null || true)
+        if [[ -n "$DIRTY_FILES" ]]; then
+            log_error "Session reported success but git working tree is not clean."
+            echo "$DIRTY_FILES" | sed 's/^/  - /'
+            SESSION_STATUS="failed"
+        fi
+    fi
 fi
 
 # Update bug status

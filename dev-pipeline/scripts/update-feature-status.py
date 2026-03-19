@@ -42,6 +42,9 @@ SESSION_STATUS_VALUES = [
     "failed",
     "crashed",
     "timed_out",
+    "commit_missing",
+    "docs_missing",
+    "merge_conflict",
 ]
 
 TERMINAL_STATUSES = {"completed", "failed", "skipped"}
@@ -107,19 +110,24 @@ def now_iso():
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def load_feature_status(state_dir, feature_id):
+def load_feature_status(state_dir, feature_id, feature_list_status=None):
     """Load the status.json for a feature.
 
     If the file does not exist, return a default pending status.
+
+    If feature_list_status is a terminal status (completed, failed, skipped),
+    it overrides the status field from status.json. This makes feature-list.json
+    the single source of truth for terminal statuses, while all other fields
+    (retry_count, sessions, etc.) still come from status.json.
     """
     status_path = os.path.join(
         state_dir, "features", feature_id, "status.json"
     )
     if not os.path.isfile(status_path):
         now = now_iso()
-        return {
+        data = {
             "feature_id": feature_id,
-            "status": "pending",
+            "status": feature_list_status if feature_list_status else "pending",
             "retry_count": 0,
             "max_retries": 3,
             "sessions": [],
@@ -128,13 +136,14 @@ def load_feature_status(state_dir, feature_id):
             "created_at": now,
             "updated_at": now,
         }
+        return data
     data, err = load_json_file(status_path)
     if err:
         # If we can't read it, treat as pending
         now = now_iso()
-        return {
+        data = {
             "feature_id": feature_id,
-            "status": "pending",
+            "status": feature_list_status if feature_list_status else "pending",
             "retry_count": 0,
             "max_retries": 3,
             "sessions": [],
@@ -143,6 +152,9 @@ def load_feature_status(state_dir, feature_id):
             "created_at": now,
             "updated_at": now,
         }
+    # feature-list.json wins for terminal statuses
+    if feature_list_status in TERMINAL_STATUSES:
+        data["status"] = feature_list_status
     return data
 
 
@@ -301,7 +313,7 @@ def action_get_next(feature_list_data, state_dir):
         fid = feature.get("id")
         if not fid:
             continue
-        fs = load_feature_status(state_dir, fid)
+        fs = load_feature_status(state_dir, fid, feature.get("status"))
         status_map[fid] = fs.get("status", "pending")
         status_data_map[fid] = fs
 
@@ -401,9 +413,51 @@ def action_update(args, feature_list_path, state_dir):
     fs = load_feature_status(state_dir, feature_id)
 
     if session_status == "success":
+        # No-op guard: if this exact successful session was already recorded,
+        # avoid rewriting state files again (prevents post-commit dirty changes).
+        existing_sessions = fs.get("sessions", [])
+        already_completed = fs.get("status") == "completed" and fs.get("resume_from_phase") is None
+        same_session_already_recorded = (
+            session_id
+            and session_id in existing_sessions
+            and fs.get("last_session_id") == session_id
+        )
+        if already_completed and (same_session_already_recorded or not session_id):
+            summary = {
+                "action": "update",
+                "feature_id": feature_id,
+                "session_status": session_status,
+                "new_status": fs.get("status", "completed"),
+                "retry_count": fs.get("retry_count", 0),
+                "resume_from_phase": fs.get("resume_from_phase"),
+                "updated_at": fs.get("updated_at"),
+                "no_op": True,
+            }
+            print(json.dumps(summary, indent=2, ensure_ascii=False))
+            return
+
         fs["status"] = "completed"
         fs["resume_from_phase"] = None
         err = update_feature_in_list(feature_list_path, feature_id, "completed")
+        if err:
+            error_out("Failed to update feature-list.json: {}".format(err))
+            return
+    elif session_status in ("commit_missing", "docs_missing", "merge_conflict"):
+        # Degraded outcome: keep artifacts for retry and expose specific status.
+        fs["retry_count"] = fs.get("retry_count", 0) + 1
+
+        if fs["retry_count"] >= max_retries:
+            fs["status"] = "failed"
+            target_status = "failed"
+        else:
+            fs["status"] = session_status
+            target_status = session_status
+
+        fs["resume_from_phase"] = None
+        fs["sessions"] = []
+        fs["last_session_id"] = None
+
+        err = update_feature_in_list(feature_list_path, feature_id, target_status)
         if err:
             error_out("Failed to update feature-list.json: {}".format(err))
             return
@@ -456,7 +510,10 @@ def action_update(args, feature_list_path, state_dir):
         "resume_from_phase": fs.get("resume_from_phase"),
         "updated_at": fs["updated_at"],
     }
-    if session_status != "success":
+    if session_status in ("commit_missing", "docs_missing", "merge_conflict"):
+        summary["degraded_reason"] = session_status
+        summary["restart_policy"] = "finalization_retry"
+    elif session_status != "success":
         summary["restart_policy"] = "full_restart"
         summary["cleanup_performed"] = cleaned
 
@@ -527,7 +584,7 @@ def _format_duration(seconds):
         return "{}h{}m".format(h, m)
 
 
-def _estimate_remaining_time(features, state_dir, counts):
+def _estimate_remaining_time(features, state_dir, counts, feature_list_data=None):
     """基于已完成 Feature 的历史耗时，按 complexity 加权预估剩余时间。
 
     策略:
@@ -540,6 +597,13 @@ def _estimate_remaining_time(features, state_dir, counts):
     """
     # complexity 权重（用于没有历史数据时的估算）
     COMPLEXITY_WEIGHT = {"low": 1.0, "medium": 2.0, "high": 4.0}
+
+    # Build feature-list status map for terminal status override
+    fl_status_map = {}
+    if feature_list_data:
+        for f in feature_list_data.get("features", []):
+            if isinstance(f, dict) and f.get("id"):
+                fl_status_map[f["id"]] = f.get("status")
 
     # 按 complexity 分组收集已完成 Feature 的耗时
     duration_by_complexity = {}  # complexity -> [duration_seconds]
@@ -561,7 +625,7 @@ def _estimate_remaining_time(features, state_dir, counts):
         fid = feature.get("id")
         if not fid:
             continue
-        fs = load_feature_status(state_dir, fid)
+        fs = load_feature_status(state_dir, fid, fl_status_map.get(fid))
         if fs.get("status") != "completed":
             continue
         duration = _calc_feature_duration(state_dir, fid)
@@ -591,7 +655,7 @@ def _estimate_remaining_time(features, state_dir, counts):
         fid = feature.get("id")
         if not fid:
             continue
-        fs = load_feature_status(state_dir, fid)
+        fs = load_feature_status(state_dir, fid, fl_status_map.get(fid))
         fstatus = fs.get("status", "pending")
         if fstatus in TERMINAL_STATUSES:
             continue
@@ -623,15 +687,28 @@ def _estimate_remaining_time(features, state_dir, counts):
 
 
 def action_status(feature_list_data, state_dir):
-    """Print a formatted overview of all features and their status."""
+    """Print a formatted overview of all features and their status.
+
+    Status is read exclusively from feature-list.json (the single source of
+    truth).  state_dir is only used for ETA estimation when session history
+    is available.
+    """
     features = feature_list_data.get("features", [])
     app_name = feature_list_data.get("app_name", "Unknown")
 
     # Gather status info
-    counts = {"completed": 0, "in_progress": 0, "failed": 0, "pending": 0, "skipped": 0}
+    counts = {
+        "completed": 0,
+        "in_progress": 0,
+        "failed": 0,
+        "pending": 0,
+        "skipped": 0,
+        "commit_missing": 0,
+        "docs_missing": 0,
+    }
     feature_lines = []
 
-    # Build dependency info: feature_id -> list of dep_ids that are not completed
+    # Build status map from feature-list.json only
     status_map = {}
     for feature in features:
         if not isinstance(feature, dict):
@@ -639,8 +716,7 @@ def action_status(feature_list_data, state_dir):
         fid = feature.get("id")
         if not fid:
             continue
-        fs = load_feature_status(state_dir, fid)
-        status_map[fid] = fs.get("status", "pending")
+        status_map[fid] = feature.get("status", "pending")
 
     for feature in features:
         if not isinstance(feature, dict):
@@ -650,11 +726,7 @@ def action_status(feature_list_data, state_dir):
         if not fid:
             continue
 
-        fs = load_feature_status(state_dir, fid)
-        fstatus = fs.get("status", "pending")
-        retry_count = fs.get("retry_count", 0)
-        max_retries_val = fs.get("max_retries", 3)
-        resume_phase = fs.get("resume_from_phase")
+        fstatus = feature.get("status", "pending")
 
         # Count statuses
         if fstatus in counts:
@@ -671,22 +743,16 @@ def action_status(feature_list_data, state_dir):
             icon = COLOR_RED + "[✗]" + COLOR_RESET
         elif fstatus == "skipped":
             icon = COLOR_GRAY + "[—]" + COLOR_RESET
+        elif fstatus == "commit_missing":
+            icon = COLOR_RED + "[↑]" + COLOR_RESET
+        elif fstatus == "docs_missing":
+            icon = COLOR_RED + "[D]" + COLOR_RESET
         else:
             icon = COLOR_GRAY + "[ ]" + COLOR_RESET
 
         # Build detail suffix
         detail = ""
-        if fstatus == "in_progress":
-            parts = []
-            if retry_count > 0:
-                parts.append("retry {}/{}".format(retry_count, max_retries_val))
-            if resume_phase is not None:
-                parts.append("CP-{}".format(resume_phase))
-            if parts:
-                detail = " ({})".format(", ".join(parts))
-        elif fstatus == "failed":
-            detail = " (failed after {} retries)".format(retry_count)
-        elif fstatus == "pending":
+        if fstatus == "pending":
             # Check if blocked by dependencies
             deps = feature.get("dependencies", [])
             blocking = [
@@ -706,6 +772,10 @@ def action_status(feature_list_data, state_dir):
                 fid, icon, COLOR_YELLOW + title + COLOR_RESET, detail
             )
         elif fstatus == "failed":
+            line_content = "{} {} {}{}".format(
+                fid, icon, COLOR_RED + title + COLOR_RESET, detail
+            )
+        elif fstatus in ("commit_missing", "docs_missing"):
             line_content = "{} {} {}{}".format(
                 fid, icon, COLOR_RED + title + COLOR_RESET, detail
             )
@@ -730,7 +800,7 @@ def action_status(feature_list_data, state_dir):
 
     # 预估剩余时间
     est_remaining, confidence = _estimate_remaining_time(
-        features, state_dir, counts
+        features, state_dir, counts, feature_list_data
     )
 
     summary_line = "Total: {} features | Completed: {} | In Progress: {}".format(
@@ -738,6 +808,9 @@ def action_status(feature_list_data, state_dir):
     )
     summary_line2 = "Failed: {} | Pending: {} | Skipped: {}".format(
         counts["failed"], counts["pending"], counts["skipped"]
+    )
+    summary_line3 = "Commit Missing: {} | Docs Missing: {}".format(
+        counts["commit_missing"], counts["docs_missing"]
     )
 
     # 构建预估剩余时间行
@@ -759,6 +832,7 @@ def action_status(feature_list_data, state_dir):
     print("║" + pad_right("  App: {}".format(app_name), inner) + " ║")
     print("║" + pad_right("  {}".format(summary_line), inner) + " ║")
     print("║" + pad_right("  {}".format(summary_line2), inner) + " ║")
+    print("║" + pad_right("  {}".format(summary_line3), inner) + " ║")
     print("╠" + "─" * BOX_WIDTH + "╣")
     print("║" + pad_right("  Progress: {}".format(progress_bar), inner) + " ║")
     print("║" + pad_right("  {}".format(eta_line), inner) + " ║")

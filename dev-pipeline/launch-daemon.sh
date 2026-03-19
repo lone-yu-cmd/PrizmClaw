@@ -8,11 +8,11 @@ set -euo pipefail
 # log consolidation, and lifecycle commands.
 #
 # Usage:
-#   ./launch-daemon.sh start [feature-list.json] [--env "KEY=VAL ..."]
+#   ./launch-daemon.sh start [feature-list.json] [--mode <mode>] [--env "KEY=VAL ..."]
 #   ./launch-daemon.sh stop
 #   ./launch-daemon.sh status
 #   ./launch-daemon.sh logs [--lines N] [--follow]
-#   ./launch-daemon.sh restart [feature-list.json] [--env "KEY=VAL ..."]
+#   ./launch-daemon.sh restart [feature-list.json] [--mode <mode>] [--env "KEY=VAL ..."]
 #
 # NOTE:
 #   In AI skill sessions, always use this daemon wrapper.
@@ -92,6 +92,7 @@ clean_stale_pid() {
 cmd_start() {
     local feature_list=""
     local env_overrides=""
+    local mode_override=""
 
     # Parse arguments
     while [[ $# -gt 0 ]]; do
@@ -103,6 +104,23 @@ cmd_start() {
                     exit 1
                 fi
                 env_overrides="$1"
+                shift
+                ;;
+            --mode)
+                shift
+                if [[ $# -eq 0 ]]; then
+                    log_error "--mode requires a value (lite|standard|full|self-evolve)"
+                    exit 1
+                fi
+                case "$1" in
+                    lite|standard|full|self-evolve)
+                        mode_override="$1"
+                        ;;
+                    *)
+                        log_error "Invalid mode: $1 (must be lite, standard, full, or self-evolve)"
+                        exit 1
+                        ;;
+                esac
                 shift
                 ;;
             *)
@@ -152,18 +170,38 @@ cmd_start() {
 
     # Build environment prefix
     local env_cmd=""
+    local env_parts=""
     if [[ -n "$env_overrides" ]]; then
-        env_cmd="env $env_overrides"
+        env_parts="$env_overrides"
+    fi
+    if [[ -n "$mode_override" ]]; then
+        env_parts="${env_parts:+$env_parts }PIPELINE_MODE=$mode_override"
+    fi
+    if [[ -n "$env_parts" ]]; then
+        env_cmd="env $env_parts"
     fi
 
     # Record start time
     local start_time
     start_time=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
 
+    # Rotate log if over 50 MB
+    if [[ -f "$LOG_FILE" ]]; then
+        local log_bytes
+        log_bytes=$(wc -c < "$LOG_FILE" 2>/dev/null | tr -d ' ')
+        if [[ "$log_bytes" -gt 52428800 ]]; then
+            mv "$LOG_FILE" "${LOG_FILE}.$(date -u '+%Y%m%dT%H%M%S').bak"
+            log_info "Log rotated (was $((log_bytes / 1048576))MB): ${LOG_FILE}.bak"
+        fi
+    fi
+
     # Launch run.sh in background, fully detached
     log_info "Launching pipeline..."
     log_info "Feature list: $feature_list"
     log_info "Log file: $LOG_FILE"
+    if [[ -n "$mode_override" ]]; then
+        log_info "Mode: $mode_override"
+    fi
     if [[ -n "$env_overrides" ]]; then
         log_info "Environment overrides: $env_overrides"
     fi
@@ -174,12 +212,20 @@ cmd_start() {
         echo "================================================================"
         echo "  Pipeline Daemon Started: $start_time"
         echo "  Feature list: $feature_list"
+        if [[ -n "$mode_override" ]]; then
+            echo "  Mode: $mode_override"
+        fi
         if [[ -n "$env_overrides" ]]; then
             echo "  Environment: $env_overrides"
         fi
         echo "================================================================"
         echo ""
     } >> "$LOG_FILE"
+
+    # Unset CLAUDECODE to allow spawning nested Claude Code sessions.
+    # When this daemon is launched from within a Claude Code session, the env var
+    # is inherited and blocks child claude processes with "nested sessions" error.
+    unset CLAUDECODE 2>/dev/null || true
 
     # Launch with nohup + disown for full detachment
     if [[ -n "$env_cmd" ]]; then
@@ -190,23 +236,28 @@ cmd_start() {
     local pipeline_pid=$!
     disown "$pipeline_pid" 2>/dev/null || true
 
-    # Write PID file
-    echo "$pipeline_pid" > "$PID_FILE"
+    # Write PID file (atomic)
+    echo "$pipeline_pid" > "${PID_FILE}.tmp"
+    mv "${PID_FILE}.tmp" "$PID_FILE"
 
-    # Write start metadata
+    # Write start metadata (atomic)
     python3 -c "
 import json, sys, os
-pid, started_at, feature_list, env_overrides, log_file, state_dir = int(sys.argv[1]), sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], sys.argv[6]
+pid, started_at, feature_list, env_overrides, log_file, state_dir, mode = int(sys.argv[1]), sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], sys.argv[6], sys.argv[7]
 data = {
     'pid': pid,
     'started_at': started_at,
     'feature_list': feature_list,
     'env_overrides': env_overrides,
+    'mode': mode,
     'log_file': log_file
 }
-with open(os.path.join(state_dir, '.pipeline-meta.json'), 'w') as f:
+target = os.path.join(state_dir, '.pipeline-meta.json')
+tmp = target + '.tmp'
+with open(tmp, 'w') as f:
     json.dump(data, f, indent=2)
-" "$pipeline_pid" "$start_time" "$feature_list" "$env_overrides" "$LOG_FILE" "$STATE_DIR" 2>/dev/null || true
+os.replace(tmp, target)
+" "$pipeline_pid" "$start_time" "$feature_list" "$env_overrides" "$LOG_FILE" "$STATE_DIR" "$mode_override" 2>/dev/null || true
 
     # Wait briefly and verify
     sleep 2
@@ -255,8 +306,9 @@ cmd_stop() {
 
     log_info "Stopping pipeline (PID: $pid)..."
 
-    # Send SIGTERM for graceful shutdown (triggers run.sh cleanup trap)
-    kill -TERM "$pid" 2>/dev/null || true
+    # Kill the entire process group to include child processes (claude-internal, etc.)
+    # First try SIGTERM to the process group (negative PID)
+    kill -TERM -- -"$pid" 2>/dev/null || kill -TERM "$pid" 2>/dev/null || true
 
     # Wait up to 30 seconds for graceful exit
     local waited=0
@@ -268,10 +320,10 @@ cmd_stop() {
         waited=$((waited + 1))
     done
 
-    # Force kill if still alive
+    # Force kill if still alive (process group first, then individual)
     if kill -0 "$pid" 2>/dev/null; then
         log_warn "Process did not exit after 30s, sending SIGKILL..."
-        kill -9 "$pid" 2>/dev/null || true
+        kill -9 -- -"$pid" 2>/dev/null || kill -9 "$pid" 2>/dev/null || true
         sleep 1
     fi
 
@@ -496,17 +548,23 @@ show_help() {
 Usage: launch-daemon.sh <command> [options]
 
 Commands:
-  start [feature-list.json] [--env "K=V ..."]   Start pipeline in background
+  start [feature-list.json] [--mode <mode>] [--env "K=V ..."]   Start pipeline in background
   stop                                            Gracefully stop pipeline
   status                                          Check if pipeline is running
   logs [--lines N] [--follow]                     View pipeline logs
-  restart [feature-list.json] [--env "K=V ..."]  Stop + start pipeline
+  restart [feature-list.json] [--mode <mode>] [--env "K=V ..."]  Stop + start pipeline
   help                                            Show this help
+
+Options:
+  --mode <lite|standard|full|self-evolve>   Override pipeline mode for all features
+  --env "KEY=VAL ..."                        Set environment variables
 
 Examples:
   ./launch-daemon.sh start                        # Start with default feature-list.json
   ./launch-daemon.sh start my-features.json       # Start with custom feature list
+  ./launch-daemon.sh start --mode self-evolve     # Self-evolve mode (framework development)
   ./launch-daemon.sh start --env "MAX_RETRIES=5 SESSION_TIMEOUT=7200"
+  ./launch-daemon.sh start feature-list.json --mode self-evolve --env "VERBOSE=1"
   ./launch-daemon.sh status                       # Check if running (JSON on stdout)
   ./launch-daemon.sh logs --follow                # Live log tailing
   ./launch-daemon.sh logs --lines 100             # Last 100 lines
@@ -518,6 +576,8 @@ Environment Variables (pass via --env):
   SESSION_TIMEOUT       Session timeout in seconds (default: 0 = no limit)
   VERBOSE               Set to 1 for verbose AI CLI output
   HEARTBEAT_INTERVAL    Heartbeat log interval in seconds (default: 30)
+  DEV_BRANCH            Custom dev branch name (default: auto-generated)
+  AUTO_PUSH             Auto-push to remote after successful feature (default: 0, set 1 to enable)
 HELP
 }
 

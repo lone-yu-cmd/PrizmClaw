@@ -1,322 +1,253 @@
 ---
 name: feature-workflow
-tier: 1
-description: "[Tier 1] End-to-end feature workflow: specify → plan → tasks → analyze → implement → review → commit. 7-phase pipeline with resume support and fast path for simple changes. (project)"
+tier: companion
+description: "One-stop entry point for feature development. Orchestrates app-planner → dev-pipeline-launcher → background execution. Handles multi-feature batch development from a single request. Use this skill whenever the user wants to build an app, develop multiple features at once, or go from idea to running code in one step. Trigger on: 'build an app', 'develop features', 'implement all features', 'one-stop development', 'batch implement', '开发一个新应用', '构建系统', '一键完成', '批量实现'. (project)"
 ---
 
-# PrizmKit Feature Workflow
+# Feature Workflow
 
-End-to-end orchestration skill for new features. Chains existing PrizmKit skills (specify, plan, tasks, analyze, implement, code-review, committer, summarize) into a 7-phase pipeline with standardized artifacts and resume support.
+One-stop entry point for feature development. Orchestrates the complete flow from requirements to committed code in a single invocation.
+
+## When to Use
+
+User says:
+- "开发一个新应用", "构建 XXX 系统", "做一个项目"
+- "一键完成这些特性", "批量实现这些需求"
+- "从零开始做一个任务管理 App"
+- "帮我实现用户登录、注册、头像上传这些功能"
+- After receiving a batch of related feature requests
+
+**Do NOT use this skill when:**
+- User only wants to plan features (use `app-planner` directly)
+- User only wants to launch pipeline for existing feature-list.json (use `dev-pipeline-launcher`)
+- User wants to fix bugs (use `bug-planner` + `bugfix-pipeline-launcher`)
+- User wants to refactor code (use `refactor-workflow`)
+
+---
 
 ## Overview
 
 ```
-prizmkit.feature <需求描述>
-  → Phase 1: Specify   → spec.md
-  → Phase 2: Plan      → plan.md
-  → Phase 3: Tasks     → tasks.md
-  → Phase 4: Analyze   → (consistency report)
-  → Phase 5: Implement → (code)
-  → Phase 6: Review    → (review report)
-  → Phase 7: Commit    → git commit + REGISTRY
+feature-workflow <需求描述>
+   │
+   ├── Phase 1: Plan → app-planner → feature-list.json
+   │
+   ├── Phase 2: Launch → dev-pipeline-launcher → background pipeline
+   │
+   └── Phase 3: Monitor → track progress → report results
 ```
 
-### Pipeline Phases
+### What This Skill Does
 
-| Phase | Name | Skill Used | Artifact |
-|-------|------|-----------|----------|
-| 1 | Specify 需求规格 | `prizmkit.specify` | → `spec.md` |
-| 2 | Plan 技术方案 | `prizmkit.plan` | → `plan.md` |
-| 3 | Tasks 任务拆解 | `prizmkit.tasks` | → `tasks.md` |
-| 4 | Analyze 一致性检查 | `prizmkit.analyze` | (quality report) |
-| 5 | Implement 实现 | `prizmkit.implement` | (code changes) |
-| 6 | Code Review | `prizmkit.code-review` | (review report) |
-| 7 | Commit & Archive | `prizmkit.committer` + `prizmkit.summarize` | git commit + REGISTRY |
+| Phase | Action | Result |
+|-------|--------|--------|
+| 1 | Call `app-planner` | `feature-list.json` with N features |
+| 2 | Call `dev-pipeline-launcher` | Background pipeline started |
+| 3 | Monitor progress | Status updates, completion report |
 
-### Artifacts
+### Why This Skill Exists
 
-Standard feature artifacts stored at `.prizmkit/specs/<feature-slug>/`:
-- **`spec.md`** — Feature specification (Phase 1)
-- **`plan.md`** — Technical implementation plan (Phase 2)
-- **`tasks.md`** — Executable task breakdown (Phase 3)
+Without this skill, users must:
+1. Invoke `app-planner` → wait for feature-list.json
+2. Invoke `dev-pipeline-launcher` → wait for pipeline start
+3. Manually check progress
 
-## Commands
-
-### prizmkit.feature \<需求描述\>
-
-Execute the full feature pipeline from natural language description to committed code.
-
-**INPUT**: Natural language feature description. Can be:
-- A brief one-liner (e.g., "添加用户头像上传功能")
-- A detailed requirement paragraph
-- A reference to an existing spec file
+With this skill, users can:
+1. Say "开发一个任务管理 App" and walk away
+2. All planning + execution happens automatically
 
 ---
 
-## Phase 1: Specify — 需求规格
+## Input Modes
 
-**Goal**: Transform natural language into structured feature specification.
+**Mode A: From natural language requirements** (default)
 
-**STEPS:**
+Natural language description of the project or features. Can be:
+- A project vision: "开发一个任务管理 App，支持用户登录、任务增删改查、任务分类"
+- A batch of features: "实现用户注册、登录、找回密码这三个功能"
+- An incremental request: "给现有系统追加用户头像上传和昵称修改功能"
 
-1. **Parse feature description**: Extract:
-   - Core functionality requested
-   - User-facing behavior expectations
-   - Implicit constraints and edge cases
-   - Affected modules (from `.prizm-docs/`)
+Flow: app-planner → dev-pipeline-launcher → monitor
 
-2. **Invoke `prizmkit.specify`** with the feature description:
-   - Receive structured `spec.md` with user stories, acceptance criteria, scope
-   - Artifact path: `.prizmkit/specs/<feature-slug>/spec.md`
+**Mode B: From existing feature-list.json**
 
-3. **Validate spec completeness**:
-   - All acceptance criteria are testable
-   - Scope boundaries are clear
-   - No ambiguous requirements remain
+When user says "run pipeline from existing file" or feature-list.json already exists:
+- Skip `app-planner` (file already exists)
+- Invoke `dev-pipeline-launcher` directly
+- Monitor and report progress
 
-**CHECKPOINT CP-FW-1**: `spec.md` exists and is well-formed.
+**Mode C: Incremental (add to existing project)**
 
----
-
-## Phase 2: Plan — 技术方案
-
-**Goal**: Generate technical implementation plan from the specification.
-
-**STEPS:**
-
-1. **Read context**: spec.md, `.prizm-docs/` (PATTERNS, RULES, TRAPS)
-
-2. **Invoke `prizmkit.plan`** with spec.md:
-   - Receive `plan.md` with architecture decisions, file changes, dependencies
-   - Artifact path: `.prizmkit/specs/<feature-slug>/plan.md`
-
-3. **Verify plan alignment**:
-   - Plan addresses all spec acceptance criteria
-   - No out-of-scope changes
-   - Dependencies are identified
-
-**CHECKPOINT CP-FW-2**: `plan.md` exists and aligns with spec.md.
+When user says "add features to existing project" or the project already has features:
+- Invoke `app-planner` in incremental mode (reads existing feature-list.json)
+- Append new features to existing list
+- Invoke `dev-pipeline-launcher`
+- Monitor and report progress
 
 ---
 
-## Phase 3: Tasks — 任务拆解
+## Phase 1: Plan
 
-**Goal**: Break implementation plan into executable, ordered tasks.
+**Goal**: Generate structured feature-list.json from natural language requirements.
 
-**STEPS:**
+**STEPS**:
 
-1. **Invoke `prizmkit.tasks`** with plan.md:
-   - Receive `tasks.md` with ordered task list, dependencies, estimated scope
-   - Artifact path: `.prizmkit/specs/<feature-slug>/tasks.md`
+1. **Invoke `app-planner` skill** with the user's requirement description:
+   - For new projects: standard planning mode
+   - For existing projects with `--incremental`: incremental planning mode
 
-2. **Verify task coverage**:
-   - Every plan item maps to at least one task
-   - Tasks include test tasks (not just implementation)
-   - Task order respects dependencies
+2. **Interactive planning** (if app-planner requires clarification):
+   - Pass through any questions to the user
+   - Collect responses and continue planning
 
-**CHECKPOINT CP-FW-3**: `tasks.md` exists with complete task coverage.
+3. **Validate output**:
+   - Confirm `feature-list.json` exists
+   - Show summary: total features, complexity distribution, dependencies
 
----
+**CHECKPOINT CP-FW-1**: `feature-list.json` generated and validated.
 
-## Phase 4: Analyze — 一致性检查
-
-**Goal**: Cross-document consistency analysis before implementation begins.
-
-**STEPS:**
-
-1. **Invoke `prizmkit.analyze`** with spec.md, plan.md, tasks.md:
-   - Check spec ↔ plan alignment
-   - Check plan ↔ tasks coverage
-   - Check for contradictions or gaps
-   - Verify naming consistency
-
-2. **Handle analysis results**:
-   - **PASS**: Proceed to Phase 5
-   - **WARNINGS**: Log warnings, proceed to Phase 5
-   - **ERRORS**: Return to the earliest affected phase to fix inconsistencies
-
-**CHECKPOINT CP-FW-4**: Analysis passes (no blocking errors).
+**If user says `--from <file>`**: Skip this phase entirely.
 
 ---
 
-## Phase 5: Implement — 实现
+## Phase 2: Launch
 
-**Goal**: Execute tasks.md with TDD approach.
+**Goal**: Start the background development pipeline.
 
-**STEPS:**
+**STEPS**:
 
-1. **Invoke `prizmkit.implement`**:
-   - Follow tasks.md order
-   - TDD: write tests first, then implementation
-   - Run tests after each task completion
+1. **Show feature summary** before launching:
+   ```
+   Ready to launch pipeline with N features:
+     F-001: User authentication (high complexity)
+     F-002: Task CRUD (medium complexity)
+     F-003: Task categories (low complexity)
 
-2. **Progress tracking**:
-   - Mark tasks complete in tasks.md as they finish
-   - If a task fails after 3 attempts → escalate to user
+   Pipeline will run in background. Close this session will NOT stop it.
+   Proceed? (Y/n)
+   ```
 
-3. **Local verification**:
-   - All new tests pass
-   - All existing tests pass (no regression)
+2. **Ask execution mode**: Before invoking the launcher, present the choice:
+   - **(1) Background daemon (recommended)**: Runs detached, survives session closure.
+   - **(2) Foreground in session**: Runs in current session with visible output. Stops if session times out.
+   - **(3) Manual — show commands**: Display commands only, no execution.
 
-**CHECKPOINT CP-FW-5**: All tasks complete, all tests green.
+   Pass the chosen mode to `dev-pipeline-launcher`.
 
----
+3. **Invoke `dev-pipeline-launcher` skill**:
+   - The launcher handles all prerequisites checks
+   - Starts `launch-daemon.sh` in background
+   - Returns PID and log file location
 
-## Phase 6: Code Review — 代码审查
+4. **Verify launch success**:
+   - Confirm pipeline is running
+   - Record PID and log path for Phase 3
 
-**Goal**: Ensure implementation quality and spec compliance.
-
-**STEPS:**
-
-1. **Invoke `prizmkit.code-review`** (scoped to changed files):
-   - Review dimensions:
-     - **Spec compliance**: Does implementation match all acceptance criteria?
-     - **Plan adherence**: Does code follow the technical plan?
-     - **Code quality**: Clean, maintainable, follows project conventions?
-     - **Test coverage**: Are all acceptance criteria tested?
-   - Verdict: PASS / PASS_WITH_WARNINGS / NEEDS_FIXES
-
-2. **Handle review results**:
-   - **PASS / PASS_WITH_WARNINGS**: Proceed to Phase 7
-   - **NEEDS_FIXES**: Return to Phase 5 (max 2 review rounds)
-
-**CHECKPOINT CP-FW-6**: Code review passes.
+**CHECKPOINT CP-FW-2**: Pipeline launched successfully in background.
 
 ---
 
-## Phase 7: Commit & Archive — 提交与归档
+## Phase 3: Monitor
 
-**Goal**: Commit with proper conventions, archive to REGISTRY.
+**Goal**: Track pipeline progress and report to user.
 
-**STEPS:**
+**STEPS**:
 
-1. **Invoke `prizmkit.committer`**:
-   - Commit message: `feat(<scope>): <description>`
-   - Include all implementation code + tests
-   - Do NOT push
+1. **Initial status check**:
+   ```bash
+   dev-pipeline/launch-daemon.sh status
+   ```
 
-2. **Invoke `prizmkit.summarize`**:
-   - Archive feature to REGISTRY.md
-   - Include: feature slug, description, files changed, date
+2. **Offer monitoring options**:
+   - "I'll check progress periodically. Say 'status' anytime for an update."
+   - "Say 'logs' to see recent activity."
+   - "Say 'stop' to pause the pipeline."
 
-3. **Update `.prizm-docs/`** if needed:
-   - New PATTERNS discovered during implementation
-   - New TRAPS encountered
-   - Updated module documentation
+3. **Periodic progress reports** (when user asks):
+   ```bash
+   python3 dev-pipeline/scripts/update-feature-status.py \
+     --feature-list feature-list.json \
+     --state-dir dev-pipeline/state \
+     --action status
+   ```
 
-**CHECKPOINT CP-FW-7**: Commit recorded, REGISTRY updated.
+4. **Completion report** (when pipeline finishes all features):
+   ```
+   ✅ Pipeline completed: 3/3 features
 
----
+   Summary:
+   - F-001: User authentication → COMMITTED (feat: user auth)
+   - F-002: Task CRUD → COMMITTED (feat: task crud)
+   - F-003: Task categories → COMMITTED (feat: categories)
 
-## Fast Path — 快速路径
+   Next steps:
+   - Review changes: git log --oneline -5
+   - Run tests: npm test
+   - Push when ready: git push
+   ```
 
-For simple features (single file, <50 lines, no cross-module impact):
-
-```
-Phase 2 (Plan) → Phase 3 (Tasks) → Phase 5 (Implement) → Phase 6 (Review) → Phase 7 (Commit)
-```
-
-Skip Phase 1 (Specify) and Phase 4 (Analyze).
-
-**CRITERIA** (ALL must be true):
-- Single file change or tightly scoped to one module
-- Estimated change < 50 lines
-- No cross-module dependencies or side effects
-- No new user-facing API surface
-- Clear and unambiguous requirement
-
-**Fast Path still requires:**
-- plan.md and tasks.md (lightweight versions)
-- Code review
-- `feat(<scope>):` commit convention
-- REGISTRY update via summarize
+**CHECKPOINT CP-FW-3**: All features completed or user stopped pipeline.
 
 ---
 
-## Resume — 中断恢复
+## Interaction During Pipeline
 
-The pipeline supports resuming from the last completed phase by detecting existing artifacts.
+While the pipeline runs in background, the user can continue the conversation:
 
-**Detection logic**: Check `.prizmkit/specs/<slug>/` for:
-
-| Artifact Found | Resume From |
-|---------------|------------|
-| (nothing) | Phase 1: Specify |
-| `spec.md` only | Phase 2: Plan |
-| `spec.md` + `plan.md` | Phase 3: Tasks |
-| `spec.md` + `plan.md` + `tasks.md` | Phase 4: Analyze |
-| All 3 docs + analysis passed | Phase 5: Implement |
-| All 3 docs + code changes exist | Phase 6: Review |
-| All 3 docs + review passed | Phase 7: Commit |
-
-**Resume command**: `prizmkit.feature <slug>` — if `<slug>` matches an existing `.prizmkit/specs/<slug>/` directory, resume instead of starting fresh.
+| User says | Action |
+|-----------|--------|
+| "status" / "进度" | Show current progress |
+| "logs" / "日志" | Show recent log activity |
+| "stop" / "停止" | Stop the pipeline (state preserved) |
+| "show F-002 logs" | Show specific feature's session log |
 
 ---
 
 ## Error Handling
 
-| Scenario | Action |
-|----------|--------|
-| Cannot parse feature description | Ask user for clarification |
-| Spec has ambiguous requirements | Invoke `prizmkit.clarify` before proceeding |
-| Plan-spec misalignment detected | Return to Phase 2 with feedback |
-| Analyze finds blocking errors | Return to earliest affected phase |
-| Implementation fails after 3 rounds | Escalate to user with analysis |
-| Review fails after 2 rounds | Escalate with review findings |
-| Full test suite has pre-existing failures | Warn user, isolate feature tests |
-| Feature requires breaking changes | STOP, recommend ADR via `prizmkit.adr-manager` |
+| Error | Action |
+|-------|--------|
+| `app-planner` cannot parse requirements | Ask user for clarification |
+| `feature-list.json` generation failed | Show error, retry with refined input |
+| Pipeline launch failed | Show daemon log, suggest manual start |
+| All features blocked/failed | Show status, suggest retrying specific features |
+| User wants to cancel mid-planning | Stop and save partial feature-list.json |
 
 ---
 
 ## Relationship to Other Skills
 
-| Skill | Role in Feature Workflow |
-|-------|------------------------|
-| `prizmkit-specify` | Phase 1: structured spec generation |
-| `prizmkit-clarify` | Phase 1 fallback: resolve ambiguities |
-| `prizmkit-plan` | Phase 2: technical implementation plan |
-| `prizmkit-tasks` | Phase 3: task breakdown |
-| `prizmkit-analyze` | Phase 4: cross-document consistency |
-| `prizmkit-implement` | Phase 5: TDD implementation |
-| `prizmkit-code-review` | Phase 6: review and quality gate |
-| `prizmkit-committer` | Phase 7: commit with `feat()` convention |
-| `prizmkit-summarize` | Phase 7: archive to REGISTRY |
-| `prizmkit-retrospective` | Optional: post-feature lessons learned |
-| `prizmkit-bug-fix-workflow` | NOT used (separate pipeline for bugs) |
-| `refactor-workflow` | NOT used (separate pipeline for refactoring) |
-| `app-planner` | Pre-pipeline: interactive feature planning |
+| Skill | Relationship |
+|-------|-------------|
+| `app-planner` | **Called by Phase 1** — generates feature-list.json |
+| `dev-pipeline-launcher` | **Called by Phase 2** — starts background pipeline |
+| `bug-planner` | **Alternative** — for bug fix workflows |
+| `bugfix-pipeline-launcher` | **Alternative** — for bug fix pipelines |
+| `refactor-workflow` | **Alternative** — for code restructuring |
 
 ---
 
-## Comparison with Refactor and Bug Fix Pipelines
+## Comparison with Alternative Workflows
 
-| Dimension | Feature Workflow | Refactor Workflow | Bug Fix Pipeline |
-|-----------|-----------------|-------------------|------------------|
-| Input | Natural language requirement | Module/code target | Bug description / stack trace |
-| Pipeline Phases | 7 (Fast Path: 5) | 6 (Fast Path: 4) | 5 (Fast Path: 3) |
-| Phase 1 | Specify (spec.md) | Analyze (refactor-analysis.md) | Triage (fix-plan.md) |
-| Artifact Docs | 3: spec.md + plan.md + tasks.md | 3: refactor-analysis.md + plan.md + tasks.md | 2: fix-plan.md + fix-report.md |
-| Artifact Path | `.prizmkit/specs/<feature-slug>/` | `.prizmkit/refactor/<slug>/` | `.prizmkit/bugfix/<bug-id>/` |
-| Skills Chain | specify → plan → tasks → analyze → implement → review → commit + summarize | tech-debt-tracker → plan → tasks → implement → review → commit | error-triage → bug-reproduce → implement → code-review → commit |
-| Commit Prefix | `feat(<scope>):` | `refactor(<scope>):` | `fix(<scope>):` |
-| REGISTRY Update | ✅ via summarize | ❌ not applicable | ❌ not applicable |
-| Test Strategy | TDD per task | Full suite after EVERY task | Reproduction test |
-| Scope Guard | N/A | ✅ (enforced) | N/A |
-| Behavior Change | ✅ Expected | ❌ Forbidden | ✅ Fix behavior |
-| Resume Support | ✅ artifact-based detection | ✅ artifact-based detection | ❌ |
+| Dimension | feature-workflow | bug-fix-workflow | refactor-workflow |
+|-----------|-----------------|------------------|-------------------|
+| **Purpose** | New features (batch) | Single bug fix (interactive) | Code restructuring |
+| **Planning Skill** | `app-planner` | None (triage built-in) | None (analysis built-in) |
+| **Execution** | Background daemon | In-session, interactive | In-session |
+| **Input** | Requirements description | Bug report / stack trace | Module / code target |
+| **Output** | Multiple `feat()` commits | Single `fix()` commit | Single `refactor()` commit |
+| **Batch alternative** | (this is the batch flow) | `bug-planner` + `bugfix-pipeline-launcher` | N/A |
+
+---
 
 ## Path References
 
-All internal asset paths MUST use `${SKILL_DIR}` placeholder for cross-IDE compatibility.
+All internal asset paths use `${SKILL_DIR}` placeholder for cross-IDE compatibility.
 
 ## Output
 
-- `spec.md` (Phase 1 artifact)
-- `plan.md` (Phase 2 artifact)
-- `tasks.md` (Phase 3 artifact)
-- Consistency analysis report (Phase 4, conversation only)
-- Implementation code + tests (Phase 5)
-- Code review report (Phase 6, conversation only)
-- Git commit with `feat(<scope>):` prefix (Phase 7)
-- REGISTRY.md entry (Phase 7)
-- Updated `.prizm-docs/` (if applicable)
+- `feature-list.json` (Phase 1 artifact)
+- Background pipeline running (Phase 2)
+- Progress updates (Phase 3)
+- Multiple git commits with `feat(<scope>):` prefix
+- Updated `.prizm-docs/` (via prizmkit-retrospective per feature)

@@ -17,9 +17,16 @@ set -euo pipefail
 #   MAX_RETRIES           Max retries per bug (default: 3)
 #   SESSION_TIMEOUT       Session timeout in seconds (default: 0 = no limit)
 #   AI_CLI                AI CLI command name (auto-detected: cbc or claude)
+#   CODEBUDDY_CLI         Legacy alias for AI_CLI (deprecated, use AI_CLI instead)
+#   PRIZMKIT_PLATFORM     Force platform: 'codebuddy' or 'claude' (auto-detected)
 #   VERBOSE               Set to 1 to enable --verbose on AI CLI
 #   HEARTBEAT_INTERVAL    Heartbeat log interval in seconds (default: 30)
 #   HEARTBEAT_STALE_THRESHOLD  Heartbeat stale threshold in seconds (default: 600)
+#   LOG_CLEANUP_ENABLED   Run periodic log cleanup (default: 1)
+#   LOG_RETENTION_DAYS    Delete logs older than N days (default: 14)
+#   LOG_MAX_TOTAL_MB      Keep total logs under N MB via oldest-first cleanup (default: 1024)
+#   DEV_BRANCH            Custom dev branch name (default: auto-generated bugfix/pipeline-{run_id})
+#   AUTO_PUSH             Auto-push to remote after successful bug fix (default: 0). Set to 1 to enable.
 # ============================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -31,34 +38,22 @@ MAX_RETRIES=${MAX_RETRIES:-3}
 SESSION_TIMEOUT=${SESSION_TIMEOUT:-0}
 HEARTBEAT_STALE_THRESHOLD=${HEARTBEAT_STALE_THRESHOLD:-600}
 HEARTBEAT_INTERVAL=${HEARTBEAT_INTERVAL:-30}
+LOG_CLEANUP_ENABLED=${LOG_CLEANUP_ENABLED:-1}
+LOG_RETENTION_DAYS=${LOG_RETENTION_DAYS:-14}
+LOG_MAX_TOTAL_MB=${LOG_MAX_TOTAL_MB:-1024}
 VERBOSE=${VERBOSE:-0}
+DEV_BRANCH=${DEV_BRANCH:-""}
+AUTO_PUSH=${AUTO_PUSH:-0}
 
-# AI CLI detection
-if [[ -n "${AI_CLI:-}" ]]; then
-    CLI_CMD="$AI_CLI"
-elif [[ -n "${CODEBUDDY_CLI:-}" ]]; then
-    CLI_CMD="$CODEBUDDY_CLI"
-elif command -v cbc &>/dev/null; then
-    CLI_CMD="cbc"
-elif command -v claude &>/dev/null; then
-    CLI_CMD="claude"
-else
-    echo "ERROR: No AI CLI found. Install CodeBuddy (cbc) or Claude Code (claude)." >&2
-    exit 1
-fi
-
-# Platform detection
-if [[ -n "${PRIZMKIT_PLATFORM:-}" ]]; then
-    PLATFORM="$PRIZMKIT_PLATFORM"
-elif [[ "$CLI_CMD" == *"claude"* ]]; then
-    PLATFORM="claude"
-else
-    PLATFORM="codebuddy"
-fi
-export PRIZMKIT_PLATFORM="$PLATFORM"
+# Source shared common helpers (CLI/platform detection + logs + deps)
+source "$SCRIPT_DIR/lib/common.sh"
+prizm_detect_cli_and_platform
 
 # Source shared heartbeat library
 source "$SCRIPT_DIR/lib/heartbeat.sh"
+
+# Source shared branch library
+source "$SCRIPT_DIR/lib/branch.sh"
 
 # Detect stream-json support
 detect_stream_json_support "$CLI_CMD"
@@ -66,19 +61,9 @@ detect_stream_json_support "$CLI_CMD"
 # Bug list path (set in main, used by cleanup trap)
 BUG_LIST=""
 
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-MAGENTA='\033[0;35m'
-BOLD='\033[1m'
-NC='\033[0m'
-
-log_info()    { echo -e "${BLUE}[INFO]${NC}    $(date '+%Y-%m-%d %H:%M:%S') $*"; }
-log_warn()    { echo -e "${YELLOW}[WARN]${NC}    $(date '+%Y-%m-%d %H:%M:%S') $*"; }
-log_error()   { echo -e "${RED}[ERROR]${NC}   $(date '+%Y-%m-%d %H:%M:%S') $*"; }
-log_success() { echo -e "${GREEN}[SUCCESS]${NC} $(date '+%Y-%m-%d %H:%M:%S') $*"; }
+# Branch tracking (for cleanup on interrupt)
+_ORIGINAL_BRANCH=""
+_DEV_BRANCH_NAME=""
 
 # ============================================================
 # Shared: Spawn AI CLI session and wait for result
@@ -105,22 +90,34 @@ spawn_and_wait_session() {
         stream_json_flag="--output-format stream-json"
     fi
 
+    local model_flag=""
+    if [[ -n "${MODEL:-}" ]]; then
+        model_flag="--model $MODEL"
+    fi
+
+    # Unset CLAUDECODE to prevent "nested session" error when launched from
+    # within an existing Claude Code session (e.g. via launch-bugfix-daemon.sh).
+    unset CLAUDECODE 2>/dev/null || true
+
     case "$CLI_CMD" in
         *claude*)
+            # Claude Code: prompt via -p, --dangerously-skip-permissions for auto-accept
             "$CLI_CMD" \
-                --print \
                 -p "$(cat "$bootstrap_prompt")" \
-                --yes \
+                --dangerously-skip-permissions \
                 $verbose_flag \
                 $stream_json_flag \
+                $model_flag \
                 > "$session_log" 2>&1 &
             ;;
         *)
+            # CodeBuddy (cbc) and others: prompt via stdin, -y for auto-accept
             "$CLI_CMD" \
                 --print \
                 -y \
                 $verbose_flag \
                 $stream_json_flag \
+                $model_flag \
                 < "$bootstrap_prompt" \
                 > "$session_log" 2>&1 &
             ;;
@@ -180,6 +177,20 @@ spawn_and_wait_session() {
         session_status="crashed"
     fi
 
+    if [[ "$session_status" == "success" ]]; then
+        local project_root
+        project_root="$(cd "$SCRIPT_DIR/.." && pwd)"
+        if git -C "$project_root" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+            local dirty_files=""
+            dirty_files=$(git -C "$project_root" status --porcelain 2>/dev/null || true)
+            if [[ -n "$dirty_files" ]]; then
+                log_error "Session reported success but git working tree is not clean."
+                echo "$dirty_files" | sed 's/^/  - /'
+                session_status="failed"
+            fi
+        fi
+    fi
+
     log_info "Session result: $session_status"
 
     # Update bug status
@@ -203,6 +214,15 @@ cleanup() {
     echo ""
     log_warn "Received interrupt signal. Saving state..."
 
+    # Kill all child processes (claude-internal, heartbeat, progress parser, etc.)
+    kill 0 2>/dev/null || true
+
+    # Log current branch info for recovery
+    if [[ -n "$_DEV_BRANCH_NAME" ]]; then
+        log_info "Development was on branch: $_DEV_BRANCH_NAME"
+        log_info "Original branch was: $_ORIGINAL_BRANCH"
+    fi
+
     if [[ -n "$BUG_LIST" && -f "$BUG_LIST" ]]; then
         python3 "$SCRIPTS_DIR/update-bug-status.py" \
             --bug-list "$BUG_LIST" \
@@ -220,13 +240,29 @@ trap cleanup SIGINT SIGTERM
 # ============================================================
 
 check_dependencies() {
-    if ! command -v jq &>/dev/null; then
-        log_error "jq is required but not installed. Install with: brew install jq"
-        exit 1
+    prizm_check_common_dependencies "$CLI_CMD"
+}
+
+run_log_cleanup() {
+    if [[ "$LOG_CLEANUP_ENABLED" != "1" ]]; then
+        return 0
     fi
-    if ! command -v python3 &>/dev/null; then
-        log_error "python3 is required but not installed."
-        exit 1
+
+    local cleanup_result
+    cleanup_result=$(python3 "$SCRIPTS_DIR/cleanup-logs.py" \
+        --state-dir "$STATE_DIR" \
+        --retention-days "$LOG_RETENTION_DAYS" \
+        --max-total-mb "$LOG_MAX_TOTAL_MB" 2>/dev/null) || {
+        log_warn "Log cleanup failed (continuing)"
+        return 0
+    }
+
+    local deleted reclaimed_kb
+    deleted=$(echo "$cleanup_result" | python3 -c "import sys,json; print(json.load(sys.stdin).get('deleted_files', 0))" 2>/dev/null || echo "0")
+    reclaimed_kb=$(echo "$cleanup_result" | python3 -c "import sys,json; print(int(json.load(sys.stdin).get('reclaimed_bytes', 0)/1024))" 2>/dev/null || echo "0")
+
+    if [[ "$deleted" -gt 0 ]]; then
+        log_info "Log cleanup: deleted $deleted files, reclaimed ${reclaimed_kb}KB"
     fi
 }
 
@@ -269,6 +305,7 @@ run_one() {
     fi
 
     check_dependencies
+    run_log_cleanup
 
     # Initialize state if needed
     if [[ ! -f "$STATE_DIR/pipeline.json" ]]; then
@@ -285,14 +322,14 @@ run_one() {
     local bug_title
     bug_title=$(python3 -c "
 import json, sys
-with open('$bug_list') as f:
+with open(sys.argv[1]) as f:
     data = json.load(f)
 for bug in data.get('bugs', []):
-    if bug.get('id') == '$bug_id':
+    if bug.get('id') == sys.argv[2]:
         print(bug.get('title', ''))
         sys.exit(0)
 sys.exit(1)
-" 2>/dev/null) || {
+" "$bug_list" "$bug_id" 2>/dev/null) || {
         log_error "Bug $bug_id not found in $bug_list"
         exit 1
     }
@@ -300,14 +337,14 @@ sys.exit(1)
     local bug_severity
     bug_severity=$(python3 -c "
 import json, sys
-with open('$bug_list') as f:
+with open(sys.argv[1]) as f:
     data = json.load(f)
 for bug in data.get('bugs', []):
-    if bug.get('id') == '$bug_id':
+    if bug.get('id') == sys.argv[2]:
         print(bug.get('severity', 'medium'))
         sys.exit(0)
 sys.exit(1)
-" 2>/dev/null) || bug_severity="medium"
+" "$bug_list" "$bug_id" 2>/dev/null) || bug_severity="medium"
 
     # Reset bug status
     python3 "$SCRIPTS_DIR/update-bug-status.py" \
@@ -362,20 +399,47 @@ sys.exit(1)
     echo -e "${BOLD}════════════════════════════════════════════════════${NC}"
     echo ""
 
-    cleanup() {
+    cleanup_single_bug() {
         echo ""
         log_warn "Interrupted. Killing session..."
         kill 0 2>/dev/null || true
+        # Log current branch info
+        if [[ -n "$_DEV_BRANCH_NAME" ]]; then
+            log_info "Development was on branch: $_DEV_BRANCH_NAME"
+        fi
         log_info "Session log: $session_dir/logs/session.log"
         exit 130
     }
-    trap cleanup SIGINT SIGTERM
+    trap cleanup_single_bug SIGINT SIGTERM
 
     _SPAWN_RESULT=""
+
+    # Branch lifecycle: create and checkout bugfix branch
+    local _proj_root
+    _proj_root="$(cd "$SCRIPT_DIR/.." && pwd)"
+    local _source_branch
+    _source_branch=$(git -C "$_proj_root" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
+    _ORIGINAL_BRANCH="$_source_branch"
+
+    local _branch_name="${DEV_BRANCH:-bugfix/${bug_id}-$(date +%s)}"
+    if branch_create "$_proj_root" "$_branch_name" "$_source_branch"; then
+        _DEV_BRANCH_NAME="$_branch_name"
+    else
+        log_warn "Failed to create branch; running session on current branch"
+    fi
+
     spawn_and_wait_session \
         "$bug_id" "$bug_list" "$session_id" \
         "$bootstrap_prompt" "$session_dir" 999
     local session_status="$_SPAWN_RESULT"
+
+    # Auto-push after successful session
+    if [[ "$session_status" == "success" && "$AUTO_PUSH" == "1" ]]; then
+        local _proj_root
+        _proj_root="$(cd "$SCRIPT_DIR/.." && pwd)"
+        log_info "AUTO_PUSH enabled; pushing to remote..."
+        git -C "$_proj_root" push -u origin "$_DEV_BRANCH_NAME" 2>/dev/null || log_warn "Auto-push failed"
+    fi
 
     echo ""
     if [[ "$session_status" == "success" ]]; then
@@ -410,6 +474,7 @@ main() {
     fi
 
     check_dependencies
+    run_log_cleanup
 
     # Initialize pipeline state if needed
     if [[ ! -f "$STATE_DIR/pipeline.json" ]]; then
@@ -451,6 +516,23 @@ main() {
     echo -e "${BOLD}════════════════════════════════════════════════════${NC}"
     echo ""
 
+    # Branch lifecycle: create bugfix branch for this pipeline run
+    local _proj_root
+    _proj_root="$(cd "$SCRIPT_DIR/.." && pwd)"
+    local _source_branch
+    _source_branch=$(git -C "$_proj_root" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
+    _ORIGINAL_BRANCH="$_source_branch"
+
+    local run_id_for_branch
+    run_id_for_branch=$(jq -r '.run_id' "$STATE_DIR/pipeline.json" 2>/dev/null || echo "$$")
+    local _branch_name="${DEV_BRANCH:-bugfix/pipeline-${run_id_for_branch}}"
+    if branch_create "$_proj_root" "$_branch_name" "$_source_branch"; then
+        _DEV_BRANCH_NAME="$_branch_name"
+        log_info "Dev branch: $_branch_name"
+    else
+        log_warn "Failed to create bugfix branch; running on current branch: $_source_branch"
+    fi
+
     local session_count=0
 
     while true; do
@@ -467,7 +549,12 @@ main() {
             log_success "════════════════════════════════════════════════════"
             log_success "  All bugs processed! Bug fix pipeline finished."
             log_success "  Total sessions: $session_count"
+            if [[ -n "$_DEV_BRANCH_NAME" ]]; then
+                log_success "  Dev branch: $_DEV_BRANCH_NAME"
+                log_success "  Merge with: git checkout $_ORIGINAL_BRANCH && git merge $_DEV_BRANCH_NAME"
+            fi
             log_success "════════════════════════════════════════════════════"
+            rm -f "$STATE_DIR/current-session.json"
             break
         fi
 
@@ -515,25 +602,38 @@ main() {
             --state-dir "$STATE_DIR" \
             --output "$bootstrap_prompt" >/dev/null 2>&1
 
-        # Track current session
+        # Track current session (atomic write via temp file)
         python3 -c "
-import json
+import json, sys, os
 from datetime import datetime
+bug_id, session_id, state_dir = sys.argv[1], sys.argv[2], sys.argv[3]
 data = {
-    'bug_id': '$bug_id',
-    'session_id': '$session_id',
-    'started_at': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
+    'bug_id': bug_id,
+    'session_id': session_id,
+    'started_at': datetime.now(datetime.UTC).strftime('%Y-%m-%dT%H:%M:%SZ')
 }
-with open('$STATE_DIR/current-session.json', 'w') as f:
+target = os.path.join(state_dir, 'current-session.json')
+tmp = target + '.tmp'
+with open(tmp, 'w') as f:
     json.dump(data, f, indent=2)
-"
+os.replace(tmp, target)
+" "$bug_id" "$session_id" "$STATE_DIR"
 
         # Spawn session
         log_info "Spawning AI CLI session: $session_id"
         _SPAWN_RESULT=""
+
         spawn_and_wait_session \
             "$bug_id" "$bug_list" "$session_id" \
             "$bootstrap_prompt" "$session_dir" "$MAX_RETRIES"
+
+        # Auto-push after successful session
+        if [[ "$_SPAWN_RESULT" == "success" && "$AUTO_PUSH" == "1" ]]; then
+            local _proj_root
+            _proj_root="$(cd "$SCRIPT_DIR/.." && pwd)"
+            log_info "AUTO_PUSH enabled; pushing to remote..."
+            git -C "$_proj_root" push 2>/dev/null || log_warn "Auto-push failed"
+        fi
 
         session_count=$((session_count + 1))
 
@@ -566,6 +666,9 @@ show_help() {
     echo "  AI_CLI                AI CLI command name (auto-detected: cbc or claude)"
     echo "  VERBOSE               Set to 1 for verbose AI CLI output"
     echo "  HEARTBEAT_INTERVAL    Heartbeat log interval in seconds (default: 30)"
+    echo "  LOG_CLEANUP_ENABLED   Run log cleanup before execution (default: 1)"
+    echo "  LOG_RETENTION_DAYS    Delete logs older than N days (default: 14)"
+    echo "  LOG_MAX_TOTAL_MB      Keep total logs under N MB (default: 1024)"
     echo ""
     echo "Examples:"
     echo "  ./run-bugfix.sh run                                    # Run all bugs"

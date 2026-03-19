@@ -1,0 +1,12 @@
+MODULE: http
+FILES: 1
+RESPONSIBILITY: Express app bootstrap with API mounting, static hosting, health endpoint, and centralized HTTP error handler
+KEY_FILES:
+- src/http/server.js: createHttpServer composition root for REST/SSE routes and static assets
+INTERFACES:
+- createHttpServer({logger}): express.Application
+DEPENDENCIES:
+- express: web server and middleware runtime
+- src/routes/api-routes.js: API route registration
+- src/services/realtime-hub.js: SSE pub/sub bridge
+UPDATED: 2026-03-19

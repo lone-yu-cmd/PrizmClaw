@@ -1,27 +1,27 @@
-DOC_LEVEL: L0
-PROJECT_NAME: PrizmClaw
-PROJECT_TYPE: telegram-bridge + web-api
-ADOPTION_MODE: brownfield
-PLATFORM: codebuddy
-LANGUAGES: JavaScript(ESM), HTML, CSS, Python, Shell
-PACKAGE_MANAGER: npm
-ENTRYPOINTS: src/index.js -> src/http/server.js + src/bot/telegram.js
-DOC_STATUS: initialized
-ASSESSMENT: ASSESSMENT.md
-MIGRATION_CANDIDATE: docs/AI_CONTEXT -> not_found
-
+PRIZM_VERSION: 2
+PROJECT: PrizmClaw
+LANG: JavaScript
+FRAMEWORK: Node.js ES2022 + TypeScript
+TECH_STACK: Express, Telegraf, Zod, Pino logging
+BUILD: npm start (node src/index.js)
+TEST: npm test
+ENTRY: src/index.js
 MODULE_INDEX:
-- runtime: src/** -> .prizm-docs/runtime.prizm
-- web-ui: public/** -> .prizm-docs/web-ui.prizm
-- pipeline: dev-pipeline/** -> .prizm-docs/pipeline.prizm
-- dev-team: dev-team/** -> .prizm-docs/team.prizm
-- project-config: package.json,.env.example,.codebuddy/settings.json,CODEBUDDY.md -> .prizm-docs/config.prizm
-
-LOAD_RULES:
-- ON_SESSION_START: read .prizm-docs/root.prizm
-- ON_TASK: load related L1 via MODULE_INDEX
-- ON_EDIT: load/create related L2 lazily
-
-DEPENDENCY_HEALTH:
-- outdated_major: dotenv,express,zod
-- npm_audit_prod: 0 vulnerabilities
+- bot -> .prizm-docs/bot.prizm
+- services -> .prizm-docs/services.prizm
+- pipeline-infra -> .prizm-docs/pipeline-infra.prizm
+- security -> .prizm-docs/security.prizm
+- utils -> .prizm-docs/utils.prizm
+- http -> .prizm-docs/http.prizm
+- routes -> .prizm-docs/routes.prizm
+- adapters -> .prizm-docs/adapters.prizm
+RULES:
+- Progressive loading: read L0 on session start, L1 on module task, L2 before file edits
+- Keep .prizm docs KEY: value with dash lists only; avoid prose and markdown headers
+- Use append-only updates for DECISIONS and CHANGELOG sections
+- Feature development updates .prizm-docs; bug-fix-only logic changes can skip doc updates
+- Keep hard size limits: root<=4KB, L1<=3KB, L2<=5KB
+- Before commit: run /prizmkit-retrospective then /prizmkit-committer
+- Commit messages use Conventional Commits; bug fixes use fix(scope): description
+- Prefer fast path for clear bug/config/refactor tasks; full workflow for multi-module feature changes
+UPDATED: 2026-03-19

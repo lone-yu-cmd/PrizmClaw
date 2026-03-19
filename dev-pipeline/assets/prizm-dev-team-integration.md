@@ -2,7 +2,7 @@
 
 ## Overview
 
-dev-pipeline drives the prizm-dev-team multi-agent team through an outer shell loop. Each iteration spawns a new CodeBuddy CLI session with a bootstrap prompt that instructs the agent to create and orchestrate the team for one feature.
+dev-pipeline drives the prizm-dev-team multi-agent team through an outer shell loop. Each iteration spawns a new AI CLI session with a bootstrap prompt that instructs the agent to create and orchestrate the team for one feature.
 
 ## Architecture
 
@@ -13,18 +13,14 @@ dev-pipeline (outer loop)
     ├── scripts/                  Python state management scripts
     ├── templates/bootstrap-prompt.md  Session prompt template
     │
-    └── [per session] CodeBuddy CLI
+    └── [per session] AI CLI
             │
-            ├── TeamCreate("prizm-dev-team-F-NNN")
-            ├── Spawn Coordinator agent
-            │       │
-            │       ├── Phase 0: Init
-            │       ├── Phase 1-4: PM (specify/plan/tasks/analyze)
-            │       ├── Phase 5: Schedule & Assign
-            │       ├── Phase 6: Dev x N (parallel implement)
-            │       ├── Phase 7: QA + Review (parallel)
-            │       ├── Phase 8: Fix Loop (max 3 rounds)
-            │       └── Phase 9: Summarize & Commit
+            ├── Phase 0: Init (Orchestrator)
+            ├── Phase 1-2: Context snapshot + Specify + Plan (Orchestrator)
+            ├── Phase 3: Analyze (Reviewer agent) [tier2] / Phase 4: Analyze [tier3]
+            ├── Phase 4: Implement (Dev agent) [tier2] / Phase 5: Implement [tier3]
+            ├── Phase 4.5/6: Review (Reviewer agent)
+            └── Phase 5/7: Retrospective & Commit (Orchestrator)
             │
             └── Write session-status.json → exit
 ```
@@ -33,24 +29,29 @@ dev-pipeline (outer loop)
 
 | Agent | Definition Path | Type |
 |-------|----------------|------|
-| Coordinator | `agent-team-master/prizm-dev-team/prizm-dev-team-coordinator/subagent.md` | prizm-dev-team-coordinator |
-| PM | `agent-team-master/prizm-dev-team/prizm-dev-team-pm/subagent.md` | prizm-dev-team-pm |
-| Dev | `agent-team-master/prizm-dev-team/prizm-dev-team-dev/subagent.md` | prizm-dev-team-dev |
-| QA | `agent-team-master/prizm-dev-team/prizm-dev-team-qa/subagent.md` | prizm-dev-team-qa |
-| Review | `agent-team-master/prizm-dev-team/prizm-dev-team-review/subagent.md` | prizm-dev-team-review |
-| Doc-Reader | `agent-team-master/prizm-dev-team/prizm-dev-team-doc-reader/subagent.md` | prizm-dev-team-doc-reader |
+| Dev | `core/agents/prizm-dev-team-dev.md` | prizm-dev-team-dev |
+| Reviewer | `core/agents/prizm-dev-team-reviewer.md` | prizm-dev-team-reviewer |
 
-## Validator Scripts
+Note: The Orchestrator role is handled by the main agent (session orchestrator) directly — no separate agent definition needed.
 
-Located at `agent-team-master/prizm-dev-team/prizm-dev-team-coordinator/scripts/`:
+## Pipeline Scripts
 
-| Script | Checkpoint | Purpose |
-|--------|-----------|---------|
-| `init-dev-team.py` | CP-0 | Initialize `.dev-team/` + `.prizmkit/` directories |
-| `validate-json-schema.py` | CP-1,2,3 | Validate JSON artifacts against schemas |
-| `validate-dag.py` | CP-3 | Verify dependency graph has no cycles |
-| `validate-report-format.py` | CP-6,7 | Check Markdown reports have required sections |
-| `check-contract-integrity.py` | CP-3,6,7 | SHA-256 hash verification for contracts |
+Located at `dev-pipeline/scripts/`:
+
+| Script | Purpose |
+|--------|---------|
+| `init-dev-team.py` | Initialize `.dev-team/` + `.prizmkit/` directories |
+| `init-pipeline.py` | Initialize pipeline state directories and config |
+| `init-bugfix-pipeline.py` | Initialize bugfix pipeline state |
+| `generate-bootstrap-prompt.py` | Render tier-specific bootstrap prompt with feature context |
+| `generate-bugfix-prompt.py` | Render bugfix bootstrap prompt with bug context |
+| `update-feature-status.py` | Update feature status in feature-list.json after session |
+| `update-bug-status.py` | Update bug status in bug-fix-list.json after session |
+| `check-session-status.py` | Read and validate session-status.json output |
+| `detect-stuck.py` | Detect stuck/hung pipeline sessions via heartbeat |
+| `parse-stream-progress.py` | Parse AI CLI output stream for progress tracking |
+| `cleanup-logs.py` | Clean up old pipeline logs and state files |
+| `utils.py` | Shared utility functions for pipeline scripts |
 
 ## Artifact Mapping
 
@@ -60,9 +61,8 @@ Located at `agent-team-master/prizm-dev-team/prizm-dev-team-coordinator/scripts/
 |-------|------|---------|
 | 1 | `specs/spec.md` | Feature specification (WHAT/WHY) |
 | 2 | `plans/plan.md` | Technical plan (architecture, API, tests) |
-| 3 | `tasks/tasks.md` | Executable task list with `[ ]` / `[x]` |
+| 3 | `tasks/tasks.md` | Executable task list with `[ ]` / `[x]` (legacy — now part of plan.md Tasks section) |
 | 4 | `analysis/analyze-report.md` | Consistency analysis |
-| 9 | `specs/REGISTRY.md` | Completed features archive |
 
 ### Dev-Team Artifacts (.dev-team/)
 
@@ -82,13 +82,13 @@ Located at `agent-team-master/prizm-dev-team/prizm-dev-team-coordinator/scripts/
 ### 1. Session Start
 
 The bootstrap prompt instructs the agent to:
-- Create a team named `prizm-dev-team-{FEATURE_ID}`
-- Spawn the Coordinator with the full subagent.md prompt
-- Coordinator then spawns PM, Dev, QA, Review as needed
+- Execute phases directly as the session orchestrator
+- Spawn Dev and Reviewer agents as subagents for implementation and review phases
+- The orchestrator handles context building, planning, retrospective, and commit phases directly
 
 ### 2. Pipeline Execution
 
-The Coordinator drives the 10-phase pipeline with 8 checkpoints (CP-0 through CP-7). Each checkpoint validates artifacts using the validator scripts.
+The Orchestrator drives the pipeline phases with checkpoints (CP-0 through CP-3). Each checkpoint validates artifacts.
 
 ### 3. Session End
 
@@ -109,8 +109,7 @@ The agent MUST write `session-status.json` before exiting:
   "resume_from_phase": null,
   "artifacts": {
     "spec_path": ".prizmkit/specs/spec.md",
-    "plan_path": ".prizmkit/plans/plan.md",
-    "tasks_path": ".prizmkit/tasks/tasks.md"
+    "plan_path": ".prizmkit/plans/plan.md"
   },
   "timestamp": "2026-03-04T11:30:00Z"
 }

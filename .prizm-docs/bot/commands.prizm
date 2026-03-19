@@ -1,0 +1,30 @@
+MODULE: bot/commands
+FILES: src/bot/commands/**/*.js (36 files)
+KEY_FILES:
+- src/bot/commands/index.js: routeCommand orchestration and handler context assembly
+- src/bot/commands/registry.js: command registration, alias mapping, help source of truth
+- src/bot/commands/parser.js: parses /cmd subcommand args --key=value flags
+- src/bot/commands/validator.js: schema-style validation and normalized params output
+- src/bot/commands/formatter.js: standardized command error responses
+- src/bot/commands/help.js: general and per-command usage generation
+- src/bot/commands/handlers/pipeline.js: feature pipeline launch/status/logs control
+- src/bot/commands/handlers/bugfix.js: bugfix pipeline command surface
+- src/bot/commands/handlers/commit.js: commit workflow command facade
+- src/bot/commands/handlers/cron.js: scheduled task create/list/pause/resume/delete
+DEPENDENCIES:
+- imports: src/security/guard.js: base user authorization gate
+- imports: src/security/permission-guard.js: role based command authorization
+- imports: src/services/audit-log-service.js: denied/critical action audit trail
+- imports: src/services/command-executor-service.js: /exec command execution pipeline
+- imports: src/services/output-pager-service.js: paginated long output and /more follow-up
+- imports: src/services/*-service.js: pipeline, monitor, session, alias, watcher integrations
+TRAPS:
+- handler contract pattern: every handler exports <name>Meta and handle<Name>; missing pair breaks registration
+- registration coupling: handlers are active only when registerPipelineCommands() wires meta+handler in telegram bootstrap
+- parser behavior: first non-option token becomes subcommand candidate; validator remaps for commands without declared subcommands
+- permission chain: routeCommand enforces allowlist and role checks before handler invocation; bypass causes inconsistent security behavior
+- long output flow: handlers should paginate/store extra pages; sending full raw output can exceed Telegram limits
+- alias flow: user aliases resolve before parse/validate; avoid hard-coding command names in downstream logic
+CHANGELOG:
+- 2026-03-19 | add: initial L2 documentation for bot commands routing and handler patterns
+UPDATED: 2026-03-19

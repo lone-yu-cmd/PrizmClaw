@@ -1,57 +1,58 @@
 ---
 name: refactor-workflow
 tier: 1
-description: "[Tier 1] End-to-end refactor workflow: analyze → plan → tasks → implement → review → commit. 6-phase behavior-preserving pipeline with scope guard and mandatory test gates. (project)"
+description: "End-to-end refactor workflow: analyze → plan → implement → review → commit. 5-phase behavior-preserving pipeline with mandatory test gates. Use this skill whenever the user wants to restructure, clean up, or optimize code without changing behavior. Trigger on: 'refactor', 'clean up code', 'restructure', 'optimize code structure', 'extract module', '重构', '优化代码结构', '代码重构'. (project)"
 ---
 
 # PrizmKit Refactor Workflow
 
-End-to-end orchestration skill for code refactoring and optimization. Chains existing PrizmKit skills (tech-debt-tracker, plan, tasks, implement, code-review, committer) into a 6-phase behavior-preserving pipeline with scope guard enforcement.
+End-to-end orchestration skill for code refactoring and optimization. Chains existing PrizmKit skills into a 5-phase behavior-preserving pipeline with mandatory test gates after each task.
+
+### When to Use
+- User says "refactor", "clean up code", "restructure", "extract module", "重构", "优化代码结构"
+- Code has accumulated tech debt that needs structural improvement
+- Module needs to be split, merged, or reorganized
+- When behavior must remain unchanged but internal quality needs improvement
+
+**Do NOT use when:**
+- User wants to add new features (use `feature-workflow`)
+- User wants to fix bugs (use `bug-planner` + `bugfix-pipeline-launcher`)
+- Change is trivial (single rename, <5 lines) — just do it directly
 
 ## Overview
 
 ```
-prizmkit.refactor <目标模块或描述>
+refactor-workflow
   → Phase 1: Analyze   → refactor-analysis.md
-  → Phase 2: Plan      → plan.md
-  → Phase 3: Tasks     → tasks.md
-  → Phase 4: Implement → (code)
-  → Phase 5: Review    → (review report)
-  → Phase 6: Commit    → git commit
+  → Phase 2: Plan      → plan.md (including Tasks section)
+  → Phase 3: Implement → (code)
+  → Phase 4: Review    → (review report)
+  → Phase 5: Commit    → git commit
 ```
 
 ### Pipeline Phases
 
 | Phase | Name | Skill Used | Artifact |
 |-------|------|-----------|----------|
-| 1 | Analyze 代码分析 | `prizmkit.tech-debt-tracker` + code reading | → `refactor-analysis.md` |
-| 2 | Plan 重构方案 | `prizmkit.plan` | → `plan.md` |
-| 3 | Tasks 任务拆解 | `prizmkit.tasks` | → `tasks.md` |
-| 4 | Implement 实现 | `prizmkit.implement` | (code changes) |
-| 5 | Code Review | `prizmkit.code-review` | (review report) |
-| 6 | Commit | `prizmkit.committer` | git commit |
+| 1 | Analyze 代码分析 | Built-in code analysis + code reading | → `refactor-analysis.md` |
+| 2 | Plan 重构方案与任务 | `/prizmkit-plan` | → `plan.md` (含 Tasks section) |
+| 3 | Implement 实现 | `/prizmkit-implement` | (code changes) |
+| 4 | Code Review | `/prizmkit-code-review` | (review report) |
+| 5 | Commit | `/prizmkit-committer` | git commit |
 
 ### Key Principles
 
-- **Behavior preservation**: Refactoring MUST NOT change observable behavior
-- **Acceptance criteria** = "behavior unchanged + structure improved"
-- **No REGISTRY entry**: Refactoring does not go into REGISTRY.md
-- **No spec.md**: Refactoring has no user stories
-- **Mandatory test gates**: Full test suite after every task, not just checkpoints
-- **Scope guard**: New behavior detected → STOP and suggest feature-workflow
+| Principle | Description |
+|-----------|-------------|
+| **Behavior preservation** | Refactoring changes structure, not behavior. If tests pass before and after, behavior is preserved. Acceptance criteria = "behavior unchanged + structure improved". |
+| **Test gates** | Full test suite runs after every task — not just at checkpoints. A refactoring that breaks tests mid-way is much harder to debug than catching it immediately. |
+| **Structural sync only** | Refactoring triggers `/prizmkit-retrospective` Job 1 (structural sync) — update `.prizm-docs/` to reflect file/interface changes. Skip knowledge injection unless a genuinely new pitfall was discovered during refactoring. |
+| **Incremental safety** | Each task preserves all tests (green → green). If tests fail → stop and revert, because later tasks build on the assumption that previous ones are clean. |
 
 ### Artifacts
-
 Refactor artifacts stored at `.prizmkit/refactor/<refactor-slug>/`:
 - **`refactor-analysis.md`** — Code analysis (Phase 1)
-- **`plan.md`** — Refactoring plan (Phase 2)
-- **`tasks.md`** — Task breakdown (Phase 3)
-
-## Commands
-
-### prizmkit.refactor \<目标模块或描述\>
-
-Execute the full refactor pipeline for a module or code area.
+- **`plan.md`** — Refactoring plan with Tasks section (Phase 2)
 
 **INPUT**: Target description. Can be:
 - Module or file path (e.g., "src/auth/")
@@ -71,18 +72,16 @@ Execute the full refactor pipeline for a module or code area.
    - Dependencies (incoming and outgoing)
    - Current test coverage
    - Known tech debt (from `.prizm-docs/` TRAPS)
-
-2. **Invoke `prizmkit.tech-debt-tracker`** on target area:
-   - Receive: debt items, complexity metrics, code smell patterns
+2. **Perform code analysis** on target area:
+   - Identify code smells: long functions, deep nesting, duplicated logic, excessive coupling
+   - Assess complexity metrics: function length, parameter count, cyclomatic complexity
    - Identify highest-impact refactoring opportunities
-
+   - Check for TODO/FIXME/HACK comments indicating known debt
 3. **Establish baseline**:
    - Run full test suite — record pass/fail counts
    - Note any pre-existing test failures (isolate from refactor impact)
    - Document current behavior contracts (public API, interfaces)
-
 4. **Generate `refactor-analysis.md`** at `.prizmkit/refactor/<refactor-slug>/refactor-analysis.md`:
-
    Required sections:
    - **Current State**: module overview, file inventory, dependency graph, complexity metrics
    - **Refactoring Goals**: what structural improvements are targeted, why (debt items, complexity, maintainability)
@@ -94,122 +93,92 @@ Execute the full refactor pipeline for a module or code area.
 
 ---
 
-## Phase 2: Plan — 重构方案
+## Phase 2: Plan — 重构方案与任务
 
-**Goal**: Generate technical refactoring plan that preserves behavior.
+**Goal**: Generate technical refactoring plan that preserves behavior, including task breakdown.
 
 **STEPS:**
 
 1. **Read context**: refactor-analysis.md, `.prizm-docs/` (PATTERNS, RULES, TRAPS)
-
-2. **Invoke `prizmkit.plan`** with refactor-analysis.md as input (in place of spec.md):
-   - Plan MUST specify: what changes, what stays the same, how behavior is preserved
+2. **Invoke `/prizmkit-plan`** with refactor-analysis.md as input (in place of spec.md):
+   - Plan specifies: what changes, what stays the same, how behavior is preserved
+   - plan.md Tasks section: each task is independently testable and preserves all tests (green → green) — this ensures any failure is immediately traceable to the task that caused it
    - Artifact path: `.prizmkit/refactor/<refactor-slug>/plan.md`
-
 3. **Verify plan constraints**:
-   - No new user-facing behavior (scope guard)
    - All public API contracts preserved
    - Test strategy: how to verify behavior unchanged at each step
    - Rollback strategy: how to revert if behavior breaks
-
-**CHECKPOINT CP-RW-2**: `plan.md` exists with behavior preservation strategy.
-
----
-
-## Phase 3: Tasks — 任务拆解
-
-**Goal**: Break refactoring plan into safe, atomic, testable tasks.
-
-**STEPS:**
-
-1. **Invoke `prizmkit.tasks`** with plan.md:
-   - Each task MUST be independently testable
-   - Each task MUST preserve all tests (green → green)
-   - Artifact path: `.prizmkit/refactor/<refactor-slug>/tasks.md`
-
-2. **Verify task safety**:
+   - Tasks ordered to minimize risk (safe renames first, structural changes later)
    - Every task ends with "run full test suite"
-   - No task introduces temporary test failures
-   - Tasks are ordered to minimize risk (safe renames first, structural changes later)
 
-**CHECKPOINT CP-RW-3**: `tasks.md` exists with test gates on every task.
+**CHECKPOINT CP-RW-2**: `plan.md` exists with behavior preservation strategy and Tasks section.
 
 ---
 
-## Phase 4: Implement — 实现
+## Phase 3: Implement — 实现
 
 **Goal**: Execute refactoring tasks with mandatory test verification after each task.
 
 **STEPS:**
 
-1. **For EACH task in tasks.md**:
+1. **For EACH task in plan.md Tasks section**:
    a. Implement the refactoring change
-   b. **Run FULL test suite** (not just affected tests)
+   b. **Run FULL test suite** (not just affected tests) — refactoring can have surprising cross-module effects that targeted tests miss
    c. Verify: all previously-passing tests still pass
-   d. If any test fails → STOP, revert task, investigate
-
-2. **Scope Guard** (checked after each task):
-   - If implementation reveals need for new behavior → **STOP**
-   - Output: "Scope guard triggered: <description of new behavior needed>"
-   - Recommend: "Switch to `prizmkit.feature` for this change"
-   - Do NOT proceed with behavior changes in refactor pipeline
-
-3. **Progress tracking**:
-   - Mark tasks complete in tasks.md as they finish
+   d. If any test fails → stop, revert task, investigate
+2. **Progress tracking**:
+   - Mark tasks complete in plan.md Tasks section as they finish
    - Record test results after each task
 
-**CHECKPOINT CP-RW-4**: All tasks complete, full test suite green.
+**CHECKPOINT CP-RW-3**: All tasks complete, full test suite green.
 
-**KEY RULES:**
-- NEVER skip the test gate between tasks
-- NEVER allow temporary test failures ("we'll fix it in the next task")
+**Important constraints for Phase 3:**
+- Never skip the test gate between tasks — a broken intermediate state compounds into much harder debugging later
+- Never allow temporary test failures ("we'll fix it in the next task") — this assumption is almost always wrong in refactoring
 - If a task cannot be completed without breaking tests → split it into smaller tasks
 - Max 3 attempts per task before escalating to user
 
 ---
 
-## Phase 5: Code Review — 代码审查
+## Phase 4: Code Review — 代码审查
 
 **Goal**: Verify refactoring quality and behavior preservation.
 
 **STEPS:**
 
-1. **Invoke `prizmkit.code-review`** (scoped to changed files):
+1. **Invoke `/prizmkit-code-review`** (scoped to changed files):
    - Review dimensions for refactoring:
      - **Behavior preservation**: Does observable behavior remain identical?
      - **Structural improvement**: Is the code measurably better? (complexity, coupling, readability)
      - **Test integrity**: Are all tests still meaningful and passing?
      - **Code quality**: Does refactored code follow project conventions?
    - Verdict: PASS / PASS_WITH_WARNINGS / NEEDS_FIXES
-
-2. **Run full test suite one final time**: All tests MUST pass
-
+2. **Run full test suite one final time**: All tests must pass
 3. **Handle review results**:
-   - **PASS / PASS_WITH_WARNINGS**: Proceed to Phase 6
-   - **NEEDS_FIXES**: Return to Phase 4 (max 2 review rounds)
+   - **PASS / PASS_WITH_WARNINGS**: Proceed to Phase 5
+   - **NEEDS_FIXES**: Return to Phase 3 (max 2 review rounds)
 
-**CHECKPOINT CP-RW-5**: Code review passes, all tests green.
+**CHECKPOINT CP-RW-4**: Code review passes, all tests green.
 
 ---
 
-## Phase 6: Commit — 提交
+## Phase 5: Commit — 提交
 
 **Goal**: Commit with refactor convention.
 
 **STEPS:**
 
-1. **Invoke `prizmkit.committer`**:
+1. **Invoke `/prizmkit-retrospective`** (Job 1: structural sync only):
+   - Update KEY_FILES/INTERFACES/DEPENDENCIES in affected `.prizm-docs/` files
+   - Skip knowledge injection unless refactoring revealed a genuinely new pitfall (e.g. a non-obvious coupling)
+   - If structural changes are significant (module split/merge), update L1 doc
+   - Stage doc changes: `git add .prizm-docs/`
+2. **Invoke `/prizmkit-committer`**:
    - Commit message: `refactor(<scope>): <description>`
    - Include all refactored code + any test updates
    - Do NOT push
-   - Do NOT invoke `prizmkit.summarize` (no REGISTRY entry for refactoring)
 
-2. **Update `.prizm-docs/`** if needed:
-   - Updated module structure documentation
-   - New PATTERNS discovered
-   - Resolved TRAPS (remove if debt is paid)
-
-**CHECKPOINT CP-RW-6**: Commit recorded with `refactor()` prefix.
+**CHECKPOINT CP-RW-5**: Commit recorded with `refactor()` prefix.
 
 ---
 
@@ -218,10 +187,10 @@ Execute the full refactor pipeline for a module or code area.
 For single-file refactoring (rename, extract method, <30 lines changed):
 
 ```
-Phase 1 (Analyze) → Phase 4 (Implement) → Phase 5 (Review) → Phase 6 (Commit)
+Phase 1 (Analyze) → Phase 2 (Simplified Plan) → Phase 3 (Implement) → Phase 4 (Review) → Phase 5 (Commit)
 ```
 
-Skip Phase 2 (Plan) and Phase 3 (Tasks).
+Skip Phase 2's detailed planning process, but still generate a lightweight `plan.md` with a simplified Tasks section (typically 1-2 tasks).
 
 **CRITERIA** (ALL must be true):
 - Single file change
@@ -230,8 +199,14 @@ Skip Phase 2 (Plan) and Phase 3 (Tasks).
 - No cross-module impact
 - No dependency changes
 
+**Fast Path implementation differs from full path:**
+- Phase 2 is simplified: generate a lightweight plan.md with 1-2 tasks directly from refactor-analysis.md, without deep architecture research
+- Phase 3 still reads plan.md Tasks as normal, marks tasks `[x]` on completion
+- Single-task refactors typically have just one task in plan.md
+
 **Fast Path still requires:**
 - refactor-analysis.md (lightweight version with baseline)
+- plan.md (simplified, 1-2 tasks)
 - Full test suite run after implementation
 - Code review
 - `refactor(<scope>):` commit convention
@@ -248,32 +223,11 @@ The pipeline supports resuming from the last completed phase by detecting existi
 |---------------|------------|
 | (nothing) | Phase 1: Analyze |
 | `refactor-analysis.md` only | Phase 2: Plan |
-| `refactor-analysis.md` + `plan.md` | Phase 3: Tasks |
-| All 3 docs | Phase 4: Implement |
-| All 3 docs + code changes exist | Phase 5: Review |
-| All 3 docs + review passed | Phase 6: Commit |
+| `refactor-analysis.md` + `plan.md` | Phase 3: Implement |
+| All docs + code changes exist | Phase 4: Review |
+| All docs + review passed | Phase 5: Commit |
 
-**Resume command**: `prizmkit.refactor <slug>` — if `<slug>` matches an existing `.prizmkit/refactor/<slug>/` directory, resume instead of starting fresh.
-
----
-
-## Scope Guard — 范围守卫
-
-The scope guard is a critical safety mechanism that prevents behavior changes from sneaking into refactoring.
-
-**Triggers:**
-- New public API method or endpoint added
-- New user-facing feature or UI element
-- Changed return values or response formats
-- New configuration options
-- Modified business logic (not just restructured)
-
-**When triggered:**
-1. STOP current task immediately
-2. Output clear message: "⚠️ Scope Guard: This change introduces new behavior"
-3. Describe what new behavior was detected
-4. Recommend: "Create a feature request and use `prizmkit.feature` instead"
-5. Offer to continue refactoring WITHOUT the behavior change
+**Resume**: If `<slug>` matches an existing `.prizmkit/refactor/<slug>/` directory, resume instead of starting fresh.
 
 ---
 
@@ -285,7 +239,6 @@ The scope guard is a critical safety mechanism that prevents behavior changes fr
 | No tests exist for target module | WARN user, recommend writing tests first |
 | Baseline tests already failing | Isolate failures, document, proceed with caution |
 | Test fails after a refactoring task | Revert task, investigate, retry or split |
-| Scope guard triggered | STOP, recommend feature-workflow |
 | Implementation fails after 3 rounds | Escalate to user with analysis |
 | Review fails after 2 rounds | Escalate with review findings |
 | Refactoring creates circular dependency | STOP, revise plan |
@@ -297,26 +250,24 @@ The scope guard is a critical safety mechanism that prevents behavior changes fr
 
 | Skill | Role in Refactor Workflow |
 |-------|--------------------------|
-| `prizmkit-tech-debt-tracker` | Phase 1: identify debt and complexity |
-| `prizmkit-plan` | Phase 2: refactoring plan generation |
-| `prizmkit-tasks` | Phase 3: task breakdown |
-| `prizmkit-implement` | Phase 4: execute refactoring tasks |
-| `prizmkit-code-review` | Phase 5: review quality and behavior preservation |
-| `prizmkit-committer` | Phase 6: commit with `refactor()` convention |
-| `feature-workflow` | Handoff target when scope guard triggers |
-| `prizmkit-specify` | NOT used (no user stories for refactoring) |
-| `prizmkit-analyze` | NOT used (no spec ↔ plan consistency needed) |
-| `prizmkit-summarize` | NOT used (no REGISTRY entry for refactoring) |
-| `prizmkit-retrospective` | Optional: post-refactor lessons learned |
+| (built-in code analysis) | Phase 1: identify debt and complexity |
+| `/prizmkit-plan` | Phase 2: refactoring plan + task generation |
+| `/prizmkit-implement` | Phase 3: execute refactoring tasks |
+| `/prizmkit-code-review` | Phase 4: review quality and behavior preservation |
+| `/prizmkit-committer` | Phase 5: commit with `refactor()` convention |
+| `/prizmkit-retrospective` | Phase 5: structural sync before commit (Job 1 only, skip knowledge injection unless new pitfall) |
+| `feature-workflow` | Handoff target when new behavior is needed |
+| `/prizmkit-specify` | NOT used (no user stories for refactoring) |
+| `/prizmkit-analyze` | NOT used (no spec ↔ plan consistency needed) |
 
 ---
 
 ## Comparison with Feature and Bug Fix Pipelines
 
 | Dimension | Feature Workflow | Refactor Workflow | Bug Fix Pipeline |
-|-----------|-----------------|-------------------|-----------------|
-| Input | Requirement description | Module/code target | Bug description |
-| Pipeline Phases | 7 (Fast: 5) | 6 (Fast: 4) | 5 (Fast: 3) |
+|-----------|-----------------|-------------------|------------------|
+| Input | Natural language requirement | Module/code target | Bug description |
+| Pipeline Phases | 6 (Fast: 4) | 5 (Fast: 3) | 5 (Fast: 3) |
 | Phase 1 | Specify (spec.md) | Analyze (refactor-analysis.md) | Triage (fix-plan.md) |
 | Artifact Path | `.prizmkit/specs/<slug>/` | `.prizmkit/refactor/<slug>/` | `.prizmkit/bugfix/<id>/` |
 | Commit Prefix | `feat(<scope>):` | `refactor(<scope>):` | `fix(<scope>):` |
@@ -325,16 +276,11 @@ The scope guard is a critical safety mechanism that prevents behavior changes fr
 | Scope Guard | N/A | ✅ (enforced) | N/A |
 | Behavior Change | ✅ Expected | ❌ Forbidden | ✅ Fix behavior |
 
-## Path References
-
-All internal asset paths MUST use `${SKILL_DIR}` placeholder for cross-IDE compatibility.
-
 ## Output
 
 - `refactor-analysis.md` (Phase 1 artifact)
-- `plan.md` (Phase 2 artifact)
-- `tasks.md` (Phase 3 artifact)
-- Refactored implementation code (Phase 4)
-- Code review report (Phase 5, conversation only)
-- Git commit with `refactor(<scope>):` prefix (Phase 6)
+- `plan.md` with Tasks section (Phase 2 artifact)
+- Refactored implementation code (Phase 3)
+- Code review report (Phase 4, conversation only)
+- Git commit with `refactor(<scope>):` prefix (Phase 5)
 - Updated `.prizm-docs/` (if applicable)

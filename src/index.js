@@ -20,14 +20,21 @@ const server = app.listen(config.webPort, config.webHost, () => {
 
 let bot = null;
 
-if (config.enableTelegram) {
-  bot = createTelegramBot();
-  bot.launch().then(() => {
-    logger.info('Telegram bridge is running.');
-  });
-} else {
-  logger.info('Telegram bridge disabled by ENABLE_TELEGRAM=false');
-}
+const initBotAsync = async () => {
+  if (config.enableTelegram) {
+    bot = await createTelegramBot();
+    bot.launch().then(() => {
+      logger.info('Telegram bridge is running.');
+    });
+  } else {
+    logger.info('Telegram bridge disabled by ENABLE_TELEGRAM=false');
+  }
+};
+
+initBotAsync().catch((error) => {
+  logger.error({ err: error.message }, 'Failed to initialize telegram bot');
+  process.exit(1);
+});
 
 function shutdown(signal) {
   logger.info(`Received ${signal}, shutting down...`);

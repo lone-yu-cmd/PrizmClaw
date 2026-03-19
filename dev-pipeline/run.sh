@@ -17,12 +17,19 @@ set -euo pipefail
 # Environment Variables:
 #   MAX_RETRIES           Max retries per feature (default: 3)
 #   SESSION_TIMEOUT       Session timeout in seconds (default: 0 = no limit)
-#   AI_CLI                AI CLI command name (auto-detected: cbc or claude)
+#   AI_CLI                AI CLI command name (override; also readable from .prizmkit/config.json)
 #   CODEBUDDY_CLI         Legacy alias for AI_CLI (deprecated, use AI_CLI instead)
 #   PRIZMKIT_PLATFORM     Force platform: 'codebuddy' or 'claude' (auto-detected)
+#   MODEL                 AI model to use (e.g. claude-opus-4.6, claude-sonnet-4.6, claude-haiku-4.5)
 #   VERBOSE               Set to 1 to enable --verbose on AI CLI (shows subagent output)
 #   HEARTBEAT_INTERVAL    Heartbeat log interval in seconds (default: 30)
 #   HEARTBEAT_STALE_THRESHOLD  Heartbeat stale threshold in seconds (default: 600)
+#   LOG_CLEANUP_ENABLED   Run periodic log cleanup (default: 1)
+#   LOG_RETENTION_DAYS    Delete logs older than N days (default: 14)
+#   LOG_MAX_TOTAL_MB      Keep total logs under N MB via oldest-first cleanup (default: 1024)
+#   PIPELINE_MODE         Override mode for all features: lite|standard|full|self-evolve (used by daemon)
+#   DEV_BRANCH            Custom dev branch name (default: auto-generated dev/pipeline-{run_id})
+#   AUTO_PUSH             Auto-push to remote after successful feature (default: 0). Set to 1 to enable.
 # ============================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -34,35 +41,23 @@ MAX_RETRIES=${MAX_RETRIES:-3}
 SESSION_TIMEOUT=${SESSION_TIMEOUT:-0}
 HEARTBEAT_STALE_THRESHOLD=${HEARTBEAT_STALE_THRESHOLD:-600}
 HEARTBEAT_INTERVAL=${HEARTBEAT_INTERVAL:-30}
+LOG_CLEANUP_ENABLED=${LOG_CLEANUP_ENABLED:-1}
+LOG_RETENTION_DAYS=${LOG_RETENTION_DAYS:-14}
+LOG_MAX_TOTAL_MB=${LOG_MAX_TOTAL_MB:-1024}
 VERBOSE=${VERBOSE:-0}
+MODEL=${MODEL:-""}
+DEV_BRANCH=${DEV_BRANCH:-""}
+AUTO_PUSH=${AUTO_PUSH:-0}
 
-# AI CLI detection: AI_CLI > CODEBUDDY_CLI > auto-detect > error
-if [[ -n "${AI_CLI:-}" ]]; then
-    CLI_CMD="$AI_CLI"
-elif [[ -n "${CODEBUDDY_CLI:-}" ]]; then
-    CLI_CMD="$CODEBUDDY_CLI"
-elif command -v cbc &>/dev/null; then
-    CLI_CMD="cbc"
-elif command -v claude &>/dev/null; then
-    CLI_CMD="claude"
-else
-    echo "ERROR: No AI CLI found. Install CodeBuddy (cbc) or Claude Code (claude)." >&2
-    exit 1
-fi
-
-# Platform detection
-if [[ -n "${PRIZMKIT_PLATFORM:-}" ]]; then
-    PLATFORM="$PRIZMKIT_PLATFORM"
-elif [[ "$CLI_CMD" == *"claude"* ]]; then
-    PLATFORM="claude"
-else
-    PLATFORM="codebuddy"
-fi
-
-export PRIZMKIT_PLATFORM="$PLATFORM"
+# Source shared common helpers (CLI/platform detection + logs + deps)
+source "$SCRIPT_DIR/lib/common.sh"
+prizm_detect_cli_and_platform
 
 # Source shared heartbeat library
 source "$SCRIPT_DIR/lib/heartbeat.sh"
+
+# Source shared branch library
+source "$SCRIPT_DIR/lib/branch.sh"
 
 # Detect stream-json support
 detect_stream_json_support "$CLI_CMD"
@@ -70,18 +65,9 @@ detect_stream_json_support "$CLI_CMD"
 # Feature list path (set in main, used by cleanup trap)
 FEATURE_LIST=""
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-BOLD='\033[1m'
-NC='\033[0m'
-
-log_info()    { echo -e "${BLUE}[INFO]${NC}    $(date '+%Y-%m-%d %H:%M:%S') $*"; }
-log_warn()    { echo -e "${YELLOW}[WARN]${NC}    $(date '+%Y-%m-%d %H:%M:%S') $*"; }
-log_error()   { echo -e "${RED}[ERROR]${NC}   $(date '+%Y-%m-%d %H:%M:%S') $*"; }
-log_success() { echo -e "${GREEN}[SUCCESS]${NC} $(date '+%Y-%m-%d %H:%M:%S') $*"; }
+# Branch tracking (for cleanup on interrupt)
+_ORIGINAL_BRANCH=""
+_DEV_BRANCH_NAME=""
 
 # ============================================================
 # Shared: Spawn an AI CLI session and wait for result
@@ -119,15 +105,24 @@ spawn_and_wait_session() {
         stream_json_flag="--output-format stream-json"
     fi
 
+    local model_flag=""
+    if [[ -n "$MODEL" ]]; then
+        model_flag="--model $MODEL"
+    fi
+
+    # Unset CLAUDECODE to prevent "nested session" error when launched from
+    # within an existing Claude Code session (e.g. via launch-daemon.sh).
+    unset CLAUDECODE 2>/dev/null || true
+
     case "$CLI_CMD" in
         *claude*)
-            # Claude Code: prompt via -p argument, --yes for auto-accept
+            # Claude Code: prompt via -p argument, --dangerously-skip-permissions for auto-accept
             "$CLI_CMD" \
-                --print \
                 -p "$(cat "$bootstrap_prompt")" \
-                --yes \
+                --dangerously-skip-permissions \
                 $verbose_flag \
                 $stream_json_flag \
+                $model_flag \
                 > "$session_log" 2>&1 &
             ;;
         *)
@@ -137,6 +132,7 @@ spawn_and_wait_session() {
                 -y \
                 $verbose_flag \
                 $stream_json_flag \
+                $model_flag \
                 < "$bootstrap_prompt" \
                 > "$session_log" 2>&1 &
             ;;
@@ -199,6 +195,49 @@ spawn_and_wait_session() {
         session_status="crashed"
     fi
 
+    if [[ "$session_status" == "success" ]]; then
+        local project_root
+        project_root="$(cd "$SCRIPT_DIR/.." && pwd)"
+        if git -C "$project_root" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+            local dirty_files=""
+            dirty_files=$(git -C "$project_root" status --porcelain 2>/dev/null || true)
+            if [[ -n "$dirty_files" ]]; then
+                log_warn "Session reported success but git working tree is not clean."
+                echo "$dirty_files" | sed 's/^/  - /'
+                session_status="commit_missing"
+            else
+                # Bugfix commits (fix: / fix(scope):) are exempt from docs check.
+                local last_commit_subject=""
+                last_commit_subject=$(git -C "$project_root" log -1 --pretty=%s 2>/dev/null || true)
+                if [[ "$last_commit_subject" =~ ^fix(\(|:) ]]; then
+                    log_info "Detected bugfix commit prefix; skipping docs check."
+                else
+                    local docs_changed=""
+                    docs_changed=$(git -C "$project_root" log --name-only --format="" -1 2>/dev/null \
+                        | grep -E '\.prizm-docs/' | head -1 || true)
+                    if [[ -z "$docs_changed" ]]; then
+                        log_warn "Session committed but no .prizm-docs changes detected."
+                        session_status="docs_missing"
+                    fi
+                fi
+            fi
+        fi
+    fi
+
+    # Persist final pipeline-resolved status back to session-status.json
+    # only for post-check statuses introduced by the pipeline itself.
+    if [[ -f "$session_status_file" && ( "$session_status" == "commit_missing" || "$session_status" == "docs_missing" ) ]]; then
+        python3 -c "
+import json, sys
+p, st = sys.argv[1], sys.argv[2]
+with open(p, 'r', encoding='utf-8') as f:
+    data = json.load(f)
+data['status'] = st
+with open(p, 'w', encoding='utf-8') as f:
+    json.dump(data, f, indent=2, ensure_ascii=False)
+" "$session_status_file" "$session_status" >/dev/null 2>&1 || true
+    fi
+
     log_info "Session result: $session_status"
 
     # Update feature status
@@ -223,6 +262,15 @@ cleanup() {
     echo ""
     log_warn "Received interrupt signal. Saving state..."
 
+    # Kill all child processes (claude-internal, heartbeat, progress parser, etc.)
+    kill 0 2>/dev/null || true
+
+    # Log current branch info for recovery
+    if [[ -n "$_DEV_BRANCH_NAME" ]]; then
+        log_info "Development was on branch: $_DEV_BRANCH_NAME"
+        log_info "Original branch was: $_ORIGINAL_BRANCH"
+    fi
+
     if [[ -n "$FEATURE_LIST" && -f "$FEATURE_LIST" ]]; then
         python3 "$SCRIPTS_DIR/update-feature-status.py" \
             --feature-list "$FEATURE_LIST" \
@@ -240,23 +288,29 @@ trap cleanup SIGINT SIGTERM
 # ============================================================
 
 check_dependencies() {
-    # Check for jq
-    if ! command -v jq &>/dev/null; then
-        log_error "jq is required but not installed. Install with: brew install jq"
-        exit 1
+    prizm_check_common_dependencies "$CLI_CMD"
+}
+
+run_log_cleanup() {
+    if [[ "$LOG_CLEANUP_ENABLED" != "1" ]]; then
+        return 0
     fi
 
-    # Check for python3
-    if ! command -v python3 &>/dev/null; then
-        log_error "python3 is required but not installed."
-        exit 1
-    fi
+    local cleanup_result
+    cleanup_result=$(python3 "$SCRIPTS_DIR/cleanup-logs.py" \
+        --state-dir "$STATE_DIR" \
+        --retention-days "$LOG_RETENTION_DAYS" \
+        --max-total-mb "$LOG_MAX_TOTAL_MB" 2>/dev/null) || {
+        log_warn "Log cleanup failed (continuing)"
+        return 0
+    }
 
-    # Check for AI CLI
-    if ! command -v "$CLI_CMD" &>/dev/null; then
-        log_warn "AI CLI '$CLI_CMD' not found in PATH."
-        log_warn "Set AI_CLI environment variable to the correct command."
-        log_warn "Continuing anyway (will fail when spawning sessions)..."
+    local deleted reclaimed_kb
+    deleted=$(echo "$cleanup_result" | python3 -c "import sys,json; print(json.load(sys.stdin).get('deleted_files', 0))" 2>/dev/null || echo "0")
+    reclaimed_kb=$(echo "$cleanup_result" | python3 -c "import sys,json; print(int(json.load(sys.stdin).get('reclaimed_bytes', 0)/1024))" 2>/dev/null || echo "0")
+
+    if [[ "$deleted" -gt 0 ]]; then
+        log_info "Log cleanup: deleted $deleted files, reclaimed ${reclaimed_kb}KB"
     fi
 }
 
@@ -296,11 +350,11 @@ run_one() {
                     exit 1
                 fi
                 case "$1" in
-                    lite|standard|full)
+                    lite|standard|full|self-evolve)
                         mode_override="$1"
                         ;;
                     *)
-                        log_error "Invalid mode: $1 (must be lite, standard, or full)"
+                        log_error "Invalid mode: $1 (must be lite, standard, full, or self-evolve)"
                         exit 1
                         ;;
                 esac
@@ -371,6 +425,15 @@ run_one() {
     fi
 
     check_dependencies
+    run_log_cleanup
+
+    # Auto-detect framework repo: if scripts/bundle.js exists, enable self-evolve mode
+    local project_root
+    project_root=$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || echo "")
+    if [[ -z "$mode_override" && -n "$project_root" && -f "$project_root/scripts/bundle.js" ]]; then
+        log_info "Detected PrizmKit framework repo — auto-enabling self-evolve mode"
+        mode_override="self-evolve"
+    fi
 
     # Verify feature exists
     local feature_title
@@ -536,25 +599,83 @@ sys.exit(1)
     echo -e "${BOLD}════════════════════════════════════════════════════${NC}"
     echo ""
 
-    # Override cleanup trap for single-feature mode
-    cleanup() {
+    # Override cleanup trap for single-feature mode (use distinct name to avoid overwriting global cleanup)
+    cleanup_single_feature() {
         echo ""
         log_warn "Interrupted. Killing session..."
         # Kill all child processes
         kill 0 2>/dev/null || true
+        # Log current branch info
+        if [[ -n "$_DEV_BRANCH_NAME" ]]; then
+            log_info "Development was on branch: $_DEV_BRANCH_NAME"
+        fi
         log_info "Session log: $session_dir/logs/session.log"
         exit 130
     }
-    trap cleanup SIGINT SIGTERM
+    trap cleanup_single_feature SIGINT SIGTERM
 
     _SPAWN_RESULT=""
+
+    # Branch lifecycle: create and checkout feature branch
+    local _proj_root
+    _proj_root="$(cd "$SCRIPT_DIR/.." && pwd)"
+    local _source_branch
+    _source_branch=$(git -C "$_proj_root" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
+    _ORIGINAL_BRANCH="$_source_branch"
+
+    local _branch_name="${DEV_BRANCH:-dev/${feature_id}-$(date +%s)}"
+    if branch_create "$_proj_root" "$_branch_name" "$_source_branch"; then
+        _DEV_BRANCH_NAME="$_branch_name"
+    else
+        log_warn "Failed to create branch; running session on current branch"
+    fi
+
     spawn_and_wait_session \
         "$feature_id" "$feature_list" "$session_id" \
         "$bootstrap_prompt" "$session_dir" 999
     local session_status="$_SPAWN_RESULT"
 
+    # Auto-push after successful session
+    if [[ "$session_status" == "success" && "$AUTO_PUSH" == "1" ]]; then
+        local _proj_root
+        _proj_root="$(cd "$SCRIPT_DIR/.." && pwd)"
+        log_info "AUTO_PUSH enabled; pushing to remote..."
+        git -C "$_proj_root" push -u origin "$_DEV_BRANCH_NAME" 2>/dev/null || log_warn "Auto-push failed"
+    fi
+
     echo ""
     if [[ "$session_status" == "success" ]]; then
+        # Self-evolve mode: run framework validation after successful session
+        if [[ "$mode_override" == "self-evolve" ]]; then
+            log_info "Self-evolve mode: running framework validation..."
+            if bash "$SCRIPTS_DIR/validate-framework.sh" 2>&1; then
+                log_success "Framework validation passed"
+            else
+                log_warn "Framework validation failed — review issues above"
+                session_status="framework_validation_failed"
+            fi
+
+            # Check for reload_needed marker in session status
+            local session_status_file="$session_dir/session-status.json"
+            if [[ -f "$session_status_file" ]]; then
+                local reload_needed
+                reload_needed=$(python3 -c "
+import json, sys
+with open(sys.argv[1]) as f:
+    data = json.load(f)
+print(data.get('reload_needed', False))
+" "$session_status_file" 2>/dev/null || echo "False")
+                if [[ "$reload_needed" == "True" ]]; then
+                    echo ""
+                    log_warn "╔══════════════════════════════════════════════════════════════╗"
+                    log_warn "║  RELOAD NEEDED: This session modified pipeline skills or     ║"
+                    log_warn "║  templates that are used by the dev-pipeline itself.          ║"
+                    log_warn "║  Changes will take effect in the NEXT session.                ║"
+                    log_warn "╚══════════════════════════════════════════════════════════════╝"
+                fi
+            fi
+        fi
+
         log_success "════════════════════════════════════════════════════"
         log_success "  $feature_id completed successfully!"
         log_success "════════════════════════════════════════════════════"
@@ -589,6 +710,7 @@ main() {
     fi
 
     check_dependencies
+    run_log_cleanup
 
     # Initialize pipeline state if needed
     if [[ ! -f "$STATE_DIR/pipeline.json" ]]; then
@@ -630,6 +752,23 @@ main() {
     echo -e "${BOLD}════════════════════════════════════════════════════${NC}"
     echo ""
 
+    # Branch lifecycle: create dev branch for this pipeline run
+    local _proj_root
+    _proj_root="$(cd "$SCRIPT_DIR/.." && pwd)"
+    local _source_branch
+    _source_branch=$(git -C "$_proj_root" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
+    _ORIGINAL_BRANCH="$_source_branch"
+
+    local run_id_for_branch
+    run_id_for_branch=$(jq -r '.run_id' "$STATE_DIR/pipeline.json" 2>/dev/null || echo "$$")
+    local _branch_name="${DEV_BRANCH:-dev/pipeline-${run_id_for_branch}}"
+    if branch_create "$_proj_root" "$_branch_name" "$_source_branch"; then
+        _DEV_BRANCH_NAME="$_branch_name"
+        log_info "Dev branch: $_branch_name"
+    else
+        log_warn "Failed to create dev branch; running on current branch: $_source_branch"
+    fi
+
     # Main processing loop
     local session_count=0
 
@@ -668,7 +807,12 @@ for f in data.get('stuck_features', []):
             log_success "════════════════════════════════════════════════════"
             log_success "  All features completed! Pipeline finished."
             log_success "  Total sessions: $session_count"
+            if [[ -n "$_DEV_BRANCH_NAME" ]]; then
+                log_success "  Dev branch: $_DEV_BRANCH_NAME"
+                log_success "  Merge with: git checkout $_ORIGINAL_BRANCH && git merge $_DEV_BRANCH_NAME"
+            fi
             log_success "════════════════════════════════════════════════════"
+            rm -f "$STATE_DIR/current-session.json"
             break
         fi
 
@@ -705,17 +849,38 @@ for f in data.get('stuck_features', []):
         mkdir -p "$session_dir/logs"
 
         local bootstrap_prompt="$session_dir/bootstrap-prompt.md"
-        python3 "$SCRIPTS_DIR/generate-bootstrap-prompt.py" \
-            --feature-list "$feature_list" \
-            --feature-id "$feature_id" \
-            --session-id "$session_id" \
-            --run-id "$run_id" \
-            --retry-count "$retry_count" \
-            --resume-phase "$resume_phase" \
-            --state-dir "$STATE_DIR" \
-            --output "$bootstrap_prompt" >/dev/null 2>&1
 
-        # Update current session tracking
+        local main_prompt_args=(
+            --feature-list "$feature_list"
+            --feature-id "$feature_id"
+            --session-id "$session_id"
+            --run-id "$run_id"
+            --retry-count "$retry_count"
+            --resume-phase "$resume_phase"
+            --state-dir "$STATE_DIR"
+            --output "$bootstrap_prompt"
+        )
+
+        # Support PIPELINE_MODE env var (set by launch-daemon.sh --mode)
+        if [[ -n "${PIPELINE_MODE:-}" ]]; then
+            main_prompt_args+=(--mode "$PIPELINE_MODE")
+        fi
+
+        # Auto-detect framework repo: if scripts/bundle.js exists, enable self-evolve mode
+        if [[ -z "${PIPELINE_MODE:-}" ]]; then
+            local _project_root
+            _project_root=$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || echo "")
+            if [[ -n "$_project_root" && -f "$_project_root/scripts/bundle.js" ]]; then
+                if [[ $session_count -eq 0 ]]; then
+                    log_info "Detected PrizmKit framework repo — auto-enabling self-evolve mode"
+                fi
+                main_prompt_args+=(--mode "self-evolve")
+            fi
+        fi
+
+        python3 "$SCRIPTS_DIR/generate-bootstrap-prompt.py" "${main_prompt_args[@]}" >/dev/null 2>&1
+
+        # Update current session tracking (atomic write via temp file)
         python3 -c "
 import json, sys, os
 from datetime import datetime
@@ -723,10 +888,13 @@ feature_id, session_id, state_dir = sys.argv[1], sys.argv[2], sys.argv[3]
 data = {
     'feature_id': feature_id,
     'session_id': session_id,
-    'started_at': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
+    'started_at': datetime.now(datetime.UTC).strftime('%Y-%m-%dT%H:%M:%SZ')
 }
-with open(os.path.join(state_dir, 'current-session.json'), 'w') as f:
+target = os.path.join(state_dir, 'current-session.json')
+tmp = target + '.tmp'
+with open(tmp, 'w') as f:
     json.dump(data, f, indent=2)
+os.replace(tmp, target)
 " "$feature_id" "$session_id" "$STATE_DIR"
 
         # Mark feature as in-progress before spawning session
@@ -739,10 +907,19 @@ with open(os.path.join(state_dir, 'current-session.json'), 'w') as f:
         # Spawn session and wait
         log_info "Spawning AI CLI session: $session_id"
         _SPAWN_RESULT=""
+
         spawn_and_wait_session \
             "$feature_id" "$feature_list" "$session_id" \
             "$bootstrap_prompt" "$session_dir" "$MAX_RETRIES"
         local session_status="$_SPAWN_RESULT"
+
+        # Auto-push after successful session
+        if [[ "$session_status" == "success" && "$AUTO_PUSH" == "1" ]]; then
+            local _proj_root
+            _proj_root="$(cd "$SCRIPT_DIR/.." && pwd)"
+            log_info "AUTO_PUSH enabled; pushing to remote..."
+            git -C "$_proj_root" push 2>/dev/null || log_warn "Auto-push failed"
+        fi
 
         session_count=$((session_count + 1))
 
@@ -763,13 +940,14 @@ show_help() {
     echo "  run [feature-list.json]                 Run all features sequentially"
     echo "  run <feature-id> [options]              Run a single feature"
     echo "  status [feature-list.json]               Show pipeline status"
+    echo "  test-cli                                 Test AI CLI: show detected CLI, version, and model"
     echo "  reset                                    Clear all state and start fresh"
     echo "  help                                     Show this help message"
     echo ""
     echo "Single Feature Options (run <feature-id>):"
     echo "  --dry-run                   Generate bootstrap prompt only, don't spawn session"
     echo "  --resume-phase N            Override resume phase (default: auto-detect)"
-    echo "  --mode <lite|standard|full> Override pipeline mode (bypasses estimated_complexity)"
+    echo "  --mode <lite|standard|full|self-evolve> Override pipeline mode (bypasses estimated_complexity)"
     echo "  --clean                     Delete artifacts and reset before running"
     echo "  --no-reset                  Skip feature status reset step"
     echo "  --timeout N                 Session timeout in seconds (default: 0 = no limit)"
@@ -778,8 +956,13 @@ show_help() {
     echo "  MAX_RETRIES           Max retries per feature (default: 3)"
     echo "  SESSION_TIMEOUT       Session timeout in seconds (default: 0 = no limit)"
     echo "  AI_CLI                AI CLI command name (auto-detected: cbc or claude)"
+    echo "  MODEL                 AI model ID (e.g. claude-opus-4.6, claude-sonnet-4.6, claude-haiku-4.5)"
     echo "  HEARTBEAT_INTERVAL    Heartbeat log interval in seconds (default: 30)"
     echo "  HEARTBEAT_STALE_THRESHOLD  Heartbeat stale threshold in seconds (default: 600)"
+    echo "  LOG_CLEANUP_ENABLED   Run log cleanup before execution (default: 1)"
+    echo "  LOG_RETENTION_DAYS    Delete logs older than N days (default: 14)"
+    echo "  LOG_MAX_TOTAL_MB      Keep total logs under N MB (default: 1024)"
+    echo "  PIPELINE_MODE         Override mode for all features: lite|standard|full|self-evolve"
     echo ""
     echo "Examples:"
     echo "  ./run.sh run                                         # Run all features"
@@ -790,6 +973,8 @@ show_help() {
     echo "  ./run.sh run F-007 --clean --mode standard             # Clean + run standard"
     echo "  ./run.sh status                                        # Show pipeline status"
     echo "  MAX_RETRIES=5 SESSION_TIMEOUT=7200 ./run.sh run        # Custom config"
+    echo "  MODEL=claude-sonnet-4.6 ./run.sh run                    # Use Sonnet model"
+    echo "  MODEL=claude-haiku-4.5 ./run.sh test-cli                # Test with Haiku"
 }
 
 case "${1:-run}" in
@@ -812,6 +997,64 @@ case "${1:-run}" in
             --feature-list "${2:-feature-list.json}" \
             --state-dir "$STATE_DIR" \
             --action status
+        ;;
+    test-cli)
+        echo ""
+        echo "============================================"
+        echo "  Dev-Pipeline AI CLI Test"
+        echo "============================================"
+        echo ""
+        echo "  Detected CLI:    $CLI_CMD"
+        echo "  Platform:        $PLATFORM"
+        if [[ -n "$MODEL" ]]; then
+            echo "  Requested Model: $MODEL"
+        fi
+
+        # Get CLI version (first line only)
+        cli_version=$("$CLI_CMD" -v 2>&1 | head -1 || echo "unknown")
+        echo "  CLI Version:     $cli_version"
+        echo ""
+        echo "  Querying AI model (headless mode)..."
+
+        test_prompt="What AI assistant/platform are you and what model are you running? Reply in one line, e.g. \"I'm Claude Code Claude Opnus x.x\".No extra text."
+
+        local_model_flag=""
+        if [[ -n "$MODEL" ]]; then
+            local_model_flag="--model $MODEL"
+        fi
+
+        # Run headless query with 30s timeout (background + kill pattern for macOS)
+        tmpfile=$(mktemp)
+        (
+            unset CLAUDECODE
+            case "$CLI_CMD" in
+                *claude*)
+                    "$CLI_CMD" -p "$test_prompt" --dangerously-skip-permissions --no-session-persistence $local_model_flag > "$tmpfile" 2>/dev/null
+                    ;;
+                *)
+                    echo "$test_prompt" | "$CLI_CMD" --print -y $local_model_flag > "$tmpfile" 2>/dev/null
+                    ;;
+            esac
+        ) &
+        query_pid=$!
+        ( sleep 30 && kill "$query_pid" 2>/dev/null ) &
+        timer_pid=$!
+        wait "$query_pid" 2>/dev/null
+        kill "$timer_pid" 2>/dev/null
+        wait "$timer_pid" 2>/dev/null || true
+
+        model_reply=$(cat "$tmpfile" 2>/dev/null | head -3)
+        rm -f "$tmpfile"
+
+        if [[ -z "$model_reply" ]]; then
+            model_reply="(no response — CLI may require auth or is unavailable)"
+        fi
+
+        echo ""
+        echo "  AI Response:     $model_reply"
+        echo ""
+        echo "============================================"
+        echo ""
         ;;
     reset)
         log_warn "Resetting pipeline state..."

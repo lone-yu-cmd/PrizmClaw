@@ -1,0 +1,12 @@
+MODULE: adapters
+FILES: 1
+RESPONSIBILITY: External CLI adapter for invoking CodeBuddy process and streaming/collecting outputs
+KEY_FILES:
+- src/adapters/codebuddy.js: spawn wrapper with timeout, heartbeat logging, stdio echo, and failure normalization
+INTERFACES:
+- runCodeBuddy(prompt, options?): Promise<string>
+DEPENDENCIES:
+- node:child_process spawn: external command execution
+- src/config.js: binary path, timeout, permission flag, echo settings
+- src/utils/logger.js: lifecycle and heartbeat logging
+UPDATED: 2026-03-19

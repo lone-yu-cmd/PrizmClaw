@@ -6,6 +6,7 @@ to avoid duplication across pipeline scripts.
 """
 
 import json
+import logging
 import os
 import sys
 
@@ -47,6 +48,27 @@ def write_json_file(path, data):
     except IOError as e:
         return "Cannot write file: {}".format(str(e))
     return None
+
+
+def setup_logging(name="prizmkit.dev_pipeline", level=None):
+    """Configure and return a standard logger for pipeline scripts.
+
+    Logs are written to stderr to avoid interfering with stdout JSON outputs.
+    """
+    resolved_level = (level or os.environ.get("PRIZMKIT_LOG_LEVEL", "INFO")).upper()
+    numeric_level = getattr(logging, resolved_level, logging.INFO)
+
+    root_logger = logging.getLogger()
+    if not root_logger.handlers:
+        logging.basicConfig(
+            level=numeric_level,
+            stream=sys.stderr,
+            format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        )
+
+    logger = logging.getLogger(name)
+    logger.setLevel(numeric_level)
+    return logger
 
 
 def error_out(message, code=1):

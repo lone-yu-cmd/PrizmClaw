@@ -507,7 +507,7 @@ export async function createTelegramBot() {
 
   // F-013: Initialize session context service
   await sessionContextService.initSessionContext({ dataDir: config.sessionPersistenceDir });
-  await aliasStore.initAliasStore({ filePath: config.aliasPersistencePath });
+  await aliasStore.initAliasStore({ persistencePath: config.aliasPersistencePath });
 
   // F-013: Restore sessions from disk
   await sessionContextService.restoreSessions();

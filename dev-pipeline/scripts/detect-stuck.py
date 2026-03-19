@@ -21,6 +21,11 @@ import os
 import sys
 from datetime import datetime, timezone
 
+from utils import error_out, setup_logging
+
+
+LOGGER = setup_logging("detect-stuck")
+
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -340,8 +345,7 @@ def main():
     state_dir = os.path.abspath(args.state_dir)
 
     if not os.path.isdir(state_dir):
-        sys.stderr.write("Error: state directory not found: {}\n".format(state_dir))
-        sys.exit(2)
+        error_out("State directory not found: {}".format(state_dir), code=2)
 
     # Determine which features to check
     if args.feature_id:
@@ -382,4 +386,12 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        error_out("detect-stuck interrupted", code=130)
+    except SystemExit:
+        raise
+    except Exception as exc:
+        LOGGER.exception("Unhandled exception in detect-stuck")
+        error_out("detect-stuck failed: {}".format(str(exc)), code=1)
