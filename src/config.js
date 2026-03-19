@@ -17,7 +17,7 @@ const schema = z.object({
   REQUEST_TIMEOUT_MS: z.coerce.number().int().nonnegative().default(120000),
   MAX_PROMPT_CHARS: z.coerce.number().int().positive().default(8000),
   MAX_HISTORY_TURNS: z.coerce.number().int().positive().default(10),
-  WEB_HOST: z.string().default('127.0.0.1'),
+  WEB_HOST: z.string().default('0.0.0.0'),
   WEB_PORT: z.coerce.number().int().positive().default(8787),
   ENABLE_SYSTEM_EXEC: z.string().optional().default('false'),
   ALLOWED_COMMAND_PREFIXES: z.string().optional().default(''),

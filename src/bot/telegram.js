@@ -612,9 +612,16 @@ export async function createTelegramBot() {
   // Register pipeline commands
   registerPipelineCommands();
 
-  bot.catch((error, ctx) => {
+  bot.catch(async (error, ctx) => {
     const message = error instanceof Error ? error.message : String(error);
     logger.error({ err: message, chatId: ctx?.chat?.id, updateType: ctx?.updateType }, 'Unhandled error while processing telegram update');
+    try {
+      if (ctx?.chat?.id) {
+        await ctx.telegram.sendMessage(ctx.chat.id, '处理请求时出现异常，请重试一次。');
+      }
+    } catch (notifyError) {
+      logger.warn({ err: notifyError instanceof Error ? notifyError.message : String(notifyError) }, 'Failed to notify user after unhandled telegram error');
+    }
   });
 
   bot.start(async (ctx) => {

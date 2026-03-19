@@ -193,7 +193,22 @@ async function callJson(path, payload) {
   return data;
 }
 
+function normalizeZeroHost() {
+  if (window.location.hostname !== '0.0.0.0') {
+    return false;
+  }
+
+  const nextUrl = new URL(window.location.href);
+  nextUrl.hostname = '127.0.0.1';
+  window.location.replace(nextUrl.toString());
+  return true;
+}
+
 function init() {
+  if (normalizeZeroHost()) {
+    return;
+  }
+
   loadSessionConfig();
 
   if (!state.sessionId) {

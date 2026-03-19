@@ -1,0 +1,132 @@
+{
+  "$schema": "dev-pipeline-bug-fix-list-v1",
+  "project_name": "PrizmClaw",
+  "project_description": "Telegram remote control assistant for computer management",
+  "created_at": "2026-03-19T15:30:00Z",
+  "created_by": "bug-planner",
+  "bugs": [
+    {
+      "id": "B-001",
+      "title": "Web UI buttons show 'Failed to fetch' error",
+      "description": "All Web UI buttons (chat send, screenshot, system exec) are non-functional and return 'Failed to fetch' errors. Expected: buttons invoke backend APIs successfully. Actual: browser network tab shows connection errors for all endpoints. Root cause: Server binds to 127.0.0.1 (localhost only) while users access from external IP addresses. Browser relative URL API calls (/api/*) attempt to connect to user's access IP, but backend only listens on 127.0.0.1, causing connection refused.",
+      "severity": "high",
+      "priority": 1,
+      "affected_feature": "F-011, F-012, F-009",
+      "environment": "development",
+      "error_source": {
+        "type": "user_report",
+        "location": "Web UI buttons in public/index.html"
+      },
+      "reproduction_steps": [
+        "Access http://<computer_ip>:8787 from another device (not 127.0.0.1)",
+        "Click chat send button or screenshot button",
+        "Observe browser console showing Failed to fetch error"
+      ],
+      "affected_modules": [
+        "src/index.js (server startup)",
+        "src/config.js (WEB_HOST configuration)",
+        "public/js/main.js (API call logic)",
+        "src/http/server.js (Express server)"
+      ],
+      "affected_files": [
+        "src/index.js:7",
+        "src/config.js:20-21, 138",
+        "public/js/main.js:101-107",
+        ".env:21 (WEB_HOST)"
+      ],
+      "verification_type": "automated",
+      "acceptance_criteria": [
+        "Server successfully binds to 0.0.0.0",
+        "Web UI from non-127.0.0.1 IP can call /api/chat",
+        "Web UI from non-127.0.0.1 IP can call /api/screenshot",
+        "Web UI from non-127.0.0.1 IP can call /api/system/exec (with ENABLE_SYSTEM_EXEC=true)",
+        "No CORS or connection errors in browser console"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "B-002",
+      "title": "System exec button returns ENABLE_SYSTEM_EXEC not enabled error",
+      "description": "Web UI system exec button returns backend error indicating system command execution is disabled. Expected: users can input commands (ls, pwd) and see output. Actual: /api/system/exec returns error message stating ENABLE_SYSTEM_EXEC must be set to true. Root cause: .env configuration has ENABLE_SYSTEM_EXEC=false (default), which is a security protection but prevents testing in development.",
+      "severity": "medium",
+      "priority": 2,
+      "affected_feature": "F-009",
+      "environment": "development",
+      "error_source": {
+        "type": "user_report",
+        "location": "Web UI system exec panel"
+      },
+      "reproduction_steps": [
+        "Verify .env has ENABLE_SYSTEM_EXEC=false or unset",
+        "Access Web UI system exec panel",
+        "Click execute button",
+        "See error message"
+      ],
+      "affected_modules": [
+        "src/security/system-guard.js (permission check)",
+        "src/routes/api-routes.js (API endpoint)",
+        ".env configuration"
+      ],
+      "affected_files": [
+        "src/security/system-guard.js:3-7",
+        "src/routes/api-routes.js:94-102",
+        ".env:25 (ENABLE_SYSTEM_EXEC)"
+      ],
+      "verification_type": "automated",
+      "acceptance_criteria": [
+        "ENABLE_SYSTEM_EXEC set to true in .env",
+        "POST /api/system/exec successfully executes commands",
+        "Web UI displays command output",
+        "High-risk commands require confirmation"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "B-003",
+      "title": "Telegram messages receive no reply from bot",
+      "description": "Users send messages to Telegram bot but receive no response. Expected: messages handled by AI CLI proxy and results returned. Actual: no reply received (no message, no error). Root causes (priority order): 1) bot.launch() Promise not awaited in src/index.js:26 causing async startup failures to be uncaught. 2) User not in ALLOWED_USER_IDS set causing permission denial. 3) CodeBuddy binary misconfigured causing spawn failure. 4) Global error handler logs but does not reply to user.",
+      "severity": "high",
+      "priority": 3,
+      "affected_feature": "F-011, F-002",
+      "environment": "production",
+      "error_source": {
+        "type": "user_report",
+        "location": "Telegram bot message handler"
+      },
+      "reproduction_steps": [
+        "Ensure npm run dev or npm start is running",
+        "Send any text message to bot via Telegram",
+        "Wait 5+ seconds and observe response",
+        "Check application logs for errors"
+      ],
+      "affected_modules": [
+        "src/index.js (startup logic)",
+        "src/bot/telegram.js (message handler)",
+        "src/security/guard.js (permission check)",
+        "src/services/ai-cli-service.js (AI CLI invocation)"
+      ],
+      "affected_files": [
+        "src/index.js:23-37",
+        "src/bot/telegram.js:827-994",
+        "src/security/guard.js:3-8",
+        "src/services/ai-cli-service.js:224-237",
+        ".env (TELEGRAM_BOT_TOKEN, ALLOWED_USER_IDS, CODEBUDDY_BIN)"
+      ],
+      "verification_type": "hybrid",
+      "acceptance_criteria": [
+        "bot.launch() handles async errors correctly",
+        "Messages receive AI CLI result or welcome response within 10 seconds",
+        "Permission check failures return clear error message",
+        "CodeBuddy binary configured correctly and executable",
+        "No unhandled exceptions in application logs"
+      ],
+      "status": "pending"
+    }
+  ],
+  "global_context": {
+    "tech_stack": "Node.js + Express + Telegraf + React Web UI",
+    "testing_strategy": "Unit + Integration tests via Node test runner",
+    "language": "JavaScript ES2022",
+    "primary_issue_category": "Configuration + Network + Async Error Handling"
+  }
+}
