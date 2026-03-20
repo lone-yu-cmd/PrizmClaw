@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-03-17T10:11:21Z",
+  "updated_at": "2026-03-20T08:44:28Z",
   "message_count": 0,
   "current_tool": null,
   "current_tool_input_summary": "",
@@ -8,6 +8,6 @@
   "tool_calls": [],
   "total_tool_calls": 0,
   "last_text_snippet": "",
-  "is_active": false,
+  "is_active": true,
   "errors": []
 }
