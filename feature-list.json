@@ -351,6 +351,49 @@
       "status": "completed",
       "session_granularity": "feature",
       "sub_features": []
+    },
+    {
+      "id": "F-015",
+      "title": "Universal Command Natural-Language Routing",
+      "description": "为 Telegram 命令系统新增统一自然语言路由层：不仅 `/p`，而是所有命令入口都支持“命令 + 自然语言补充”与“纯自然语言意图”两种输入。系统需先进行意图识别，再映射到对应命令 handler（如 pipeline/planner/bugfix/file/system），避免被固定子命令解析器误判。\n\n该能力需要与现有严格命令协议兼容：显式结构化参数优先、自然语言作为增强层；当语义冲突或置信度不足时，返回候选动作与确认提示，保证可控与可解释。",
+      "priority": 15,
+      "estimated_complexity": "medium",
+      "dependencies": [
+        "F-002",
+        "F-011"
+      ],
+      "acceptance_criteria": [
+        "所有核心命令入口（如 /pipeline、/planner、/bugfix、文件与系统命令）都可接受自然语言补充输入",
+        "用户发送纯自然语言请求时，系统可识别意图并路由到正确命令链路（或要求确认）",
+        "显式结构化参数优先于自然语言推断，现有严格子命令行为不回归",
+        "语义冲突或低置信度场景会返回候选动作与修正建议，而非直接报未知子命令",
+        "新增意图路由测试矩阵，覆盖多命令类别、歧义输入与回退路径"
+      ],
+      "status": "in_progress",
+      "session_granularity": "feature",
+      "sub_features": []
+    },
+    {
+      "id": "F-016",
+      "title": "Resilient Telegram Image Delivery",
+      "description": "增强 Telegram 图片发送链路的稳定性，重点处理 `sendPhoto` 场景中的 `ECONNRESET` 与 `ETIMEDOUT` 问题。该能力需与自然语言路由联动：当用户表达“发送这张图/把图片发我”等意图时，系统可稳定命中图片发送流程。实现可配置重试、指数退避、请求超时与连接复用策略，并在主发送失败时执行可控降级（如切换 sendDocument 或压缩后重发）。\n\n同时补齐可观测性：记录 attempt、error_code、latency、fallback_path 等指标，支持后续按失败类型定位网络、代理、文件大小或 Telegram API 抖动问题。",
+      "priority": 16,
+      "estimated_complexity": "medium",
+      "dependencies": [
+        "F-010",
+        "F-015"
+      ],
+      "acceptance_criteria": [
+        "当用户通过命令或自然语言提出发送图片需求时，都能命中统一图片发送链路",
+        "图片发送默认启用有限次数重试与指数退避，单次失败不会立即终止整体发送流程",
+        "可配置请求超时与总重试预算，超限后返回结构化失败原因（timeout/reset/api）",
+        "当 sendPhoto 连续失败时，系统可按策略降级为 sendDocument（或等价安全降级路径）",
+        "发送日志包含 fileRef/filePath/attempt/latency/fallback 字段，便于定位不稳定根因",
+        "新增稳定性回归测试（模拟超时与连接重置）并验证最终成功率或降级成功路径"
+      ],
+      "status": "pending",
+      "session_granularity": "feature",
+      "sub_features": []
     }
   ],
   "global_context": {

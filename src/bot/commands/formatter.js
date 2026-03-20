@@ -12,7 +12,9 @@ export const ErrorCodes = {
   MISSING_PARAM: 'MISSING_PARAM',
   INVALID_PARAM: 'INVALID_PARAM',
   UNAUTHORIZED: 'UNAUTHORIZED',
-  INTERNAL_ERROR: 'INTERNAL_ERROR'
+  INTERNAL_ERROR: 'INTERNAL_ERROR',
+  NL_LOW_CONFIDENCE: 'NL_LOW_CONFIDENCE',
+  NL_AMBIGUOUS: 'NL_AMBIGUOUS'
 };
 
 /**
@@ -84,6 +86,20 @@ export function formatError(code, context = {}) {
         suggestion: context.reason ? `错误: ${context.reason}` : undefined
       };
 
+    case ErrorCodes.NL_LOW_CONFIDENCE:
+      return {
+        code,
+        message: '我不完全确定你的意图，候选动作如下：',
+        suggestion: context.candidates || undefined
+      };
+
+    case ErrorCodes.NL_AMBIGUOUS:
+      return {
+        code,
+        message: `检测到语义歧义：${context.reason || '多个候选操作相近'}`,
+        suggestion: context.candidates || undefined
+      };
+
     default:
       return {
         code: ErrorCodes.INTERNAL_ERROR,
@@ -134,6 +150,41 @@ export function formatErrorResponse(error) {
   if (error.usage) {
     lines.push(`用法: ${error.usage}`);
   }
+
+  return lines.join('\n');
+}
+
+/**
+ * Format NL routing suggestions into a user-friendly message.
+ * Used for low-confidence or ambiguous routing results.
+ *
+ * @param {import('./intent-router.js').IntentRouteResult} routeResult
+ * @returns {string} Formatted suggestion message
+ */
+export function formatNLSuggestions(routeResult) {
+  if (!routeResult || !routeResult.matched || routeResult.candidates.length === 0) {
+    return '无法识别你的意图，请尝试使用具体命令或 /help 查看所有可用命令。';
+  }
+
+  const lines = [];
+
+  if (routeResult.ambiguityReason) {
+    lines.push(`⚠️ ${routeResult.ambiguityReason}`);
+    lines.push('');
+  } else {
+    lines.push('💡 我不完全确定你的意图，候选动作如下：');
+    lines.push('');
+  }
+
+  const top = routeResult.candidates.slice(0, 3);
+  for (let i = 0; i < top.length; i++) {
+    const c = top[i];
+    const cmd = `/${c.command}${c.subcommand ? ` ${c.subcommand}` : ''}${c.args && c.args.length > 0 ? ` ${c.args.join(' ')}` : ''}`;
+    lines.push(`${i + 1}. ${cmd}  (${(c.confidence * 100).toFixed(0)}%)`);
+  }
+
+  lines.push('');
+  lines.push('请直接执行上述命令，或输入 /help 查看所有可用命令。');
 
   return lines.join('\n');
 }

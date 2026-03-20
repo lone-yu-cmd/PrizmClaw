@@ -483,3 +483,103 @@
   [0;32m▶[0m [0;34m[HEARTBEAT][0m 38m0s | log: 1MB | msgs: 0 | 0 tool calls
   [0;32m▶[0m [0;34m[HEARTBEAT][0m 38m30s | log: 1MB | msgs: 0 | 0 tool calls
   [0;32m▶[0m [0;34m[HEARTBEAT][0m 39m0s | log: 1MB | msgs: 0 | 0 tool calls
+
+================================================================
+  Pipeline Daemon Started: 2026-03-19T17:04:40Z
+  Feature list: /Users/loneyu/SelfProjects/PrizmClaw/feature-list.json
+================================================================
+
+[0;34m[INFO][0m    2026-03-20 01:04:41 Resuming existing pipeline...
+
+[1m════════════════════════════════════════════════════[0m
+[1m          Dev-Pipeline Runner Started[0m
+[1m════════════════════════════════════════════════════[0m
+[0;34m[INFO][0m    2026-03-20 01:04:41 Feature list: /Users/loneyu/SelfProjects/PrizmClaw/feature-list.json
+[0;34m[INFO][0m    2026-03-20 01:04:41 Max retries per feature: 3
+[0;34m[INFO][0m    2026-03-20 01:04:41 Session timeout: none
+[0;34m[INFO][0m    2026-03-20 01:04:41 AI CLI: cbc (platform: codebuddy)
+[1m════════════════════════════════════════════════════[0m
+
+M	dev-pipeline/state/.pipeline-meta.json
+M	dev-pipeline/state/pipeline-daemon.log
+M	feature-list.json
+[0;34m[INFO][0m    2026-03-20 01:04:41 Created and checked out branch: dev/pipeline-run-20260312-123136 (from main)
+[0;34m[INFO][0m    2026-03-20 01:04:41 Dev branch: dev/pipeline-run-20260312-123136
+
+[1m────────────────────────────────────────────────────[0m
+[0;34m[INFO][0m    2026-03-20 01:04:41 Feature: [1mF-015[0m — Universal Command Natural-Language Routing
+[0;34m[INFO][0m    2026-03-20 01:04:41 Retry: 0 / 3
+[1m────────────────────────────────────────────────────[0m
+Traceback (most recent call last):
+  File "<string>", line 8, in <module>
+AttributeError: type object 'datetime.datetime' has no attribute 'UTC'
+
+================================================================
+  Pipeline Daemon Started: 2026-03-19T17:05:39Z
+  Feature list: /Users/loneyu/SelfProjects/PrizmClaw/feature-list.json
+================================================================
+
+[0;34m[INFO][0m    2026-03-20 01:05:39 Resuming existing pipeline...
+
+[1m════════════════════════════════════════════════════[0m
+[1m          Dev-Pipeline Runner Started[0m
+[1m════════════════════════════════════════════════════[0m
+[0;34m[INFO][0m    2026-03-20 01:05:39 Feature list: /Users/loneyu/SelfProjects/PrizmClaw/feature-list.json
+[0;34m[INFO][0m    2026-03-20 01:05:39 Max retries per feature: 3
+[0;34m[INFO][0m    2026-03-20 01:05:39 Session timeout: none
+[0;34m[INFO][0m    2026-03-20 01:05:39 AI CLI: cbc (platform: codebuddy)
+[1m════════════════════════════════════════════════════[0m
+
+[0;34m[INFO][0m    2026-03-20 01:05:39 Branch already exists: dev/pipeline-run-20260312-123136 — checking out
+M	dev-pipeline/run-bugfix.sh
+M	dev-pipeline/run.sh
+M	dev-pipeline/state/.pipeline-meta.json
+M	dev-pipeline/state/pipeline-daemon.log
+M	feature-list.json
+[0;34m[INFO][0m    2026-03-20 01:05:39 Dev branch: dev/pipeline-run-20260312-123136
+
+[1m────────────────────────────────────────────────────[0m
+[0;34m[INFO][0m    2026-03-20 01:05:39 Feature: [1mF-015[0m — Universal Command Natural-Language Routing
+[0;34m[INFO][0m    2026-03-20 01:05:39 Retry: 0 / 3
+[1m────────────────────────────────────────────────────[0m
+[0;34m[INFO][0m    2026-03-20 01:05:39 Spawning AI CLI session: F-015-20260320010539
+[0;34m[INFO][0m    2026-03-20 01:05:41 Session log: 0 lines, 0KB
+[1;33m[WARN][0m    2026-03-20 01:05:41 Session ended without status file — treating as crashed
+[0;34m[INFO][0m    2026-03-20 01:05:41 Session result: crashed
+[0;34m[INFO][0m    2026-03-20 01:05:41 Pausing 5s before next feature...
+
+[1m────────────────────────────────────────────────────[0m
+[0;34m[INFO][0m    2026-03-20 01:05:46 Feature: [1mF-015[0m — Universal Command Natural-Language Routing
+[0;34m[INFO][0m    2026-03-20 01:05:46 Retry: 1 / 3
+[1m────────────────────────────────────────────────────[0m
+[0;34m[INFO][0m    2026-03-20 01:05:46 Spawning AI CLI session: F-015-20260320010546
+  [0;32m▶[0m [0;34m[HEARTBEAT][0m 0m30s | log: 18KB | msgs: 0 | 0 tool calls
+  [0;32m▶[0m [0;34m[HEARTBEAT][0m 1m0s | log: 46KB | msgs: 0 | 0 tool calls
+  [0;32m▶[0m [0;34m[HEARTBEAT][0m 1m30s | log: 125KB | msgs: 0 | 0 tool calls
+  [0;32m▶[0m [0;34m[HEARTBEAT][0m 2m0s | log: 158KB | msgs: 0 | 0 tool calls
+  [0;32m▶[0m [0;34m[HEARTBEAT][0m 2m30s | log: 175KB | msgs: 0 | 0 tool calls
+  [0;32m▶[0m [0;34m[HEARTBEAT][0m 3m0s | log: 207KB | msgs: 0 | 0 tool calls
+  [0;32m▶[0m [0;34m[HEARTBEAT][0m 3m30s | log: 392KB | msgs: 0 | 0 tool calls
+  [0;32m▶[0m [0;34m[HEARTBEAT][0m 4m0s | log: 440KB | msgs: 0 | 0 tool calls
+  [0;32m▶[0m [0;34m[HEARTBEAT][0m 4m30s | log: 442KB | msgs: 0 | 0 tool calls
+  [1;33m⏸[0m [0;34m[HEARTBEAT][0m 5m0s | log: 442KB | msgs: 0 | 0 tool calls
+  [0;32m▶[0m [0;34m[HEARTBEAT][0m 5m30s | log: 446KB | msgs: 0 | 0 tool calls
+  [1;33m⏸[0m [0;34m[HEARTBEAT][0m 6m0s | log: 446KB | msgs: 0 | 0 tool calls
+  [0;32m▶[0m [0;34m[HEARTBEAT][0m 6m30s | log: 468KB | msgs: 0 | 0 tool calls
+  [0;32m▶[0m [0;34m[HEARTBEAT][0m 7m0s | log: 487KB | msgs: 0 | 0 tool calls
+  [0;32m▶[0m [0;34m[HEARTBEAT][0m 7m30s | log: 678KB | msgs: 0 | 0 tool calls
+  [1;33m⏸[0m [0;34m[HEARTBEAT][0m 8m0s | log: 678KB | msgs: 0 | 0 tool calls
+  [1;33m⏸[0m [0;34m[HEARTBEAT][0m 8m30s | log: 678KB | msgs: 0 | 0 tool calls
+  [0;32m▶[0m [0;34m[HEARTBEAT][0m 9m0s | log: 701KB | msgs: 0 | 0 tool calls
+  [0;32m▶[0m [0;34m[HEARTBEAT][0m 9m30s | log: 715KB | msgs: 0 | 0 tool calls
+  [0;32m▶[0m [0;34m[HEARTBEAT][0m 10m0s | log: 727KB | msgs: 0 | 0 tool calls
+  [0;32m▶[0m [0;34m[HEARTBEAT][0m 10m30s | log: 738KB | msgs: 0 | 0 tool calls
+  [0;32m▶[0m [0;34m[HEARTBEAT][0m 11m0s | log: 740KB | msgs: 0 | 0 tool calls
+  [0;32m▶[0m [0;34m[HEARTBEAT][0m 11m30s | log: 749KB | msgs: 0 | 0 tool calls
+  [0;32m▶[0m [0;34m[HEARTBEAT][0m 12m0s | log: 756KB | msgs: 0 | 0 tool calls
+  [0;32m▶[0m [0;34m[HEARTBEAT][0m 12m30s | log: 772KB | msgs: 0 | 0 tool calls
+  [1;33m⏸[0m [0;34m[HEARTBEAT][0m 13m0s | log: 772KB | msgs: 0 | 0 tool calls
+  [0;32m▶[0m [0;34m[HEARTBEAT][0m 13m30s | log: 806KB | msgs: 0 | 0 tool calls
+  [0;32m▶[0m [0;34m[HEARTBEAT][0m 14m0s | log: 812KB | msgs: 0 | 0 tool calls
+  [0;32m▶[0m [0;34m[HEARTBEAT][0m 14m30s | log: 817KB | msgs: 0 | 0 tool calls
+  [0;32m▶[0m [0;34m[HEARTBEAT][0m 15m0s | log: 825KB | msgs: 0 | 0 tool calls

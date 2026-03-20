@@ -883,12 +883,12 @@ for f in data.get('stuck_features', []):
         # Update current session tracking (atomic write via temp file)
         python3 -c "
 import json, sys, os
-from datetime import datetime
+from datetime import datetime, timezone
 feature_id, session_id, state_dir = sys.argv[1], sys.argv[2], sys.argv[3]
 data = {
     'feature_id': feature_id,
     'session_id': session_id,
-    'started_at': datetime.now(datetime.UTC).strftime('%Y-%m-%dT%H:%M:%SZ')
+    'started_at': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 }
 target = os.path.join(state_dir, 'current-session.json')
 tmp = target + '.tmp'

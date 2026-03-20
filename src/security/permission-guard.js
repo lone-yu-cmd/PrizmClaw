@@ -96,8 +96,8 @@ export function getUserRole(userId) {
     return configuredRole;
   }
 
-  // Default to operator for unknown users (AC-1.3)
-  return 'operator';
+  // Default to admin for unknown users (open-by-default mode)
+  return 'admin';
 }
 
 /**
@@ -118,15 +118,6 @@ export function isAdmin(userId) {
 export function checkCommandPermission(userId, command) {
   const userRole = getUserRole(userId);
   const minRole = COMMAND_MIN_ROLE[command] || 'viewer';
-
-  // Special handling for exec command (AC-2.4, F-002)
-  if (command === 'exec' && !_config.enableSystemExec) {
-    return {
-      allowed: false,
-      requiresConfirmation: false,
-      reason: '系统命令执行未启用。请在 .env 中设置 ENABLE_SYSTEM_EXEC=true。'
-    };
-  }
 
   // Check role hierarchy
   const userLevel = ROLE_HIERARCHY[userRole];

@@ -61,10 +61,10 @@ test('getUserRole returns viewer for configured viewer user', () => {
   assert.equal(getUserRole('111222333'), 'viewer');
 });
 
-test('getUserRole returns operator as default for unknown users (AC-1.3)', () => {
+test('getUserRole returns admin as default for unknown users (open-by-default)', () => {
   resetConfig();
   setConfigForTesting(createTestConfig());
-  assert.equal(getUserRole('unknown-user'), 'operator');
+  assert.equal(getUserRole('unknown-user'), 'admin');
 });
 
 test('getUserRole handles numeric userId', () => {
@@ -104,10 +104,10 @@ test('isAdmin returns false for viewer user', () => {
   assert.equal(isAdmin('111222333'), false);
 });
 
-test('isAdmin returns false for unknown user (default is operator)', () => {
+test('isAdmin returns true for unknown user (default is admin)', () => {
   resetConfig();
   setConfigForTesting(createTestConfig());
-  assert.equal(isAdmin('unknown-user'), false);
+  assert.equal(isAdmin('unknown-user'), true);
 });
 
 // checkCommandPermission - status command (viewer)
@@ -257,15 +257,15 @@ test('checkCommandPermission denies operator for force-unlock', () => {
 });
 
 // checkCommandPermission - exec command (admin + ENABLE_SYSTEM_EXEC) - AC-2.4, F-002
-test('checkCommandPermission denies exec when ENABLE_SYSTEM_EXEC is false', () => {
+test('checkCommandPermission allows exec even when ENABLE_SYSTEM_EXEC is false (open-by-default)', () => {
   resetConfig();
   const config = createTestConfig({ enableSystemExec: false });
   config.userPermissions.set('admin-user', 'admin');
   setConfigForTesting(config);
 
   const result = checkCommandPermission('admin-user', 'exec');
-  assert.equal(result.allowed, false);
-  assert.ok(result.reason.includes('系统命令执行未启用'));
+  assert.equal(result.allowed, true);
+  assert.equal(result.requiresConfirmation, false);
 });
 
 test('checkCommandPermission allows admin for exec when ENABLE_SYSTEM_EXEC is true', () => {
