@@ -56,10 +56,51 @@ class ProgressTracker:
         self._current_tool_input_parts = []
 
     def process_event(self, event):
-        """Process a single stream-json event and update state."""
+        """Process a single stream-json event and update state.
+
+        Supports two formats:
+        1. Claude API raw stream: message_start, content_block_start, content_block_delta, etc.
+        2. Claude Code verbose stream-json: assistant, user, tool_result, system, etc.
+           (produced by claude/claude-internal --verbose --output-format stream-json)
+        """
         event_type = event.get("type", "")
 
-        if event_type == "message_start":
+        # ── Claude Code verbose format ──────────────────────────────
+        if event_type == "assistant":
+            self.message_count += 1
+            self.is_active = True
+            message = event.get("message", {})
+            content_blocks = message.get("content", [])
+            for block in content_blocks:
+                block_type = block.get("type", "")
+                if block_type == "tool_use":
+                    tool_name = block.get("name", "unknown")
+                    self.current_tool = tool_name
+                    self.tool_call_counts[tool_name] += 1
+                    self.total_tool_calls += 1
+                    # Extract summary from input
+                    tool_input = block.get("input", {})
+                    if isinstance(tool_input, dict):
+                        self._extract_tool_summary_from_dict(tool_input)
+                    self._detect_phase(json.dumps(tool_input, ensure_ascii=False)[:500])
+                elif block_type == "text":
+                    text = block.get("text", "")
+                    if text.strip():
+                        self.last_text_snippet = text.strip()[:120]
+                    self._detect_phase(text)
+
+        elif event_type == "tool_result" or event_type == "user":
+            # tool_result contains output from tool execution
+            self.is_active = True
+
+        elif event_type == "system":
+            # System events (hooks, init, etc.) — track but don't count as messages
+            subtype = event.get("subtype", "")
+            if subtype == "init":
+                self.is_active = True
+
+        # ── Claude API raw stream format ────────────────────────────
+        elif event_type == "message_start":
             self.message_count += 1
             self.is_active = True
 
@@ -141,27 +182,30 @@ class ProgressTracker:
                     return
 
     def _extract_tool_summary(self, raw_input):
-        """Extract a human-readable summary from tool input JSON."""
+        """Extract a human-readable summary from tool input JSON string."""
         try:
             data = json.loads(raw_input)
-            # Common patterns in tool inputs
-            if isinstance(data, dict):
-                # Agent tool - look for description or prompt
-                if "description" in data:
-                    self.current_tool_input_summary = str(data["description"])[:100]
-                elif "command" in data:
-                    self.current_tool_input_summary = str(data["command"])[:100]
-                elif "file_path" in data:
-                    self.current_tool_input_summary = str(data["file_path"])[:100]
-                elif "pattern" in data:
-                    self.current_tool_input_summary = str(data["pattern"])[:100]
-                elif "query" in data:
-                    self.current_tool_input_summary = str(data["query"])[:100]
-                elif "prompt" in data:
-                    self.current_tool_input_summary = str(data["prompt"])[:100]
+            self._extract_tool_summary_from_dict(data)
         except (json.JSONDecodeError, TypeError):
             # Keep whatever partial summary we had
             pass
+
+    def _extract_tool_summary_from_dict(self, data):
+        """Extract a human-readable summary from tool input dict."""
+        if isinstance(data, dict):
+            # Common patterns in tool inputs
+            if "description" in data:
+                self.current_tool_input_summary = str(data["description"])[:100]
+            elif "command" in data:
+                self.current_tool_input_summary = str(data["command"])[:100]
+            elif "file_path" in data:
+                self.current_tool_input_summary = str(data["file_path"])[:100]
+            elif "pattern" in data:
+                self.current_tool_input_summary = str(data["pattern"])[:100]
+            elif "query" in data:
+                self.current_tool_input_summary = str(data["query"])[:100]
+            elif "prompt" in data:
+                self.current_tool_input_summary = str(data["prompt"])[:100]
 
     def to_dict(self):
         """Export current state as a dictionary for JSON serialization."""
