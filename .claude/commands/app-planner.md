@@ -91,7 +91,7 @@ Execute the selected scenario workflow in conversation mode with mandatory check
 
 ### Checkpoints (Mandatory Gates)
 
-Never skip checkpoints. If any checkpoint fails, follow error recovery flow (see §Error Recovery).
+Checkpoints catch cascading errors early — skipping one means the next phase builds on unvalidated assumptions, which compounds into much harder debugging later.
 
 | Checkpoint | Artifact/State | Criteria | Phase |
 |-----------|----------------|----------|-------|
@@ -310,16 +310,23 @@ Resume incremental planning? (Y/n)"
 
 ### Artifact Path Convention
 
-Recommended structure for feature planning artifacts:
+**CRITICAL PATH RULE**: `feature-list.json` MUST be written to the project root directory
+(same level as `package.json` / `.git`).
+
+Before writing, verify: `ls package.json .git 2>/dev/null` — if these exist in the current
+directory, you are at the project root. NEVER write to `dev-pipeline/` or any subdirectory.
+
+After writing, verify: `ls -la feature-list.json` from project root.
 
 ```
-.prizmkit/planning/
-  ├── feature-list.json              # Primary output (always here)
-  ├── feature-list.validated.json    # Checkpoint backup after CP-AP-5
-  └── <ISO-timestamp>.backup.json    # Optional incremental backups
+<project-root>/
+  ├── feature-list.json              # Primary output (always here, at project root)
+  └── .prizmkit/planning/            # Optional organization for backups
+      ├── feature-list.validated.json    # Checkpoint backup after CP-AP-5
+      └── <ISO-timestamp>.backup.json    # Optional incremental backups
 ```
 
-Mention this path when summarizing (Phase 8 handoff) to help users organize future sessions.
+The pipeline reads `feature-list.json` from the project root by default. If the user specifies a custom path, the launcher accepts it as an argument.
 
 Maintainer note: evaluation workflow moved to `assets/evaluation-guide.md`.
 

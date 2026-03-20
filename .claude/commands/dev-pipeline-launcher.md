@@ -1,16 +1,23 @@
 ---
-description: Launch and manage the dev-pipeline from within an AI CLI session. Start pipeline in background, monitor logs, check status, stop pipeline. Invoke when user wants to start building features, run the pipeline, or check pipeline progress. (project)
+description: "Launch and manage the dev-pipeline from within an AI CLI session. Start pipeline in background, monitor logs, check status, stop pipeline. Use this skill whenever the user wants to start building features, run the pipeline, check pipeline progress, retry features, or stop the pipeline. Trigger on: 'run pipeline', 'start pipeline', 'start building', 'pipeline status', 'stop pipeline', 'retry feature', '启动流水线', '开始实现', '流水线状态', '停止流水线'. (project)"
 ---
 
 # Dev-Pipeline Launcher
 
 Launch the autonomous development pipeline from within an AI CLI conversation. The pipeline runs as a fully detached background process -- closing the AI CLI session does NOT stop the pipeline.
 
-### Mandatory Execution Mode (MUST)
+### Execution Mode
 
-- Always use daemon mode via `dev-pipeline/launch-daemon.sh` for start/stop/status/log actions.
-- NEVER run `dev-pipeline/run.sh run ...` directly from this skill.
-- Reason: foreground `run.sh` can be terminated by AI CLI command timeout (e.g. cbc 120s, claude may vary), while daemon mode survives session timeout.
+**Default: Foreground mode** via `dev-pipeline/run.sh run` — this provides visible output and direct error feedback. Use `launch-daemon.sh` only when the user explicitly requests background execution (e.g., "run in background", "detached mode", "后台运行").
+
+Foreground `run.sh` is preferred because:
+- Immediate visibility of errors and progress
+- No orphaned processes if something goes wrong
+- Session summary artifacts are written reliably
+
+Use daemon mode (`launch-daemon.sh`) only when:
+- User explicitly requests background/detached execution
+- Pipeline must survive AI CLI session closure
 
 ### When to Use
 
@@ -99,31 +106,36 @@ Detect user intent from their message, then follow the corresponding workflow:
    ```
 
 4. **Ask execution mode**: Present the user with a choice before launching:
-   - **(1) Background daemon (recommended)**: Pipeline runs fully detached via `launch-daemon.sh`. Survives session closure.
-   - **(2) Foreground in session**: Pipeline runs in the current session via `run.sh run`. Visible output but will stop if session times out.
+   - **(1) Foreground in session (recommended)**: Pipeline runs in the current session via `run.sh run`. Visible output and direct error feedback.
+   - **(2) Background daemon**: Pipeline runs fully detached via `launch-daemon.sh`. Survives session closure. Use only when user explicitly requests background execution.
    - **(3) Manual — show commands**: Display the exact commands the user can run themselves. No execution.
 
-   Default to option 1 if user says "just run it" or doesn't specify.
+   Default to option 1 if user says "just run it" or doesn't specify. Default to option 2 only if user explicitly says "background", "detached", or "后台".
 
-   **If option 2 (foreground)**:
+   **If option 1 (foreground)**:
    ```bash
    dev-pipeline/run.sh run feature-list.json
    ```
-   Note: This will block the session. Warn user about timeout risk.
+
+   **If option 2 (background)**:
+   ```bash
+   dev-pipeline/launch-daemon.sh start feature-list.json
+   ```
+   Note: Pipeline runs fully detached. Survives session closure.
 
    **If option 3 (manual)**: Print commands and stop. Do not execute anything.
    ```
-   # To run in background (recommended):
-   dev-pipeline/launch-daemon.sh start feature-list.json
-
-   # To run in foreground:
+   # To run in foreground (recommended):
    dev-pipeline/run.sh run feature-list.json
 
+   # To run in background (detached):
+   dev-pipeline/launch-daemon.sh start feature-list.json
+
    # To check status:
-   dev-pipeline/launch-daemon.sh status
+   dev-pipeline/run.sh status feature-list.json
    ```
 
-5. **Ask user to confirm**: "Ready to launch the pipeline? It will process N features in the background."
+5. **Ask user to confirm**: "Ready to launch the pipeline? It will process N features."
 
 6. **Launch**:
    ```bash
@@ -283,4 +295,4 @@ Notes:
 - **Single instance**: Only one pipeline can run at a time. The PID file prevents duplicates.
 - **Pipeline coexistence**: Feature and bugfix pipelines use separate state directories (`state/` vs `bugfix-state/`), so they can run simultaneously without conflict.
 - **State preservation**: Stopping and restarting the pipeline resumes from where it left off -- completed features are not re-run.
-- **HANDOFF**: After pipeline completes all features, suggest running `prizmkit-code-review` for overall review, or `prizmkit-summarize` to archive.
+- **HANDOFF**: After pipeline completes all features, suggest running `prizmkit-retrospective` for project memory update, or ask user what's next.

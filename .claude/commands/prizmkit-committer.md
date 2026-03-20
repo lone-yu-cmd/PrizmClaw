@@ -1,16 +1,17 @@
 ---
-description: Commit workflow with automatic Prizm doc updates, changelog management, and learning capture. Invoke when user wants to commit, finish task, or ship changes. (project)
+description: "Pure git commit workflow with safety checks. Stages files, analyzes diff, generates Conventional Commits message, and commits. Does NOT modify .prizm-docs/ — memory maintenance is handled by /prizmkit-retrospective before this skill is invoked. Trigger on: 'commit', '提交', 'finish', 'done', 'ship it', 'save my work'. (project)"
 ---
 
 # PrizmKit Committer
 
-Automated commit workflow that keeps Prizm documentation in sync, manages changelog entries, and captures learnings from each commit.
+Pure git commit workflow. Analyzes changes, generates a Conventional Commits message, performs safety checks, and commits.
+
+**This skill is a pure git commit tool. It does NOT modify any project files — no `.prizm-docs/`, no source code, no documentation.** It only reads diffs, generates a commit message, and commits. For feature/refactor workflows, run `/prizmkit-retrospective` before this skill to sync `.prizm-docs/`. For bug fixes, skip retrospective entirely — bug fixes do not update `.prizm-docs/`.
 
 ### When to Use
 - User says "commit", "提交", "finish", "done with this task", "ship it"
-- After implementing a feature or fixing a bug
-- CodeBuddy: the UserPromptSubmit hook will remind to use this skill
-- Claude Code: the `.claude/rules/prizm-commit-workflow.md` rule will enforce this
+- After `/prizmkit-retrospective` has finished memory maintenance
+- The UserPromptSubmit hook will remind to use this skill when commit intent is detected
 
 ### Workflow
 
@@ -23,53 +24,7 @@ git status
 - If "nothing to commit, working tree clean": inform user and stop
 - If there are changes: proceed
 
-#### Step 2: Prizm Documentation Update (CRITICAL — must complete before commit)
-
-2a. Get changed files:
-```bash
-git diff --cached --name-status
-```
-If nothing staged, also check:
-```bash
-git diff --name-status
-```
-
-2b. Read .prizm-docs/root.prizm to get MODULE_INDEX
-
-2c. Map each changed file to its module using MODULE_INDEX paths
-
-2d. For each affected module:
-- IF L2 doc exists (.prizm-docs/<module>/<submodule>.prizm):
-  - Update KEY_FILES (add new files, remove deleted, note modified)
-  - Update INTERFACES (if public signatures changed)
-  - Update DEPENDENCIES (if imports changed)
-  - Append to module CHANGELOG section
-  - Update UPDATED timestamp
-- IF L1 doc exists (.prizm-docs/<module>.prizm):
-  - Update FILES count
-  - Update KEY_FILES (if major files added/removed)
-  - Update UPDATED timestamp
-- Update root.prizm:
-  - Update MODULE_INDEX file counts (only if counts changed)
-  - UPDATED timestamp (only if structural changes)
-
-2e. Append to .prizm-docs/changelog.prizm:
-Format: `- YYYY-MM-DD | <module-path> | <verb>: <one-line description>`
-Verbs: add, update, fix, remove, refactor, rename, deprecate
-
-2f. Stage prizm docs:
-```bash
-git add .prizm-docs/
-```
-
-SKIP CONDITIONS for doc update:
-- Only internal implementation changed (no interface/dependency change)
-- Only comments, whitespace, or formatting changed
-- Only test files changed
-- Only .prizm files changed (avoid circular updates)
-- Bug fixes to existing features (bugs are incomplete features being refined, not new functionality — no new doc entries needed)
-
-#### Step 3: Diff Analysis
+#### Step 2: Diff Analysis
 ```bash
 git diff HEAD
 ```
@@ -78,16 +33,12 @@ Analyze:
 - Scope: affected module name
 - Description: imperative mood summary
 
-#### Step 4: Update CHANGELOG.md
-If CHANGELOG.md exists, append entry following Keep a Changelog format.
-If manage_changelog.py exists in skill scripts:
-```bash
-python3 .claude/command-assets/prizmkit-committer/scripts/manage_changelog.py add --type <type> --message "<description>"
-```
+#### Step 3: Update CHANGELOG.md
+If CHANGELOG.md exists in the project root, append an entry following Keep a Changelog format under the `[Unreleased]` section. Match the existing style in the file.
 
-#### Step 5: Git Commit
+#### Step 4: Git Commit
 
-5a. Safety check before staging:
+4a. Safety check before staging:
 ```bash
 git diff --name-only
 git ls-files --others --exclude-standard
@@ -98,18 +49,18 @@ Review the output for sensitive files. If any file matches these patterns, **STO
 - `credentials.*`, `*secret*`
 - `*.sqlite`, `*.db` (database files)
 
-5b. Stage and commit:
+4b. Stage and commit:
 ```bash
-git add -A
+git add <specific-files>
 git diff --cached --name-only
 ```
-Review staged file list one final time, then:
+Stage files explicitly by name rather than using `git add -A`, which can accidentally include sensitive files or large binaries that appeared between the safety check and staging. Review staged file list one final time, then:
 ```bash
 git commit -m "<type>(<scope>): <description>"
 ```
 Follow Conventional Commits format.
 
-#### Step 6: Verification
+#### Step 5: Verification
 ```bash
 git log -1 --stat
 ```
@@ -120,9 +71,9 @@ Then verify working tree is clean:
 git status
 ```
 - If "nothing to commit, working tree clean": commit verified successfully, proceed
-- If there are uncommitted changes remaining: **STOP** and report error — all changes must be captured in the commit. Run `git add -A && git commit --amend --no-edit` to include missed files, then re-verify
+- If there are uncommitted changes remaining: **STOP** and report what files were missed. Stage the missed files explicitly by name and create a new commit (do NOT amend the previous commit — amending risks destroying unrelated changes from prior commits)
 
-#### Step 7: Optional Push
+#### Step 6: Optional Push
 Ask user: "Push to remote?"
 - Yes: `git push`
 - No: Stop
@@ -130,5 +81,16 @@ Ask user: "Push to remote?"
 ### Error Handling
 - If git diff is empty but untracked files exist: run `git add -N .` first (respects .gitignore)
 - If CHANGELOG.md script fails: update manually or ask user
-- If .prizm-docs/ doesn't exist: skip Step 2 entirely (project not initialized)
-- If sensitive files are detected during Step 5a safety check: warn user and do NOT stage them automatically
+- If sensitive files are detected during Step 4a safety check: warn user and do NOT stage them automatically
+
+## Example
+
+**Feature commit:**
+```
+git commit -m "feat(avatar): add user avatar upload with S3 storage"
+```
+
+**Bug fix commit:**
+```
+git commit -m "fix(auth): handle null token in refresh flow"
+```

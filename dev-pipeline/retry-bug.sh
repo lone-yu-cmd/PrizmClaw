@@ -226,23 +226,33 @@ if [[ "$USE_STREAM_JSON" == "true" ]]; then
     STREAM_JSON_FLAG="--output-format stream-json"
 fi
 
+# claude-internal requires --verbose when using stream-json with -p/--print
+VERBOSE_FLAG=""
+if [[ "$USE_STREAM_JSON" == "true" ]]; then
+    VERBOSE_FLAG="--verbose"
+fi
+
 # Spawn AI CLI session
 MODEL_FLAG=""
 if [[ -n "${MODEL:-}" ]]; then
     MODEL_FLAG="--model $MODEL"
 fi
 
+unset CLAUDECODE 2>/dev/null || true
+
 case "$CLI_CMD" in
     *claude*)
+        # Claude Code: prompt via -p argument, --dangerously-skip-permissions for auto-accept
         "$CLI_CMD" \
-            --print \
             -p "$(cat "$BOOTSTRAP_PROMPT")" \
-            --yes \
+            --dangerously-skip-permissions \
+            $VERBOSE_FLAG \
             $STREAM_JSON_FLAG \
             $MODEL_FLAG \
             > "$SESSION_LOG" 2>&1 &
         ;;
     *)
+        # CodeBuddy (cbc) and others: prompt via stdin
         "$CLI_CMD" \
             --print \
             -y \

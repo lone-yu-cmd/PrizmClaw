@@ -344,16 +344,16 @@ def detect_init_status(project_root):
 def detect_existing_artifacts(project_root, feature_slug):
     """Check which planning artifacts already exist for this feature.
 
-    Returns a dict with keys: has_spec, has_plan, has_tasks, all_complete.
+    Returns a dict with keys: has_spec, has_plan, all_complete.
+    Tasks are now part of plan.md (Tasks section), not a separate file.
     """
     specs_dir = os.path.join(project_root, ".prizmkit", "specs", feature_slug)
     result = {
         "has_spec": os.path.isfile(os.path.join(specs_dir, "spec.md")),
         "has_plan": os.path.isfile(os.path.join(specs_dir, "plan.md")),
-        "has_tasks": os.path.isfile(os.path.join(specs_dir, "tasks.md")),
     }
     result["all_complete"] = all([
-        result["has_spec"], result["has_plan"], result["has_tasks"]
+        result["has_spec"], result["has_plan"]
     ])
     return result
 
@@ -408,18 +408,26 @@ def build_replacements(args, feature, features, global_context, script_dir):
         )
 
     # Agent definitions are .md files in the platform-specific agents dir
-    coordinator_subagent = os.path.join(
-        agents_dir, "prizm-dev-team-coordinator.md",
-    )
-    pm_subagent = os.path.join(
-        agents_dir, "prizm-dev-team-pm.md",
-    )
     dev_subagent = os.path.join(
         agents_dir, "prizm-dev-team-dev.md",
     )
     reviewer_subagent = os.path.join(
         agents_dir, "prizm-dev-team-reviewer.md",
     )
+
+    # Verify agent files actually exist — missing files cause confusing
+    # errors when the AI session tries to read them later.
+    for agent_path, agent_name in [
+        (dev_subagent, "dev agent"),
+        (reviewer_subagent, "reviewer agent"),
+    ]:
+        if not os.path.isfile(agent_path):
+            LOGGER.warning(
+                "Agent file not found: %s (%s). "
+                "Subagent spawning may fail. "
+                "Run `npx prizmkit install` to reinstall agent definitions.",
+                agent_path, agent_name,
+            )
     # Validator scripts - check if they exist in .codebuddy/scripts/, otherwise use dev-pipeline/scripts/
     validator_scripts_dir = os.path.join(project_root, "dev-pipeline", "scripts")
     init_script_path = os.path.join(validator_scripts_dir, "init-dev-team.py")
@@ -475,8 +483,6 @@ def build_replacements(args, feature, features, global_context, script_dir):
         ),
         "{{GLOBAL_CONTEXT}}": format_global_context(global_context),
         "{{TEAM_CONFIG_PATH}}": team_config_path,
-        "{{COORDINATOR_SUBAGENT_PATH}}": coordinator_subagent,
-        "{{PM_SUBAGENT_PATH}}": pm_subagent,
         "{{DEV_SUBAGENT_PATH}}": dev_subagent,
         "{{REVIEWER_SUBAGENT_PATH}}": reviewer_subagent,
         "{{VALIDATOR_SCRIPTS_DIR}}": validator_scripts_dir,
@@ -489,7 +495,6 @@ def build_replacements(args, feature, features, global_context, script_dir):
         "{{INIT_DONE}}": "true" if init_done else "false",
         "{{HAS_SPEC}}": "true" if artifacts["has_spec"] else "false",
         "{{HAS_PLAN}}": "true" if artifacts["has_plan"] else "false",
-        "{{HAS_TASKS}}": "true" if artifacts["has_tasks"] else "false",
         "{{ARTIFACTS_COMPLETE}}": "true" if artifacts["all_complete"] else "false",
         "{{IS_SELF_EVOLVE}}": "true" if is_self_evolve else "false",
     }

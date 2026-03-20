@@ -430,6 +430,14 @@ Examples:
   ./launch-bugfix-daemon.sh logs --follow                 # Live log tailing
   ./launch-bugfix-daemon.sh stop                          # Graceful shutdown
   ./launch-bugfix-daemon.sh restart                       # Stop + start
+
+Environment Variables (pass via --env):
+  MAX_RETRIES           Max retries per bug (default: 3)
+  SESSION_TIMEOUT       Session timeout in seconds (default: 0 = no limit)
+  VERBOSE               Set to 1 for verbose AI CLI output
+  HEARTBEAT_INTERVAL    Heartbeat log interval in seconds (default: 30)
+  DEV_BRANCH            Custom dev branch name (default: auto-generated)
+  AUTO_PUSH             Auto-push to remote after successful bug fix (default: 0, set 1 to enable)
 HELP
 }
 

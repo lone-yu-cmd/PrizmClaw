@@ -1,29 +1,23 @@
 ---
-description: Cross-document consistency analysis for spec.md, plan.md, and tasks.md. Detects duplications, ambiguities, gaps, and rule conflicts. Read-only. (project)
+description: "Cross-document consistency analysis for spec.md and plan.md (including Tasks section). Detects duplications, ambiguities, gaps, and rule conflicts. Read-only. Use this skill to check if spec and plan are aligned, validate documents before coding, or as a quality gate after planning. Trigger on: 'analyze', 'check consistency', 'validate spec', 'review plan', 'is the spec ready', 'check if spec and plan are aligned', 'validate documents before coding'. (project)"
 ---
 
 # PrizmKit Analyze
 
-Perform a non-destructive cross-artifact consistency and quality analysis across spec.md, plan.md, and tasks.md before implementation. Identifies duplications, ambiguities, underspecified items, rule conflicts, and coverage gaps.
+Perform a non-destructive cross-artifact consistency and quality analysis across spec.md and plan.md (including Tasks section) before implementation. Identifies duplications, ambiguities, underspecified items, rule conflicts, and coverage gaps.
 
 ### When to Use
-- After ``/prizmkit-plan`` to validate spec-plan-tasks alignment before implementation
+- After `/prizmkit-plan` to validate spec-plan-tasks alignment before implementation
 - User says "analyze", "check consistency", "validate spec", "review plan"
-- Before ``/prizmkit-implement`` as a quality gate
-
-## Commands
-
-### `/prizmkit-analyze`
-
-Cross-document consistency analysis.
+- Before `/prizmkit-implement` as a quality gate
 
 **PRECONDITION:** `spec.md` and `plan.md` exist in `.prizmkit/specs/###-feature-name/`. `plan.md` must include a Tasks section.
 
 ## Operating Constraints
 
-**STRICTLY READ-ONLY**: Do **not** modify any files. Output a structured analysis report to conversation only. Offer an optional remediation plan (user must explicitly approve before any edits).
+**Read-only analysis**: Do not modify any files. The analysis output goes to conversation only, with an optional remediation plan the user must explicitly approve. This separation matters because the user needs to understand what's wrong before deciding what to change — auto-fixing consistency issues often introduces new ones.
 
-**Prizm Rules Authority**: The project rules in `.prizm-docs/root.prizm` RULES section are **non-negotiable** within this analysis scope. Rule conflicts are automatically CRITICAL severity and require adjustment of the spec, plan, or tasks — not dilution or silent ignoring of the rule. If a rule itself needs to change, that must occur via a separate ``/prizmkit-doc`.update`.
+**Prizm Rules take precedence**: The project rules in `.prizm-docs/root.prizm` RULES section are the source of truth. If a spec or plan element conflicts with a MUST/NEVER directive, the spec/plan needs to change, not the rule. This prevents well-intentioned features from silently violating project-wide constraints. If a rule itself is wrong, that's a separate conversation via prizmkit-prizm-docs (Update operation).
 
 ## Execution Steps
 
@@ -33,10 +27,9 @@ Locate the current feature directory in `.prizmkit/specs/###-feature-name/` by c
 
 Derive absolute paths:
 - SPEC = `.prizmkit/specs/###-feature-name/spec.md`
-- PLAN = `.prizmkit/specs/###-feature-name/plan.md`
-- TASKS = `.prizmkit/specs/###-feature-name/tasks.md` (optional)
+- PLAN = `.prizmkit/specs/###-feature-name/plan.md` (must include a Tasks section)
 
-Abort with an error message if spec.md or plan.md is missing — instruct the user to run the missing prerequisite command (``/prizmkit-specify`` or ``/prizmkit-plan``).
+Abort with an error message if spec.md or plan.md is missing — instruct the user to run the missing prerequisite command (`/prizmkit-specify` or `/prizmkit-plan`).
 
 ### Step 2: Load Artifacts (Progressive Disclosure)
 
@@ -151,13 +144,13 @@ Output a Markdown report (**no file writes**) with the following structure:
 
 At end of report, output a concise Next Actions block:
 
-- If CRITICAL issues exist: **Recommend resolving before ``/prizmkit-implement``**
+- If CRITICAL issues exist: **Recommend resolving before `/prizmkit-implement`**
 - If only LOW/MEDIUM: User may proceed, but provide improvement suggestions
 - Provide explicit command suggestions:
-  - "Run ``/prizmkit-specify`` to refine requirements"
-  - "Run ``/prizmkit-plan`` to adjust architecture or tasks"
-  - "Edit tasks.md to add coverage for requirement X"
-  - "Proceed to ``/prizmkit-implement``" (if clean)
+  - "Run `/prizmkit-specify` to refine requirements"
+  - "Run `/prizmkit-plan` to adjust architecture or tasks"
+  - "Edit plan.md Tasks section to add coverage for requirement X"
+  - "Proceed to `/prizmkit-implement`" (if clean)
 
 ### Step 8: Offer Remediation
 
@@ -166,19 +159,37 @@ Ask the user: "Would you like me to suggest concrete remediation edits for the t
 ## Operating Principles
 
 ### Context Efficiency
-- **Minimal high-signal tokens**: Focus on actionable findings, not exhaustive documentation
-- **Progressive disclosure**: Load artifacts incrementally; don't dump all content into analysis
-- **Token-efficient output**: Limit findings table to 50 rows; summarize overflow
-- **Deterministic results**: Rerunning without changes should produce consistent IDs and counts
+- Focus on actionable findings, not exhaustive documentation — the goal is to surface problems, not prove you read everything
+- Load artifacts incrementally; reading all content upfront wastes tokens on sections irrelevant to the feature
+- Cap findings at 50 rows to keep the report scannable; summarize overflow with counts
+- Rerunning without changes should produce consistent IDs and counts (deterministic)
 
-### Analysis Guidelines
-- **NEVER modify files** (this is read-only analysis)
-- **NEVER hallucinate missing sections** (if absent, report them accurately)
-- **Prioritize Prizm Rules violations** (these are always CRITICAL)
-- **Use examples over exhaustive rules** (cite specific instances, not generic patterns)
-- **Report zero issues gracefully** (emit success report with coverage statistics)
+### Analysis Approach
+- Do not modify files — read-only analysis ensures artifacts remain stable for the implement phase
+- If a section is absent, report it accurately rather than guessing what it might contain
+- Prizm Rules violations are always CRITICAL — they represent project-wide constraints that outrank individual feature decisions
+- Cite specific instances rather than generic patterns — "spec §2.1 says REST but plan §Architecture says GraphQL" is more useful than "terminology inconsistency found"
+- If zero issues found, report success with coverage statistics — a clean report is valuable confirmation
 
-**HANDOFF:** ``/prizmkit-implement`` (if clean) or ``/prizmkit-specify`` / ``/prizmkit-plan`` (if issues found)
+## Example Finding
+
+```
+| ID | Category | Severity | Location(s) | Summary | Recommendation |
+|----|----------|----------|-------------|---------|----------------|
+| D1 | Rules Alignment | CRITICAL | plan.md §Architecture | Plan specifies SQLite but root.prizm RULES has "MUST: use PostgreSQL for all persistent storage" | Change plan to use PostgreSQL or request rule amendment via prizmkit-prizm-docs |
+| E1 | Coverage Gap | HIGH | spec.md §FR-3 | "User can export reports as PDF" has no corresponding task in plan.md Tasks section | Add export task to Phase 3 of plan.md |
+```
+
+**HANDOFF:** `/prizmkit-implement` (if clean) or `/prizmkit-specify` / `/prizmkit-plan` (if issues found)
+
+## Loop Protection
+
+In unattended pipeline mode, the analyze→fix→analyze cycle can loop indefinitely if issues keep reappearing. To prevent this:
+
+- Track an `analyze_iteration` counter starting at 1. Each re-run of this skill after remediation increments the counter.
+- **max_iterations = 5**: If `analyze_iteration >= 5`, you MUST proceed to `/prizmkit-implement` regardless of remaining findings. Log a warning: "Loop protection triggered — proceeding to implement with N unresolved findings (iterations: 5/5)."
+- Unresolved findings from the final iteration should be noted in the handoff so that `/prizmkit-code-review` can catch them downstream.
+- This guard exists because some findings oscillate (fixing one re-introduces another) and blocking forever is worse than proceeding with known issues.
 
 ## Output
 

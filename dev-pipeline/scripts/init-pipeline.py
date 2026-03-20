@@ -300,6 +300,15 @@ def main():
         print(json.dumps(output, indent=2, ensure_ascii=False))
         sys.exit(1)
 
+    # Warn if feature-list.json is not at project root
+    feature_list_dir = os.path.dirname(os.path.abspath(args.feature_list))
+    indicators = ['.git', 'package.json', '.prizmkit']
+    is_at_root = any(os.path.exists(os.path.join(feature_list_dir, i)) for i in indicators)
+    if not is_at_root:
+        sys.stderr.write(
+            "Warning: feature-list.json may not be at project root: {}\n".format(feature_list_dir)
+        )
+
     # Validate schema
     schema_errors = validate_schema(data)
     if schema_errors:

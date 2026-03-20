@@ -1,5 +1,5 @@
 ---
-description: "Full-lifecycle dev toolkit. Covers spec-driven development, Prizm context docs, code quality, debugging, deployment, and knowledge management. Use 'prizmkit.*' for help. (project)"
+description: "Full-lifecycle dev toolkit. Covers spec-driven development, Prizm context docs, code quality, debugging, deployment, and knowledge management. Use this skill whenever the user asks about PrizmKit workflow, wants to know which command to use, or needs help choosing between full workflow and fast path. Trigger on: '/prizmkit', 'prizmkit help', 'which prizmkit command', 'how do I start a feature'. (project)"
 ---
 
 # PrizmKit — Full-Lifecycle Development Toolkit
@@ -24,22 +24,47 @@ PrizmKit is a comprehensive, independent AI development toolkit that covers the 
 - Architectural decisions
 - Data model or API changes
 
-**Use fast path (implement -> commit directly):**
+The full workflow generates spec, plan, and task artifacts that create a traceable record of what was built and why — this matters for future maintainability and AI context loading.
+
+**Use fast path (plan → implement → commit):**
 - Bug fixes with clear root cause
 - Single-file config or typo fixes
 - Simple refactors (rename, extract)
 - Documentation-only changes
 - Test additions for existing code
 
-For fast-path changes, you can directly use the implement command with inline task description, then the commit command.
-- CodeBuddy: ``/prizmkit-implement`` → ``/prizmkit-commit``
-- Claude Code: `/prizmkit-implement` → `/prizmkit-committer`
+The fast path skips specify and analyze but still generates a simplified plan.md (with Tasks section) so that implement has a task list to follow.
+
+For fast-path changes, you can directly generate a simplified plan.md, then use implement and commit commands.
+
+## Workflow Example
+
+**Full workflow** for adding a user avatar upload feature:
+```
+/prizmkit-specify    → writes .prizmkit/specs/001-avatar-upload/spec.md
+/prizmkit-plan       → writes plan.md with tasks (architecture, data model, API, UI)
+/prizmkit-analyze    → checks spec↔plan consistency, finds gaps
+/prizmkit-implement  → executes tasks in order, marks [x] as done
+/prizmkit-code-review → reviews against spec, outputs PASS/NEEDS FIXES
+/prizmkit-retrospective → syncs .prizm-docs/ with code changes
+/prizmkit-committer  → commits feat(avatar): add upload
+```
+
+**Fast path** for fixing a null pointer bug:
+```
+/prizmkit-plan       → "fix null check in UserService.getAvatar()" (simplified plan.md)
+/prizmkit-implement  → executes tasks from plan.md
+/prizmkit-committer  → commits fix(user): handle null avatar gracefully
+```
+
+### Fast Path Commands
+ `/prizmkit-plan` → `/prizmkit-implement` → `/prizmkit-committer`
 
 ### Bug Fix Documentation Policy
 
 **Bug fixes MUST NOT create new documentation entries.** Bug fixes are refinements of incomplete existing features — they complete what was already planned, not introduce new functionality. Specifically:
 
-- Do NOT run ``/prizmkit-summarize`` for bug fix commits (no new REGISTRY.md entries)
+- Run `/prizmkit-retrospective` with structural sync only (Job 1) for bug fix commits — skip knowledge injection unless genuinely new TRAP discovered
 - Do NOT create new spec/plan/tasks under `.prizmkit/specs/` for bug fixes
 - Do NOT update `.prizm-docs/` module docs for pure bug fixes (no interface/dependency change)
 - Bug fix commits use `fix(<scope>):` prefix in Conventional Commits, not `feat:`
@@ -52,7 +77,7 @@ PrizmKit produces two complementary knowledge layers:
 
 ```
 .prizm-docs/           → Project "what is" (static: structure, interfaces, rules, traps, decisions)
-.prizmkit/specs/       → Feature "what to do" (workflow: spec → plan → tasks → code)
+.prizmkit/specs/       → Feature "what to do" (workflow: spec → plan → code(implement))
 ```
 
 ## Skill Inventory
@@ -60,18 +85,17 @@ PrizmKit produces two complementary knowledge layers:
 ### Foundation (3)
 - **prizm-kit** — Full-lifecycle dev toolkit entry point
 - **prizmkit-init** — Project takeover: scan → assess → generate docs → initialize
-- **prizmkit-prizm-docs** — Prizm documentation framework: ``/prizmkit-doc`.init`, ``/prizmkit-doc`.update`, ``/prizmkit-doc`.status`, ``/prizmkit-doc`.rebuild`, ``/prizmkit-doc`.validate`, ``/prizmkit-doc`.migrate`
+- **prizmkit-prizm-docs** — Prizm documentation framework with 6 operations: init, update, status, rebuild, validate, migrate
 
-### Spec-Driven Workflow (9)
+### Spec-Driven Workflow (8)
 - **prizmkit-specify** — Create structured feature specifications from natural language
 - **prizmkit-clarify** — Interactive requirement clarification
 - **prizmkit-plan** — Generate technical plan with data model, API contracts, and executable task breakdown (all in one plan.md)
 - **prizmkit-analyze** — Cross-document consistency analysis (spec ↔ plan ↔ tasks)
 - **prizmkit-implement** — Execute tasks following TDD approach
 - **prizmkit-code-review** — Review code against spec and plan
-- **prizmkit-summarize** — Archive completed features to REGISTRY.md
-- **prizmkit-committer** — Commit workflow with automatic Prizm doc update
-- **prizmkit-retrospective** — Post-feature learning: extract lessons → update Prizm docs
+- **prizmkit-retrospective** — Sole .prizm-docs/ maintainer: structural sync + knowledge injection (TRAPS/RULES/DECISIONS)
+- **prizmkit-committer** — Pure git commit: diff analysis, safety checks, Conventional Commits
 
 ### Quality Assurance (5)
 - **prizmkit-tool-tech-debt-tracker** — [Tier 1] Technical debt identification and tracking via code pattern analysis
@@ -95,13 +119,29 @@ PrizmKit produces two complementary knowledge layers:
 - **prizmkit-tool-onboarding-generator** — [Tier 2] Generate developer onboarding guides
 - **prizmkit-tool-api-doc-generator** — [Tier 2] Extract API documentation from source code
 
-### Pipeline & Companion (6)
-- **feature-workflow** — [Tier 1] End-to-end feature workflow: specify → plan → analyze → implement → review → commit
-- **refactor-workflow** — [Tier 1] End-to-end refactor workflow: analyze → plan → implement → review → commit
+### Pipeline & Companion (7)
+- **feature-workflow** — One-stop feature development: plan → launch pipeline → monitor
+- **refactor-workflow** — End-to-end refactor: analyze → plan → implement → review → commit
 - **app-planner** — Interactive app planning that produces feature-list.json for dev-pipeline
 - **bug-planner** — Interactive bug planning that produces bug-fix-list.json for bugfix-pipeline
-- **dev-pipeline-launcher** — Launch and manage the dev-pipeline from within a CLI session
-- **bugfix-pipeline-launcher** — Launch and manage the bugfix pipeline from within a CLI session
+- **bug-fix-workflow** — Interactive single-bug fix in current session (triage → reproduce → fix → review → commit)
+- **dev-pipeline-launcher** — Launch and manage the feature dev-pipeline (background daemon)
+- **bugfix-pipeline-launcher** — Launch and manage the bugfix pipeline (background daemon)
+
+### Scenario Decision Tree
+
+Not sure which skill to use? Follow this:
+
+| I want to... | Use this |
+|---|---|
+| Build a new app or batch of features from scratch | `feature-workflow` (one-stop) |
+| Plan features first, then decide when to build | `app-planner` → `dev-pipeline-launcher` |
+| Launch pipeline for an existing feature-list.json | `dev-pipeline-launcher` |
+| Fix multiple bugs in batch | `bug-planner` → `bugfix-pipeline-launcher` |
+| Fix one specific bug right now, interactively | `bug-fix-workflow` |
+| Refactor/restructure code without changing behavior | `refactor-workflow` |
+| Add a single small feature (spec → plan → implement) | `/prizmkit-specify` → `/prizmkit-plan` → `/prizmkit-implement` |
+| Quick bug fix or config change | Fast path: `/prizmkit-plan` → `/prizmkit-implement` → `/prizmkit-committer` |
 
 ### Tier Definitions
 
@@ -127,10 +167,8 @@ python3 .claude/command-assets/prizm-kit/scripts/install-`/prizmkit-py` --target
 
 ## Hook / Rules Configuration
 
-**CodeBuddy:** Uses native `type: prompt` hooks for automatic doc updates before commits.
-The hook is configured automatically by `prizmkit-init`. See `assets/hooks/prizm-commit-hook.json`.
-
-**Claude Code:** Uses `.claude/rules/` glob-scoped markdown files for automatic enforcement.
-Rules are created automatically by `prizmkit-init` (or `/prizmkit-init`). See:
-- `assets/claude-md-template.md` for the project memory template
+Both CodeBuddy and Claude Code use unified commands for automatic doc updates and commit enforcement.
+Hooks and rules are configured automatically by `prizmkit-init`. See:
+- `core/templates/hooks/commit-intent.json` for the commit hook template
+- `assets/project-memory-template.md` for the project memory template
 - The init skill creates `prizm-documentation.md` and `prizm-commit-workflow.md` rules

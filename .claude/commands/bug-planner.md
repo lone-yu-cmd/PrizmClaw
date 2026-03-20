@@ -1,5 +1,5 @@
 ---
-description: "Interactive bug planning that produces bug-fix-list.json for the Bug Fix Pipeline. Supports multiple input formats: error logs, stack traces, user reports, failed tests, monitoring alerts. (project)"
+description: "Interactive bug planning that produces bug-fix-list.json for the Bug Fix Pipeline. Supports multiple input formats: error logs, stack traces, user reports, failed tests, monitoring alerts. Use this skill whenever the user has bugs to report, errors to parse, or test failures to organize. Trigger on: 'plan bug fixes', 'report bugs', 'I have some bugs', 'these tests are failing', 'here is an error log', 'parse these errors', '修复 bug', '生成 bug 列表', '规划 bug 修复'. (project)"
 ---
 
 # Bug Planner
@@ -15,33 +15,28 @@ User says:
 - "here's an error log", "parse these errors"
 - After receiving bug reports, error logs, or failed test output
 
-## Commands
+**Do NOT use when:**
+- User wants to start fixing bugs now (use `bugfix-pipeline-launcher`)
+- User wants to fix a single bug interactively (use `bug-fix-workflow`)
+- User wants to plan features (use `app-planner`)
 
-### `/prizmkit-bug`-plan
+## Intent Routing
 
-Launch the interactive bug planning process.
+This skill handles multiple operations. Determine the user's intent and execute the matching operation:
 
-### `/prizmkit-bug`-plan-from-log \<log-file-or-content\>
-
-Auto-generate bug entries from error logs or stack traces.
-
-### `/prizmkit-bug`-plan-from-tests \<test-output\>
-
-Auto-generate bug entries from failed test case output.
-
-### `/prizmkit-bug`-plan-validate \<bug-fix-list.json\>
-
-Validate an existing `bug-fix-list.json` against the schema.
-
-### `/prizmkit-bug`-plan-summary \<bug-fix-list.json\>
-
-Print a summary of bugs grouped by severity and status.
+| User Intent | Operation | Trigger Phrases |
+|---|---|---|
+| Plan bugs interactively | **Interactive Planning** | "plan bug fixes", "report bugs", "规划 bug 修复" |
+| Parse error logs into bugs | **From Log** | "parse this error log", "here's a stack trace", "parse these errors" |
+| Parse test failures into bugs | **From Tests** | "these tests are failing", "parse test output" |
+| Validate existing bug list | **Validate** | "validate bug list", "check bug-fix-list.json" |
+| Summarize bug list | **Summary** | "bug summary", "show bug list", "list bugs" |
 
 ---
 
-## Interactive Planning Process
+## Operation: Interactive Planning
 
-The interactive ``/prizmkit-bug`-plan` command guides through 4 phases:
+Launch the interactive bug planning process through 4 phases.
 
 ### Phase 1: Project Context
 
@@ -138,7 +133,11 @@ ALERT: Error rate spike: 500 errors/min on /api/login endpoint
 ### Phase 4: Generate & Validate
 
 1. **Generate `bug-fix-list.json`**: Conform to `dev-pipeline/templates/bug-fix-list-schema.json`
-2. **Validate against schema**: Run the validation checks below
+2. **Validate against schema**: Run the validation script:
+   ```bash
+   python3 .claude/command-assets/bug-planner/scripts/validate-bug-list.py bug-fix-list.json --feature-list feature-list.json
+   ```
+   If the script is not available, perform the validation checks manually (see checklist below).
 3. **Write file** to project root (or user-specified path)
 4. **Output**: File path, summary, and next steps
 
@@ -177,14 +176,11 @@ Next steps:
 - Review: cat bug-fix-list.json
 - Start fixing: say "开始修复" or "start fixing bugs" to launch the bugfix pipeline
 - Or run directly: ./dev-pipeline/launch-bugfix-daemon.sh start bug-fix-list.json
-- Fix one interactively: invoke bug-fix-workflow for each bug
 ```
 
 ---
 
-## Non-Interactive Commands
-
-### `/prizmkit-bug`-plan-from-log
+## Operation: From Log
 
 Batch-parse error logs to generate bug entries without interactive prompts:
 
@@ -200,7 +196,7 @@ Batch-parse error logs to generate bug entries without interactive prompts:
 4. Output draft `bug-fix-list.json` for user review
 5. Ask: "Review and confirm? You can edit individual entries."
 
-### `/prizmkit-bug`-plan-from-tests
+## Operation: From Tests
 
 Batch-parse failed test output:
 
@@ -210,7 +206,7 @@ Batch-parse failed test output:
 4. Set verification_type to `automated` (test already exists)
 5. Output draft `bug-fix-list.json`
 
-### `/prizmkit-bug`-plan-validate
+## Operation: Validate
 
 Validate existing `bug-fix-list.json`:
 
@@ -224,7 +220,7 @@ Validate existing `bug-fix-list.json`:
    - Invalid `affected_feature` references (if feature-list.json exists)
 4. Output: validation result with specific errors/warnings
 
-### `/prizmkit-bug`-plan-summary
+## Operation: Summary
 
 Print human-readable summary:
 
@@ -266,10 +262,6 @@ After `bug-fix-list.json` is generated, the user can:
 | No bugs provided | Prompt with examples of supported input formats |
 | Invalid feature reference | Warn and ask user to correct or remove reference |
 | Schema validation failure | Show specific errors, offer to fix interactively |
-
-## Path References
-
-All internal asset paths MUST use `.claude/command-assets/bug-planner` placeholder for cross-IDE compatibility.
 
 ## Output
 

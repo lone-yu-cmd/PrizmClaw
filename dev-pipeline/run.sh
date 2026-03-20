@@ -28,6 +28,8 @@ set -euo pipefail
 #   LOG_RETENTION_DAYS    Delete logs older than N days (default: 14)
 #   LOG_MAX_TOTAL_MB      Keep total logs under N MB via oldest-first cleanup (default: 1024)
 #   PIPELINE_MODE         Override mode for all features: lite|standard|full|self-evolve (used by daemon)
+#   DEV_BRANCH            Custom dev branch name (default: auto-generated dev/pipeline-{run_id})
+#   AUTO_PUSH             Auto-push to remote after successful feature (default: 0). Set to 1 to enable.
 # ============================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -44,6 +46,8 @@ LOG_RETENTION_DAYS=${LOG_RETENTION_DAYS:-14}
 LOG_MAX_TOTAL_MB=${LOG_MAX_TOTAL_MB:-1024}
 VERBOSE=${VERBOSE:-0}
 MODEL=${MODEL:-""}
+DEV_BRANCH=${DEV_BRANCH:-""}
+AUTO_PUSH=${AUTO_PUSH:-0}
 
 # Source shared common helpers (CLI/platform detection + logs + deps)
 source "$SCRIPT_DIR/lib/common.sh"
@@ -52,11 +56,18 @@ prizm_detect_cli_and_platform
 # Source shared heartbeat library
 source "$SCRIPT_DIR/lib/heartbeat.sh"
 
+# Source shared branch library
+source "$SCRIPT_DIR/lib/branch.sh"
+
 # Detect stream-json support
 detect_stream_json_support "$CLI_CMD"
 
 # Feature list path (set in main, used by cleanup trap)
 FEATURE_LIST=""
+
+# Branch tracking (for cleanup on interrupt)
+_ORIGINAL_BRANCH=""
+_DEV_BRANCH_NAME=""
 
 # ============================================================
 # Shared: Spawn an AI CLI session and wait for result
@@ -92,6 +103,8 @@ spawn_and_wait_session() {
     local stream_json_flag=""
     if [[ "$USE_STREAM_JSON" == "true" ]]; then
         stream_json_flag="--output-format stream-json"
+        # claude-internal requires --verbose when using stream-json with -p/--print
+        verbose_flag="--verbose"
     fi
 
     local model_flag=""
@@ -203,9 +216,9 @@ spawn_and_wait_session() {
                 else
                     local docs_changed=""
                     docs_changed=$(git -C "$project_root" log --name-only --format="" -1 2>/dev/null \
-                        | grep -E '(\.prizm-docs/|\.prizmkit/specs/REGISTRY\.md)' | head -1 || true)
+                        | grep -E '\.prizm-docs/' | head -1 || true)
                     if [[ -z "$docs_changed" ]]; then
-                        log_warn "Session committed but no .prizm-docs or REGISTRY.md changes detected."
+                        log_warn "Session committed but no .prizm-docs changes detected."
                         session_status="docs_missing"
                     fi
                 fi
@@ -229,15 +242,89 @@ with open(p, 'w', encoding='utf-8') as f:
 
     log_info "Session result: $session_status"
 
+    # Write lightweight session summary for post-session inspection
+    local feature_slug
+    feature_slug=$(python3 -c "
+import json, re, sys
+flist, fid = sys.argv[1], sys.argv[2]
+with open(flist) as f:
+    data = json.load(f)
+for feat in data.get('features', []):
+    if feat.get('id') == fid:
+        fnum = feat['id'].replace('F-', '').replace('f-', '').zfill(3)
+        title = feat.get('title', '').lower()
+        title = re.sub(r'[^a-z0-9\s-]', '', title)
+        title = re.sub(r'[\s]+', '-', title.strip())
+        title = re.sub(r'-+', '-', title).strip('-')
+        print(f'{fnum}-{title}')
+        sys.exit(0)
+sys.exit(1)
+" "$feature_list" "$feature_id" 2>/dev/null) || {
+        log_warn "Could not resolve feature slug for $feature_id — session summary and artifact validation will be skipped"
+        feature_slug=""
+    }
+
+    if [[ -n "$feature_slug" ]]; then
+        local project_root_for_summary
+        project_root_for_summary="$(cd "$SCRIPT_DIR/.." && pwd)"
+        local summary_path="$project_root_for_summary/.prizmkit/specs/${feature_slug}/session-summary.json"
+        mkdir -p "$(dirname "$summary_path")"
+        local session_start_time
+        session_start_time=$(python3 -c "
+import json, sys, os
+p = os.path.join(sys.argv[1], 'current-session.json')
+if os.path.isfile(p):
+    with open(p) as f: print(json.load(f).get('started_at', ''))
+else: print('')
+" "$STATE_DIR" 2>/dev/null) || session_start_time=""
+        local exec_tier
+        exec_tier=$(python3 -c "
+import json, sys, os
+p = sys.argv[1]
+if os.path.isfile(p):
+    with open(p) as f: print(json.load(f).get('exec_tier', ''))
+else: print('')
+" "$session_dir/session-status.json" 2>/dev/null) || exec_tier=""
+        cat > "$summary_path" <<SUMMARY
+{
+  "feature_id": "$feature_id",
+  "session_id": "$session_id",
+  "status": "$session_status",
+  "started_at": "$session_start_time",
+  "completed_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "tier": "$exec_tier"
+}
+SUMMARY
+    fi
+
+    # Validate key artifacts exist after successful session
+    if [[ "$session_status" == "success" && -n "$feature_slug" ]]; then
+        local project_root_for_artifacts
+        project_root_for_artifacts="$(cd "$SCRIPT_DIR/.." && pwd)"
+        local context_snapshot="$project_root_for_artifacts/.prizmkit/specs/${feature_slug}/context-snapshot.md"
+        local plan_file="$project_root_for_artifacts/.prizmkit/specs/${feature_slug}/plan.md"
+
+        if [[ ! -f "$context_snapshot" ]]; then
+            log_warn "ARTIFACT_MISSING: context-snapshot.md not found at $context_snapshot"
+        fi
+        if [[ ! -f "$plan_file" ]]; then
+            log_warn "ARTIFACT_MISSING: plan.md not found at $plan_file"
+        fi
+    fi
+
     # Update feature status
-    python3 "$SCRIPTS_DIR/update-feature-status.py" \
+    local update_output
+    update_output=$(python3 "$SCRIPTS_DIR/update-feature-status.py" \
         --feature-list "$feature_list" \
         --state-dir "$STATE_DIR" \
         --feature-id "$feature_id" \
         --session-status "$session_status" \
         --session-id "$session_id" \
         --max-retries "$max_retries" \
-        --action update >/dev/null 2>&1 || true
+        --action update 2>&1) || {
+        log_error "Failed to update feature status: $update_output"
+        log_error "feature-list.json may be out of sync. Manual intervention needed."
+    }
 
     # Return status via global variable (avoids $() swallowing stdout)
     _SPAWN_RESULT="$session_status"
@@ -253,6 +340,12 @@ cleanup() {
 
     # Kill all child processes (claude-internal, heartbeat, progress parser, etc.)
     kill 0 2>/dev/null || true
+
+    # Log current branch info for recovery
+    if [[ -n "$_DEV_BRANCH_NAME" ]]; then
+        log_info "Development was on branch: $_DEV_BRANCH_NAME"
+        log_info "Original branch was: $_ORIGINAL_BRANCH"
+    fi
 
     if [[ -n "$FEATURE_LIST" && -f "$FEATURE_LIST" ]]; then
         python3 "$SCRIPTS_DIR/update-feature-status.py" \
@@ -588,16 +681,43 @@ sys.exit(1)
         log_warn "Interrupted. Killing session..."
         # Kill all child processes
         kill 0 2>/dev/null || true
+        # Log current branch info
+        if [[ -n "$_DEV_BRANCH_NAME" ]]; then
+            log_info "Development was on branch: $_DEV_BRANCH_NAME"
+        fi
         log_info "Session log: $session_dir/logs/session.log"
         exit 130
     }
     trap cleanup_single_feature SIGINT SIGTERM
 
     _SPAWN_RESULT=""
+
+    # Branch lifecycle: create and checkout feature branch
+    local _proj_root
+    _proj_root="$(cd "$SCRIPT_DIR/.." && pwd)"
+    local _source_branch
+    _source_branch=$(git -C "$_proj_root" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
+    _ORIGINAL_BRANCH="$_source_branch"
+
+    local _branch_name="${DEV_BRANCH:-dev/${feature_id}-$(date +%s)}"
+    if branch_create "$_proj_root" "$_branch_name" "$_source_branch"; then
+        _DEV_BRANCH_NAME="$_branch_name"
+    else
+        log_warn "Failed to create branch; running session on current branch"
+    fi
+
     spawn_and_wait_session \
         "$feature_id" "$feature_list" "$session_id" \
         "$bootstrap_prompt" "$session_dir" 999
     local session_status="$_SPAWN_RESULT"
+
+    # Auto-push after successful session
+    if [[ "$session_status" == "success" && "$AUTO_PUSH" == "1" ]]; then
+        local _proj_root
+        _proj_root="$(cd "$SCRIPT_DIR/.." && pwd)"
+        log_info "AUTO_PUSH enabled; pushing to remote..."
+        git -C "$_proj_root" push -u origin "$_DEV_BRANCH_NAME" 2>/dev/null || log_warn "Auto-push failed"
+    fi
 
     echo ""
     if [[ "$session_status" == "success" ]]; then
@@ -665,6 +785,16 @@ main() {
         exit 1
     fi
 
+    # Validate feature-list.json is at project root
+    local fl_dir
+    fl_dir="$(cd "$(dirname "$feature_list")" && pwd)"
+    local project_root
+    project_root="$(pwd)"
+    if [[ "$fl_dir" != "$project_root" ]]; then
+        log_warn "feature-list.json is not at project root ($project_root), found at $fl_dir"
+        log_warn "Pipeline expects feature-list.json at project root. Proceeding but results may be unstable."
+    fi
+
     check_dependencies
     run_log_cleanup
 
@@ -708,6 +838,23 @@ main() {
     echo -e "${BOLD}════════════════════════════════════════════════════${NC}"
     echo ""
 
+    # Branch lifecycle: create dev branch for this pipeline run
+    local _proj_root
+    _proj_root="$(cd "$SCRIPT_DIR/.." && pwd)"
+    local _source_branch
+    _source_branch=$(git -C "$_proj_root" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
+    _ORIGINAL_BRANCH="$_source_branch"
+
+    local run_id_for_branch
+    run_id_for_branch=$(jq -r '.run_id' "$STATE_DIR/pipeline.json" 2>/dev/null || echo "$$")
+    local _branch_name="${DEV_BRANCH:-dev/pipeline-${run_id_for_branch}}"
+    if branch_create "$_proj_root" "$_branch_name" "$_source_branch"; then
+        _DEV_BRANCH_NAME="$_branch_name"
+        log_info "Dev branch: $_branch_name"
+    else
+        log_warn "Failed to create dev branch; running on current branch: $_source_branch"
+    fi
+
     # Main processing loop
     local session_count=0
 
@@ -746,6 +893,10 @@ for f in data.get('stuck_features', []):
             log_success "════════════════════════════════════════════════════"
             log_success "  All features completed! Pipeline finished."
             log_success "  Total sessions: $session_count"
+            if [[ -n "$_DEV_BRANCH_NAME" ]]; then
+                log_success "  Dev branch: $_DEV_BRANCH_NAME"
+                log_success "  Merge with: git checkout $_ORIGINAL_BRANCH && git merge $_DEV_BRANCH_NAME"
+            fi
             log_success "════════════════════════════════════════════════════"
             rm -f "$STATE_DIR/current-session.json"
             break
@@ -818,12 +969,12 @@ for f in data.get('stuck_features', []):
         # Update current session tracking (atomic write via temp file)
         python3 -c "
 import json, sys, os
-from datetime import datetime
+from datetime import datetime, timezone
 feature_id, session_id, state_dir = sys.argv[1], sys.argv[2], sys.argv[3]
 data = {
     'feature_id': feature_id,
     'session_id': session_id,
-    'started_at': datetime.now(datetime.UTC).strftime('%Y-%m-%dT%H:%M:%SZ')
+    'started_at': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 }
 target = os.path.join(state_dir, 'current-session.json')
 tmp = target + '.tmp'
@@ -842,10 +993,19 @@ os.replace(tmp, target)
         # Spawn session and wait
         log_info "Spawning AI CLI session: $session_id"
         _SPAWN_RESULT=""
+
         spawn_and_wait_session \
             "$feature_id" "$feature_list" "$session_id" \
             "$bootstrap_prompt" "$session_dir" "$MAX_RETRIES"
         local session_status="$_SPAWN_RESULT"
+
+        # Auto-push after successful session
+        if [[ "$session_status" == "success" && "$AUTO_PUSH" == "1" ]]; then
+            local _proj_root
+            _proj_root="$(cd "$SCRIPT_DIR/.." && pwd)"
+            log_info "AUTO_PUSH enabled; pushing to remote..."
+            git -C "$_proj_root" push 2>/dev/null || log_warn "Auto-push failed"
+        fi
 
         session_count=$((session_count + 1))
 

@@ -1,16 +1,14 @@
 ---
-description: Launch and manage the bugfix pipeline from within a cbc session. Start pipeline in background, monitor logs, check status, stop pipeline. Invoke when user wants to start fixing bugs, run the bugfix pipeline, or check bugfix progress. (project)
+description: "Launch and manage the bugfix pipeline from within an AI CLI session. Start pipeline in background, monitor logs, check status, stop pipeline. Use this skill whenever the user wants to start fixing bugs, run the bugfix pipeline, check bugfix progress, or stop the bugfix pipeline. Trigger on: 'start fixing bugs', 'run bugfix pipeline', 'bugfix status', 'stop bug fix', '启动 bug 修复', '开始修复 bug', '修复进度', '停止修复'. (project)"
 ---
 
 # Bugfix-Pipeline Launcher
 
-Launch the autonomous bug fix pipeline from within a cbc conversation. The pipeline runs as a fully detached background process -- closing the cbc session does NOT stop the pipeline.
+Launch the autonomous bug fix pipeline from within an AI CLI conversation. The pipeline runs as a fully detached background process -- closing the AI CLI session does NOT stop the pipeline.
 
-### Mandatory Execution Mode (MUST)
+### Execution Mode
 
-- Always use daemon mode via `dev-pipeline/launch-bugfix-daemon.sh` for start/stop/status/log actions.
-- NEVER run `dev-pipeline/run-bugfix.sh run ...` directly from this skill.
-- Reason: foreground `run-bugfix.sh` can be terminated by AI CLI command timeout (e.g. cbc 120s), while daemon mode survives session timeout.
+Always use daemon mode via `dev-pipeline/launch-bugfix-daemon.sh` for start/stop/status/log actions. Foreground `run-bugfix.sh` can be terminated by AI CLI command timeout, while daemon mode survives session timeout — this prevents half-finished bug fixes that leave the codebase in an inconsistent state.
 
 ### When to Use
 
@@ -247,7 +245,7 @@ SESSION_TIMEOUT=3600 dev-pipeline/retry-bug.sh B-001 bug-fix-list.json
 ### Integration Notes
 
 - **After bug-planner**: This is the natural next step. When user finishes bug planning and has `bug-fix-list.json`, suggest launching the bugfix pipeline.
-- **Session independence**: The bugfix pipeline runs completely detached. User can close cbc, open a new session later, and use this skill to check progress or stop the pipeline.
+- **Session independence**: The bugfix pipeline runs completely detached. User can close the AI CLI, open a new session later, and use this skill to check progress or stop the pipeline.
 - **Single instance**: Only one bugfix pipeline can run at a time. The PID file prevents duplicates.
 - **Feature pipeline coexistence**: Bugfix and feature pipelines use separate state directories (`bugfix-state/` vs `state/`), so they can run simultaneously without conflict.
 - **State preservation**: Stopping and restarting the bugfix pipeline resumes from where it left off -- completed bugs are not re-fixed.

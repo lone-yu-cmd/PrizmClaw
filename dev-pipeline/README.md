@@ -85,7 +85,7 @@ When a feature is stuck (e.g. retry count exceeded, bad artifacts), use `reset-f
 
 What gets cleaned with `--clean`:
 - `state/features/F-XXX/sessions/` — all session logs and prompts
-- `.prizmkit/specs/{feature-slug}/` — spec.md, plan.md, tasks.md, contracts/
+- `.prizmkit/specs/{feature-slug}/` — spec.md, plan.md (with Tasks section), contracts/
 
 What is always reset (with or without `--clean`):
 - `status.json` — status → pending, retry_count → 0
@@ -221,12 +221,9 @@ run.sh main loop
   ├─ AI CLI session            # cbc --print -y < prompt (CodeBuddy)
   │   │                        # claude --print -p "$(cat prompt)" --yes (Claude Code)
   │   └─ prizm-dev-team       # Multi-agent team implements the feature
-  │       ├─ Coordinator      # Orchestrates the 10-phase pipeline
-  │       ├─ PM               # Phase 1-4: specify → plan → tasks → analyze
-  │       ├─ Dev x N           # Phase 6: implement with TDD
-  │       ├─ QA               # Phase 7: integration tests + code review
-  │       ├─ Review           # Phase 7: code consistency audit
-  │       └─ Coordinator      # Phase 9: summarize → commit → retrospective
+  │       ├─ Orchestrator    # Main agent: init, plan, schedule, retrospective, commit
+  │       ├─ Dev x N          # Implementation with TDD
+  │       └─ Reviewer        # Analyze + code review
   │
   ├─ check-session-status.py  # Parse session outcome
   ├─ update-feature-status.py # Update feature state (completed/failed/retry)
@@ -238,19 +235,19 @@ run.sh main loop
 
 Each AI CLI session drives the prizm-dev-team through these phases. **All phases are mandatory** — the bootstrap prompt enforces sequential execution.
 
-> **Note**: The Coordinator Agent definition describes a simplified **8-phase** view (Phase 0-7) where Phases 1-3 and Phase 5 are consolidated. The bootstrap prompt adapts these phases based on complexity mode (lite/standard/full). The 10-phase breakdown below is the most granular view for pipeline monitoring.
+> **Note**: The bootstrap prompt adapts these phases based on complexity mode (lite/standard/full). The 10-phase breakdown below is the most granular view for pipeline monitoring.
 
 | Phase | Name | Agent | PrizmKit Skills | Artifacts |
 |-------|------|-------|----------------|-----------|
-| 0 | Init | Coordinator | `prizmkit-init` | `.prizm-docs/root.prizm`, `.prizmkit/config.json` |
-| 1 | Specify | PM | `prizmkit-specify`, `prizmkit-clarify` | `.prizmkit/specs/spec.md` |
-| 2 | Plan + Tasks | PM | `prizmkit-plan` | `.prizmkit/specs/plan.md` (含 Tasks section) |
-| 3 | Analyze | PM | `prizmkit-analyze` | Analysis report (no CRITICAL issues) |
-| 4 | Schedule | Coordinator | — | TaskList entries assigned |
+| 0 | Init | Orchestrator | `prizmkit-init` | `.prizm-docs/root.prizm`, `.prizmkit/config.json` |
+| 1 | Specify | Orchestrator | `prizmkit-specify`, `prizmkit-clarify` | `.prizmkit/specs/spec.md` |
+| 2 | Plan + Tasks | Orchestrator | `prizmkit-plan` | `.prizmkit/specs/plan.md` (含 Tasks section) |
+| 3 | Analyze | Reviewer | `prizmkit-analyze` | Analysis report (no CRITICAL issues) |
+| 4 | Schedule | Orchestrator | — | TaskList entries assigned |
 | 5 | Implement | Dev x N | `prizmkit-implement` | Code + tests, plan.md Tasks marked `[x]` |
-| 6 | Review | QA + Review | `prizmkit-code-review` | Integration tests, review report |
+| 6 | Review | Reviewer | `prizmkit-code-review` | Integration tests, review report |
 | 7 | Fix Loop | Dev | — | Max 3 rounds of fixes |
-| 8 | Summarize & Commit | Coordinator | `prizmkit-summarize`, `prizmkit-committer`, `prizmkit-retrospective` | REGISTRY.md, git commit, .prizm-docs/ updated |
+| 8 | Retrospective & Commit | Orchestrator | `prizmkit-retrospective`, `prizmkit-committer` | .prizm-docs/ synced + enriched, git commit |
 
 ### Feature Dependency Resolution
 
@@ -386,15 +383,13 @@ Each feature generates artifacts in a dedicated subdirectory under `.prizmkit/sp
 .prizmkit/
 ├── config.json                          # PrizmKit configuration
 └── specs/
-    ├── REGISTRY.md                      # Feature registry (Phase 9 appends here)
     ├── 001-project-infrastructure-setup/
     │   ├── spec.md                      # Phase 1: Feature specification
     │   ├── checklists/
     │   │   └── requirements.md          # Phase 1: Spec quality checklist
     │   ├── plan.md                      # Phase 2: Implementation plan
     │   ├── data-model.md               # Phase 2: Data model (if applicable)
-    │   ├── contracts/                   # Phase 2: API contracts (if applicable)
-    │   └── tasks.md                     # Phase 3: Task breakdown
+    │   └── contracts/                   # Phase 2: API contracts (if applicable)
     ├── 002-core-encryption-vault/
     │   └── ...
     └── ...
@@ -441,7 +436,7 @@ The AI CLI session exited without producing a `session-status.json`. This typica
 
 ### .prizmkit/specs/ is empty after feature completion
 
-The session skipped the PrizmKit artifact generation phases (spec.md, plan.md, tasks.md). This can happen if:
+The session skipped the PrizmKit artifact generation phases (spec.md, plan.md). This can happen if:
 
 1. **Agent definitions not found**: Check that agent definition files exist
    - CodeBuddy: `.codebuddy/agents/prizm-dev-team-*.md`
@@ -461,7 +456,7 @@ The pipeline expects:
 
 | Resource | Location | Description |
 |----------|----------|-------------|
-| Agent Definitions | `.codebuddy/agents/prizm-dev-team-*.md` | 4 agent types: coordinator, pm, dev, reviewer |
+| Agent Definitions | `.codebuddy/agents/prizm-dev-team-*.md` | 2 agent types: dev, reviewer |
 | Team Config | `~/.codebuddy/teams/prizm-dev-team/config.json` | Team runtime configuration |
 | Team Inboxes | `~/.codebuddy/teams/prizm-dev-team/inboxes/` | Agent message inboxes |
 
@@ -469,7 +464,7 @@ The pipeline expects:
 
 | Resource | Location | Description |
 |----------|----------|-------------|
-| Agent Definitions | `.claude/agents/prizm-dev-team-*.md` | 4 agent types: coordinator, pm, dev, reviewer |
+| Agent Definitions | `.claude/agents/prizm-dev-team-*.md` | 2 agent types: dev, reviewer |
 | Team Config | `.claude/team-info.json` | Team runtime configuration (project-level) |
 
 The `generate-bootstrap-prompt.py` script resolves these paths automatically. If paths are incorrect, check the `build_replacements()` function in that script.
@@ -576,8 +571,8 @@ dev-pipeline/bugfix-state/        # Runtime state (gitignored)
 | State dir | `state/` | N/A (in-session) | `bugfix-state/` |
 | Ordering | Dependencies DAG → priority | N/A (single refactor per session) | Severity → priority (no dependencies) |
 | Phases | 10-phase (specify → plan → tasks → implement → review) | 6-phase (analyze → plan → tasks → implement → review → commit) | 5-phase (triage → reproduce → fix → verify → commit) |
-| Agents | Coordinator + PM + Dev + Reviewer | Dev + Reviewer only | Dev + Reviewer only |
-| Artifacts | spec.md, plan.md, tasks.md, REGISTRY.md | refactor-analysis.md, plan.md, tasks.md | fix-plan.md, fix-report.md only |
+| Agents | Orchestrator + Dev + Reviewer | Dev + Reviewer only | Dev + Reviewer only |
+| Artifacts | spec.md, plan.md (with Tasks section) | refactor-analysis.md, plan.md (with Tasks section) | fix-plan.md, fix-report.md only |
 | Commit prefix | `feat(<scope>):` | `refactor(<scope>):` | `fix(<scope>):` |
 | Scope Guard | N/A | ✅ (behavior change → STOP) | N/A |
 | Test Strategy | TDD per task | Full suite after EVERY task | Reproduction test |

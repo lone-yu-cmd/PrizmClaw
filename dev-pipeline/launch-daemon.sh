@@ -576,6 +576,8 @@ Environment Variables (pass via --env):
   SESSION_TIMEOUT       Session timeout in seconds (default: 0 = no limit)
   VERBOSE               Set to 1 for verbose AI CLI output
   HEARTBEAT_INTERVAL    Heartbeat log interval in seconds (default: 30)
+  DEV_BRANCH            Custom dev branch name (default: auto-generated)
+  AUTO_PUSH             Auto-push to remote after successful feature (default: 0, set 1 to enable)
 HELP
 }
 

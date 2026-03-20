@@ -1,5 +1,5 @@
 ---
-description: One-stop entry point for feature development. Orchestrates app-planner → dev-pipeline-launcher → background execution. Handles multi-feature batch development from a single request. (project)
+description: "One-stop entry point for feature development. Orchestrates app-planner → dev-pipeline-launcher → background execution. Handles multi-feature batch development from a single request. Use this skill whenever the user wants to build an app, develop multiple features at once, or go from idea to running code in one step. Trigger on: 'build an app', 'develop features', 'implement all features', 'one-stop development', 'batch implement', '开发一个新应用', '构建系统', '一键完成', '批量实现'. (project)"
 ---
 
 # Feature Workflow
@@ -26,7 +26,7 @@ User says:
 ## Overview
 
 ```
-`/prizmkit-feature` <需求描述>
+feature-workflow <需求描述>
    │
    ├── Phase 1: Plan → app-planner → feature-list.json
    │
@@ -56,48 +56,31 @@ With this skill, users can:
 
 ---
 
-## Commands
+## Input Modes
 
-### `/prizmkit-feature` \<需求描述\>
+**Mode A: From natural language requirements** (default)
 
-One-stop feature development from natural language requirements.
-
-**INPUT**: Natural language description of the project or features. Can be:
+Natural language description of the project or features. Can be:
 - A project vision: "开发一个任务管理 App，支持用户登录、任务增删改查、任务分类"
 - A batch of features: "实现用户注册、登录、找回密码这三个功能"
 - An incremental request: "给现有系统追加用户头像上传和昵称修改功能"
 
-**FLOW**:
-1. Invoke `app-planner` with the description
-2. After feature-list.json is generated, invoke `dev-pipeline-launcher`
-3. Monitor and report progress
+Flow: app-planner → dev-pipeline-launcher → monitor
 
-### `/prizmkit-feature` --from \<feature-list.json\>
+**Mode B: From existing feature-list.json**
 
-Skip planning, directly launch pipeline from existing feature-list.json.
+When user says "run pipeline from existing file" or feature-list.json already exists:
+- Skip `app-planner` (file already exists)
+- Invoke `dev-pipeline-launcher` directly
+- Monitor and report progress
 
-**USE WHEN**:
-- feature-list.json already exists
-- User wants to restart/resume pipeline execution
+**Mode C: Incremental (add to existing project)**
 
-**FLOW**:
-1. Skip `app-planner` (file already exists)
-2. Invoke `dev-pipeline-launcher` directly
-3. Monitor and report progress
-
-### `/prizmkit-feature` \<需求描述\> --incremental
-
-Add new features to an existing project (incremental mode).
-
-**USE WHEN**:
-- Project already has features implemented
-- User wants to add new features to existing codebase
-
-**FLOW**:
-1. Invoke `app-planner` in incremental mode (reads existing feature-list.json)
-2. Append new features to existing list
-3. Invoke `dev-pipeline-launcher`
-4. Monitor and report progress
+When user says "add features to existing project" or the project already has features:
+- Invoke `app-planner` in incremental mode (reads existing feature-list.json)
+- Append new features to existing list
+- Invoke `dev-pipeline-launcher`
+- Monitor and report progress
 
 ---
 
@@ -246,18 +229,18 @@ While the pipeline runs in background, the user can continue the conversation:
 
 | Dimension | feature-workflow | bug-fix-workflow | refactor-workflow |
 |-----------|-----------------|------------------|-------------------|
-| **Purpose** | New features (batch) | Bug fixes (batch) | Code restructuring |
-| **Planning Skill** | `app-planner` | `bug-planner` | None (direct invocation) |
-| **Launcher Skill** | `dev-pipeline-launcher` | `bugfix-pipeline-launcher` | None (in-session) |
-| **Input** | Requirements description | Bug reports / logs | Module / code target |
-| **Output** | Multiple `feat()` commits | Multiple `fix()` commits | Single `refactor()` commit |
-| **Execution Mode** | Background daemon | Background daemon | In-session |
+| **Purpose** | New features (batch) | Single bug fix (interactive) | Code restructuring |
+| **Planning Skill** | `app-planner` | None (triage built-in) | None (analysis built-in) |
+| **Execution** | Background daemon | In-session, interactive | In-session |
+| **Input** | Requirements description | Bug report / stack trace | Module / code target |
+| **Output** | Multiple `feat()` commits | Single `fix()` commit | Single `refactor()` commit |
+| **Batch alternative** | (this is the batch flow) | `bug-planner` + `bugfix-pipeline-launcher` | N/A |
 
 ---
 
 ## Path References
 
-All internal asset paths MUST use `.claude/command-assets/feature-workflow` placeholder for cross-IDE compatibility.
+All internal asset paths use `.claude/command-assets/feature-workflow` placeholder for cross-IDE compatibility.
 
 ## Output
 
@@ -265,4 +248,4 @@ All internal asset paths MUST use `.claude/command-assets/feature-workflow` plac
 - Background pipeline running (Phase 2)
 - Progress updates (Phase 3)
 - Multiple git commits with `feat(<scope>):` prefix
-- Updated `REGISTRY.md` (via `/prizmkit-summarize` per feature)
+- Updated `.prizm-docs/` (via prizmkit-retrospective per feature)

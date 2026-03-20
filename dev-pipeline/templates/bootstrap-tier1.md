@@ -5,7 +5,7 @@
 - **Feature ID**: {{FEATURE_ID}} | **Session**: {{SESSION_ID}} | **Run**: {{RUN_ID}}
 - **Complexity**: {{COMPLEXITY}} | **Retry**: {{RETRY_COUNT}} / {{MAX_RETRIES}}
 - **Previous Status**: {{PREV_SESSION_STATUS}} | **Resume From**: {{RESUME_PHASE}}
-- **Init**: {{INIT_DONE}} | Artifacts: spec={{HAS_SPEC}} plan={{HAS_PLAN}} tasks={{HAS_TASKS}}
+- **Init**: {{INIT_DONE}} | Artifacts: spec={{HAS_SPEC}} plan={{HAS_PLAN}}
 
 ## Your Mission
 
@@ -35,9 +35,7 @@ You are the **session orchestrator**. Implement Feature {{FEATURE_ID}}: "{{FEATU
 
 ```
 .prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md
-.prizmkit/specs/{{FEATURE_SLUG}}/plan.md
-.prizmkit/specs/{{FEATURE_SLUG}}/tasks.md
-.prizmkit/specs/REGISTRY.md
+.prizmkit/specs/{{FEATURE_SLUG}}/plan.md              ← includes Tasks section
 ```
 
 ---
@@ -72,7 +70,7 @@ If MISSING — build it now:
    - **Section 1 — Feature Brief**: feature description + acceptance criteria (copy from above)
    - **Section 2 — Project Structure**: output of relevant `ls src/` calls
    - **Section 3 — Prizm Context**: content of root.prizm and relevant L1/L2 docs
-   - **Section 4 — Existing Source Files**: full content of each related file as code block
+   - **Section 4 — Existing Source Files**: **full verbatim content** of each related file in fenced code blocks (with `### path/to/file` heading and line count). Include ALL files needed for implementation and review — downstream phases read this section instead of re-reading individual source files
    - **Section 5 — Existing Tests**: full content of related test files as code block
 
 ### Phase 2: Plan & Tasks
@@ -81,19 +79,18 @@ If MISSING — build it now:
 ls .prizmkit/specs/{{FEATURE_SLUG}}/ 2>/dev/null
 ```
 
-If plan.md or tasks.md missing, write them directly (no PM needed):
-- `plan.md`: key components, data flow, files to create/modify (under 80 lines)
-- `tasks.md`: checklist with `[ ]` checkboxes, each task = one implementable unit
+If plan.md missing, write it directly:
+- `plan.md`: key components, data flow, files to create/modify, and a Tasks section with `[ ]` checkboxes (each task = one implementable unit). Keep under 80 lines.
 
-**CP-1**: plan.md and tasks.md exist.
+**CP-1**: plan.md exists with Tasks section.
 
 ### Phase 3: Implement
 
-For each task in tasks.md:
+For each task in plan.md Tasks section:
 1. Read the relevant section from `context-snapshot.md` (no need to re-read individual files)
 2. Write/edit the code
 3. Run tests after each task
-4. Mark task `[x]` in tasks.md immediately
+3. Mark task `[x]` in plan.md Tasks section immediately
 
 After all tasks complete, append to `context-snapshot.md`:
 ```
@@ -102,42 +99,29 @@ Files changed/created: [list]
 Key decisions: [list]
 ```
 
-### Phase 4: Self-Review
+### Phase 4: Code Review (mandatory)
 
 1. Re-read acceptance criteria from Section 1 of context-snapshot.md
-2. Run the full test suite
-3. Check error handling and edge cases
-4. Fix any issues found
+2. Run `/prizmkit-code-review` — verify all acceptance criteria, check code quality and correctness
+3. Run the full test suite
+4. If review uncovers issues, fix them (max 2 fix rounds)
 
-**CP-2**: All acceptance criteria met, tests pass.
+**CP-2**: All acceptance criteria met, tests pass, code review passed.
 
-### Phase 4.5: Prizm Doc Update (mandatory for feature sessions)
+### Phase 4.5: Memory Maintenance (mandatory before commit)
 
-Run `/prizmkit-prizm-docs` and sync project docs before commit:
-1. Use `git diff --cached --name-status` (fallback: `git diff --name-status`) to locate changed modules
-2. Update affected `.prizm-docs/` files (L1/L2, changelog.prizm)
-3. Stage documentation updates (`git add .prizm-docs/`) if changed
+Run `/prizmkit-retrospective` — the **sole maintainer** of `.prizm-docs/`:
+1. **Structural sync**: Use `git diff --cached --name-status` to locate changed modules, update KEY_FILES/INTERFACES/DEPENDENCIES/file counts in affected `.prizm-docs/` files
+2. **Knowledge injection** (feature sessions only): Extract TRAPS/RULES/DECISIONS from completed work into `.prizm-docs/`
+3. Stage all doc changes: `git add .prizm-docs/`
 
-Doc maintenance pass condition (pipeline-enforced): `REGISTRY.md` **or** `.prizm-docs/` changed in the final commit.
-
-### Phase 4.7: Retrospective (feature sessions only, before commit)
-
-If this session is a feature (not a bug-fix-only commit), run `/prizmkit-retrospective` now — **before committing**.
-Retrospective must update relevant `.prizm-docs/` sections (TRAPS/RULES/DECISIONS) when applicable, so those changes are included in the feature commit.
-Stage any `.prizm-docs/` changes produced: `git add .prizm-docs/`
+Doc maintenance pass condition (pipeline-enforced): `.prizm-docs/` changed in the final commit.
 
 ### Phase 5: Commit
 
-- Run `/prizmkit-summarize` → archive to REGISTRY.md
-- Mark feature complete:
-  ```bash
-  python3 {{VALIDATOR_SCRIPTS_DIR}}/update-feature-status.py \
-    --feature-list "{{FEATURE_LIST_PATH}}" \
-    --state-dir "{{PROJECT_ROOT}}/dev-pipeline/state" \
-    --feature-id "{{FEATURE_ID}}" --session-id "{{SESSION_ID}}" --action complete
-  ```
 - Run `/prizmkit-committer` → `feat({{FEATURE_ID}}): {{FEATURE_TITLE}}`, do NOT push
 - MANDATORY: commit must be done via `/prizmkit-committer` skill. Do NOT run manual `git add`/`git commit` as a substitute.
+- Do NOT run `update-feature-status.py` here — the pipeline runner handles feature-list.json updates automatically after session exit.
 
 ---
 
@@ -164,8 +148,7 @@ Write to: `{{SESSION_STATUS_PATH}}`
   "retrospective_done": true,
   "artifacts": {
     "context_snapshot_path": ".prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md",
-    "plan_path": ".prizmkit/specs/{{FEATURE_SLUG}}/plan.md",
-    "tasks_path": ".prizmkit/specs/{{FEATURE_SLUG}}/tasks.md"
+    "plan_path": ".prizmkit/specs/{{FEATURE_SLUG}}/plan.md"
   },
   "git_commit": "<commit hash>",
   "timestamp": "2026-03-04T10:00:00Z"
@@ -180,11 +163,11 @@ After writing `session-status.json`, verify repository is clean:
 git status --short
 ```
 
-If any files remain, include them in the last commit:
+If any files remain (e.g. session-status.json), stage and create a follow-up commit:
 
 ```bash
 git add -A
-git commit --amend --no-edit
+git commit -m "chore({{FEATURE_ID}}): include session artifacts"
 ```
 
 Re-check `git status --short` and ensure it is empty before exiting.
@@ -200,7 +183,8 @@ Re-check `git status --short` and ensure it is empty before exiting.
 
 ## Reminders
 
-- Tier 1: you do everything — no subagents, no TeamCreate
+- Tier 1: you handle everything directly — invoke skills yourself (no subagents needed for simple tasks)
+- MANDATORY skills: `/prizmkit-code-review`, `/prizmkit-retrospective`, `/prizmkit-committer` — never skip these
 - Build context-snapshot.md FIRST; use it throughout instead of re-reading files
 - ALWAYS write session-status.json before exiting
 - `/prizmkit-committer` is mandatory — do NOT skip the commit phase, and do NOT replace it with manual git commit commands

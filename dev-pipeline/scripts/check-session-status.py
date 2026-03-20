@@ -66,7 +66,7 @@ def determine_status(data):
     """Determine the single-line status string from the parsed data.
 
     Returns one of: success, partial_resumable, partial_not_resumable,
-    failed, commit_missing, docs_missing.
+    failed, commit_missing, docs_missing, merge_conflict.
     """
     status = data.get("status", "")
 
@@ -84,6 +84,8 @@ def determine_status(data):
         return "commit_missing"
     elif status == "docs_missing":
         return "docs_missing"
+    elif status == "merge_conflict":
+        return "merge_conflict"
     else:
         # Unknown status value — treat as crashed
         return "crashed"

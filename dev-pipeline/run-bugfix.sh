@@ -25,6 +25,8 @@ set -euo pipefail
 #   LOG_CLEANUP_ENABLED   Run periodic log cleanup (default: 1)
 #   LOG_RETENTION_DAYS    Delete logs older than N days (default: 14)
 #   LOG_MAX_TOTAL_MB      Keep total logs under N MB via oldest-first cleanup (default: 1024)
+#   DEV_BRANCH            Custom dev branch name (default: auto-generated bugfix/pipeline-{run_id})
+#   AUTO_PUSH             Auto-push to remote after successful bug fix (default: 0). Set to 1 to enable.
 # ============================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -40,6 +42,8 @@ LOG_CLEANUP_ENABLED=${LOG_CLEANUP_ENABLED:-1}
 LOG_RETENTION_DAYS=${LOG_RETENTION_DAYS:-14}
 LOG_MAX_TOTAL_MB=${LOG_MAX_TOTAL_MB:-1024}
 VERBOSE=${VERBOSE:-0}
+DEV_BRANCH=${DEV_BRANCH:-""}
+AUTO_PUSH=${AUTO_PUSH:-0}
 
 # Source shared common helpers (CLI/platform detection + logs + deps)
 source "$SCRIPT_DIR/lib/common.sh"
@@ -48,11 +52,18 @@ prizm_detect_cli_and_platform
 # Source shared heartbeat library
 source "$SCRIPT_DIR/lib/heartbeat.sh"
 
+# Source shared branch library
+source "$SCRIPT_DIR/lib/branch.sh"
+
 # Detect stream-json support
 detect_stream_json_support "$CLI_CMD"
 
 # Bug list path (set in main, used by cleanup trap)
 BUG_LIST=""
+
+# Branch tracking (for cleanup on interrupt)
+_ORIGINAL_BRANCH=""
+_DEV_BRANCH_NAME=""
 
 # ============================================================
 # Shared: Spawn AI CLI session and wait for result
@@ -77,6 +88,8 @@ spawn_and_wait_session() {
     local stream_json_flag=""
     if [[ "$USE_STREAM_JSON" == "true" ]]; then
         stream_json_flag="--output-format stream-json"
+        # claude-internal requires --verbose when using stream-json with -p/--print
+        verbose_flag="--verbose"
     fi
 
     local model_flag=""
@@ -205,6 +218,12 @@ cleanup() {
 
     # Kill all child processes (claude-internal, heartbeat, progress parser, etc.)
     kill 0 2>/dev/null || true
+
+    # Log current branch info for recovery
+    if [[ -n "$_DEV_BRANCH_NAME" ]]; then
+        log_info "Development was on branch: $_DEV_BRANCH_NAME"
+        log_info "Original branch was: $_ORIGINAL_BRANCH"
+    fi
 
     if [[ -n "$BUG_LIST" && -f "$BUG_LIST" ]]; then
         python3 "$SCRIPTS_DIR/update-bug-status.py" \
@@ -386,16 +405,43 @@ sys.exit(1)
         echo ""
         log_warn "Interrupted. Killing session..."
         kill 0 2>/dev/null || true
+        # Log current branch info
+        if [[ -n "$_DEV_BRANCH_NAME" ]]; then
+            log_info "Development was on branch: $_DEV_BRANCH_NAME"
+        fi
         log_info "Session log: $session_dir/logs/session.log"
         exit 130
     }
     trap cleanup_single_bug SIGINT SIGTERM
 
     _SPAWN_RESULT=""
+
+    # Branch lifecycle: create and checkout bugfix branch
+    local _proj_root
+    _proj_root="$(cd "$SCRIPT_DIR/.." && pwd)"
+    local _source_branch
+    _source_branch=$(git -C "$_proj_root" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
+    _ORIGINAL_BRANCH="$_source_branch"
+
+    local _branch_name="${DEV_BRANCH:-bugfix/${bug_id}-$(date +%s)}"
+    if branch_create "$_proj_root" "$_branch_name" "$_source_branch"; then
+        _DEV_BRANCH_NAME="$_branch_name"
+    else
+        log_warn "Failed to create branch; running session on current branch"
+    fi
+
     spawn_and_wait_session \
         "$bug_id" "$bug_list" "$session_id" \
         "$bootstrap_prompt" "$session_dir" 999
     local session_status="$_SPAWN_RESULT"
+
+    # Auto-push after successful session
+    if [[ "$session_status" == "success" && "$AUTO_PUSH" == "1" ]]; then
+        local _proj_root
+        _proj_root="$(cd "$SCRIPT_DIR/.." && pwd)"
+        log_info "AUTO_PUSH enabled; pushing to remote..."
+        git -C "$_proj_root" push -u origin "$_DEV_BRANCH_NAME" 2>/dev/null || log_warn "Auto-push failed"
+    fi
 
     echo ""
     if [[ "$session_status" == "success" ]]; then
@@ -472,6 +518,23 @@ main() {
     echo -e "${BOLD}════════════════════════════════════════════════════${NC}"
     echo ""
 
+    # Branch lifecycle: create bugfix branch for this pipeline run
+    local _proj_root
+    _proj_root="$(cd "$SCRIPT_DIR/.." && pwd)"
+    local _source_branch
+    _source_branch=$(git -C "$_proj_root" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
+    _ORIGINAL_BRANCH="$_source_branch"
+
+    local run_id_for_branch
+    run_id_for_branch=$(jq -r '.run_id' "$STATE_DIR/pipeline.json" 2>/dev/null || echo "$$")
+    local _branch_name="${DEV_BRANCH:-bugfix/pipeline-${run_id_for_branch}}"
+    if branch_create "$_proj_root" "$_branch_name" "$_source_branch"; then
+        _DEV_BRANCH_NAME="$_branch_name"
+        log_info "Dev branch: $_branch_name"
+    else
+        log_warn "Failed to create bugfix branch; running on current branch: $_source_branch"
+    fi
+
     local session_count=0
 
     while true; do
@@ -488,6 +551,10 @@ main() {
             log_success "════════════════════════════════════════════════════"
             log_success "  All bugs processed! Bug fix pipeline finished."
             log_success "  Total sessions: $session_count"
+            if [[ -n "$_DEV_BRANCH_NAME" ]]; then
+                log_success "  Dev branch: $_DEV_BRANCH_NAME"
+                log_success "  Merge with: git checkout $_ORIGINAL_BRANCH && git merge $_DEV_BRANCH_NAME"
+            fi
             log_success "════════════════════════════════════════════════════"
             rm -f "$STATE_DIR/current-session.json"
             break
@@ -540,12 +607,12 @@ main() {
         # Track current session (atomic write via temp file)
         python3 -c "
 import json, sys, os
-from datetime import datetime
+from datetime import datetime, timezone
 bug_id, session_id, state_dir = sys.argv[1], sys.argv[2], sys.argv[3]
 data = {
     'bug_id': bug_id,
     'session_id': session_id,
-    'started_at': datetime.now(datetime.UTC).strftime('%Y-%m-%dT%H:%M:%SZ')
+    'started_at': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 }
 target = os.path.join(state_dir, 'current-session.json')
 tmp = target + '.tmp'
@@ -557,9 +624,18 @@ os.replace(tmp, target)
         # Spawn session
         log_info "Spawning AI CLI session: $session_id"
         _SPAWN_RESULT=""
+
         spawn_and_wait_session \
             "$bug_id" "$bug_list" "$session_id" \
             "$bootstrap_prompt" "$session_dir" "$MAX_RETRIES"
+
+        # Auto-push after successful session
+        if [[ "$_SPAWN_RESULT" == "success" && "$AUTO_PUSH" == "1" ]]; then
+            local _proj_root
+            _proj_root="$(cd "$SCRIPT_DIR/.." && pwd)"
+            log_info "AUTO_PUSH enabled; pushing to remote..."
+            git -C "$_proj_root" push 2>/dev/null || log_warn "Auto-push failed"
+        fi
 
         session_count=$((session_count + 1))
 

@@ -3,8 +3,8 @@ description: "PrizmKit commit workflow rules"
 ---
 
 Before any git commit in this project:
-1. Update `.prizm-docs/` for affected modules
+1. Run `/prizmkit-retrospective` to sync `.prizm-docs/` (memory maintenance)
 2. Use Conventional Commits format: type(scope): description
 3. Bug fixes use `fix()` prefix, not `feat()`
-4. Do NOT create REGISTRY.md entries for bug fixes
-5. Use `/prizmkit-committer` command for the complete commit workflow
+4. Bug fixes run retrospective with structural sync only (Job 1)
+5. Use `/prizmkit-committer` command for the pure commit workflow

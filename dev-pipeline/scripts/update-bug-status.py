@@ -39,6 +39,7 @@ SESSION_STATUS_VALUES = [
     "failed",
     "crashed",
     "timed_out",
+    "merge_conflict",
 ]
 
 TERMINAL_STATUSES = {"completed", "failed", "skipped", "needs_info"}
@@ -237,6 +238,25 @@ def action_update(args, bug_list_path, state_dir):
         if err:
             error_out("Failed to update bug-fix-list.json: {}".format(err))
             return
+    elif session_status == "merge_conflict":
+        # Degraded outcome: keep artifacts for retry (branch preserves work)
+        bs["retry_count"] = bs.get("retry_count", 0) + 1
+
+        if bs["retry_count"] >= max_retries:
+            bs["status"] = "failed"
+            target_status = "failed"
+        else:
+            bs["status"] = "merge_conflict"
+            target_status = "merge_conflict"
+
+        bs["resume_from_phase"] = None
+        bs["sessions"] = []
+        bs["last_session_id"] = None
+
+        err = update_bug_in_list(bug_list_path, bug_id, target_status)
+        if err:
+            error_out("Failed to update bug-fix-list.json: {}".format(err))
+            return
     else:
         bs["retry_count"] = bs.get("retry_count", 0) + 1
 
@@ -285,7 +305,10 @@ def action_update(args, bug_list_path, state_dir):
         "resume_from_phase": bs.get("resume_from_phase"),
         "updated_at": bs["updated_at"],
     }
-    if session_status != "success":
+    if session_status == "merge_conflict":
+        summary["degraded_reason"] = "merge_conflict"
+        summary["restart_policy"] = "finalization_retry"
+    elif session_status != "success":
         summary["restart_policy"] = "full_restart"
         summary["cleanup_performed"] = cleaned
 

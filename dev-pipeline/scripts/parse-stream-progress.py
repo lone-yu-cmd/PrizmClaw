@@ -28,11 +28,11 @@ from datetime import datetime, timezone
 # Phase keywords for detection
 PHASE_KEYWORDS = {
     "specify": ["prizmkit-specify", "spec.md", "specification", "gathering requirements"],
-    "plan": ["prizmkit-plan", "plan.md", "architecture", "design plan", "task checklist", "task breakdown", "tasks.md"],
+    "plan": ["prizmkit-plan", "plan.md", "architecture", "design plan", "task checklist", "task breakdown"],
     "analyze": ["prizmkit-analyze", "cross-check", "consistency", "analyzing"],
     "implement": ["prizmkit-implement", "implement", "TDD", "coding", "writing code"],
     "code-review": ["prizmkit-code-review", "code review", "review verdict", "reviewing"],
-    "summarize": ["prizmkit-summarize", "REGISTRY.md", "summarize", "summary"],
+    "retrospective": ["prizmkit-retrospective", "retrospective", "knowledge distillation", "TRAPS", ".prizm-docs/ sync", "structural sync"],
     "commit": ["prizmkit-committer", "git commit", "feat(", "fix(", "committing"],
 }
 

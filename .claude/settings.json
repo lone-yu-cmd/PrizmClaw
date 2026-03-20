@@ -15,7 +15,7 @@
   "hooks": {
     "UserPromptSubmit": [
       {
-        "matcher": "\\b(commit|Commit|push|Push|finish|Finish|ship|Ship|merge|Merge|pull request|Pull Request|pr|PR)\\b|提交|推送|收尾|完成任务|合并|发版|发布",
+        "matcher": "(?i)\\b(commit|push|finish|ship|merge|pull request|pr)\\b|提交|推送|收尾|完成任务|合并|发版|发布",
         "hooks": [
           {
             "type": "command",
@@ -30,7 +30,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if echo \"$CLAUDE_TOOL_INPUT\" 2>/dev/null | grep -qE 'git (commit|merge|rebase)' 2>/dev/null; then DRIFT=$(sh .prizmkit/scripts/diff-prizm-docs.sh 2>/dev/null); if [ -n \"$DRIFT\" ]; then echo \"PRIZMKIT_DRIFT_DETECTED: prizm-docs structural differences found after git operation:\"; echo \"$DRIFT\"; echo \"Please update affected .prizm-docs/ files using /prizmkit-prizm-docs.\"; fi; fi"
+            "command": "TOOL_INPUT=\"${CLAUDE_TOOL_INPUT:-${CODEBUDDY_TOOL_INPUT:-}}\"; if echo \"$TOOL_INPUT\" | grep -qE 'git (commit|merge|rebase)' 2>/dev/null; then DRIFT=$(sh .prizmkit/scripts/diff-prizm-docs.sh 2>/dev/null); if [ -n \"$DRIFT\" ]; then echo \"PRIZMKIT_DRIFT_DETECTED: prizm-docs structural differences found:\"; echo \"$DRIFT\"; echo \"Please update affected .prizm-docs/ files.\"; fi; fi"
           }
         ]
       }

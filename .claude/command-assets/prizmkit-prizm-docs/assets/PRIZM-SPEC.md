@@ -294,7 +294,7 @@ FOR any source file at path P:
   1. Walk up directory tree to find the first ancestor D where .prizm-docs/<D>.prizm exists
   2. That file is the L1 doc for this source file
   3. If P is inside a subdirectory S of D, check if .prizm-docs/<D>/<S>.prizm exists for L2
-  4. If no .prizm doc found, the module is undocumented (may need prizmkit.doc.update)
+  4. If no .prizm doc found, the module is undocumented (may need prizmkit-prizm-docs Update operation)
 
 ---
 
@@ -345,7 +345,7 @@ BUDGET: Typical task should consume 3000-5000 tokens of prizm docs total
 
 ## 7.1 Trigger
 
-WHEN: Before every commit (detected automatically via hook, or manually via prizmkit.doc.update)
+WHEN: Before every commit (detected automatically via hook, or manually via prizmkit-prizm-docs Update operation)
 GOAL: Keep prizm docs synchronized with source code
 
 ## 7.2 Update Decision Logic
@@ -441,7 +441,7 @@ NEVER: Rewrite entire .prizm files on update (modify only affected sections)
 
 ## 9.1 Algorithm
 
-COMMAND: prizmkit.doc.init
+OPERATION: Init (invoked via prizmkit-prizm-docs skill)
 PRECONDITION: No .prizm-docs/ directory exists (or user confirms overwrite)
 
 ALGORITHM: prizm_init
@@ -575,18 +575,18 @@ ON_DEEP_READ trigger:
 
 The Prizm skill is defined at: ${SKILL_DIR}/SKILL.md
 
-COMMANDS:
+OPERATIONS (all invoked via the prizmkit-prizm-docs skill):
 
-  prizmkit.doc.init       - Bootstrap .prizm-docs/ for a new project (Section 9)
-  prizmkit.doc.update     - Sync docs with code changes (Section 7)
-  prizmkit.doc.status     - Check freshness of all docs
-  prizmkit.doc.rebuild    - Regenerate docs for a specific module
-  prizmkit.doc.validate   - Check format compliance and consistency (Section 10.2)
-  prizmkit.doc.migrate    - Convert existing docs to .prizm-docs/ format (Section 10.3)
+  Init       - Bootstrap .prizm-docs/ for a new project (Section 9)
+  Update     - Sync docs with code changes (Section 7)
+  Status     - Check freshness of all docs
+  Rebuild    - Regenerate docs for a specific module
+  Validate   - Check format compliance and consistency (Section 10.2)
+  Migrate    - Convert existing docs to .prizm-docs/ format (Section 10.3)
 
-## 10.2 prizmkit.doc.validate
+## 10.2 Validate Operation
 
-COMMAND: prizmkit.doc.validate
+OPERATION: Validate (invoked via prizmkit-prizm-docs skill)
 PRECONDITION: .prizm-docs/ directory exists
 
 ALGORITHM: prizm_validate
@@ -640,9 +640,9 @@ STEPS:
 
 OUTPUT: Validation report with PASS/FAIL per check category, issue list with file paths and line references, suggested fixes for common problems.
 
-## 10.3 prizmkit.doc.migrate
+## 10.3 Migrate Operation
 
-COMMAND: prizmkit.doc.migrate
+OPERATION: Migrate (invoked via prizmkit-prizm-docs skill)
 PRECONDITION: Existing documentation (docs/, docs/AI_CONTEXT/, README.md, ARCHITECTURE.md, etc.). No .prizm-docs/ directory (or user confirms overwrite).
 
 ALGORITHM: prizm_migrate
@@ -713,7 +713,7 @@ JSON:
         "hooks": [
           {
             "type": "command",
-            "command": "echo 'PRIZMKIT_DOC_UPDATE_REQUIRED: Before committing, you MUST update .prizm-docs/ per Prizm auto-update protocol. Steps: 1) Run git diff --cached --name-status. 2) Map changed files to modules via root.prizm MODULE_INDEX. 3) Read and update affected .prizm files (only changed sections). 4) Append to changelog.prizm. 5) Stage .prizm files with git add .prizm-docs/. 6) Then proceed with commit. RULES: Never rewrite entire .prizm files. Never add prose. Only update affected sections.'"
+            "command": "echo 'PRIZMKIT_MEMORY_MAINTENANCE_REQUIRED: Before committing, you MUST run /prizmkit-retrospective to maintain .prizm-docs/ project memory. It handles both structural sync (KEY_FILES, INTERFACES, DEPENDENCIES) and knowledge injection (TRAPS, RULES, DECISIONS). After retrospective completes, proceed with /prizmkit-committer for the actual git commit.'"
           }
         ]
       }
@@ -749,7 +749,7 @@ The core requirement is: before any commit operation, AI must update affected .p
 
 ## 12.1 Template Section
 
-Append the following to any project's CODEBUDDY.md during prizmkit.doc.init:
+Append the following to any project's CODEBUDDY.md during Init operation:
 
 TEXT:
 
@@ -835,8 +835,8 @@ FILES:
 This is enough to give AI a project overview and track changes.
 L1 and L2 docs can be added incrementally as AI works in specific areas.
 
-BOOTSTRAP_COMMAND:
-  prizmkit.doc.init
+BOOTSTRAP:
+  Invoke prizmkit-prizm-docs skill (Init operation)
 
 Or manually create these two files following the templates in Section 3.
 
@@ -854,8 +854,8 @@ V1 (2026-03-02): Initial specification
 
 V2 (2026-03-02): Enhanced specification
 - Added ON_DEEP_READ trigger for L2 generation (L2 created during deep analysis, not just modifications)
-- Added prizmkit.doc.validate command for format compliance and consistency checking
-- Added prizmkit.doc.migrate command for converting existing docs to .prizm-docs/ format
+- Added Validate operation for format compliance and consistency checking
+- Added Migrate operation for converting existing docs to .prizm-docs/ format
 - Added RULES hierarchy: root.prizm RULES authoritative, L1/L2 supplement only with module-specific exceptions
 - Added Section 16: Conflict Resolution for multi-person collaboration merge strategies
 - Added Section 17: Version Migration for upgrading between spec versions
@@ -916,7 +916,7 @@ ALGORITHM: prizm_merge_conflict
 
 ## 16.4 Prevention
 
-BEST_PRACTICE: Run prizmkit.doc.update immediately before committing to minimize drift
+BEST_PRACTICE: Run prizmkit-prizm-docs Update operation immediately before committing to minimize drift
 BEST_PRACTICE: Keep .prizm doc changes small and focused (section-level, not file-level rewrites)
 BEST_PRACTICE: Coordinate on MODULE_INDEX changes (adding/removing modules) to avoid structural conflicts
 
@@ -932,7 +932,7 @@ MIGRATION_TRIGGER: AI detects PRIZM_VERSION in root.prizm and applies migration 
 
 ## 17.2 V1 to V2 Migration
 
-COMMAND: Automatic on first prizmkit.doc.update or prizmkit.doc.validate after spec upgrade
+TRIGGER: Automatic on first prizmkit-prizm-docs Update or Validate operation after spec upgrade
 
 ALGORITHM: prizm_migrate_v1_to_v2
 
@@ -947,7 +947,7 @@ ALGORITHM: prizm_migrate_v1_to_v2
    FLAG: Any L1/L2 RULES that contradict root.prizm RULES for manual review
 
 3. VALIDATE:
-   Run full prizmkit.doc.validate
+   Run full Validate operation
    REPORT: Migration results and any issues found
 
 4. UPDATE_CHANGELOG:

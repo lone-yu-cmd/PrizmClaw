@@ -15,7 +15,7 @@
     },
     "status": {
       "type": "string",
-      "enum": ["success", "partial", "failed", "commit_missing", "docs_missing"]
+      "enum": ["success", "partial", "failed", "commit_missing", "docs_missing", "merge_conflict"]
     },
     "completed_phases": {
       "type": "array",
@@ -72,7 +72,7 @@
       "properties": {
         "spec_path": { "type": "string" },
         "plan_path": { "type": "string" },
-        "tasks_path": { "type": "string" }
+        "context_snapshot_path": { "type": "string" }
       }
     },
     "timestamp": {

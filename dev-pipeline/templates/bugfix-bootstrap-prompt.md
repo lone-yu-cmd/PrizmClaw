@@ -18,18 +18,17 @@ You are the **bug fix session orchestrator**. Fix Bug {{BUG_ID}}: "{{BUG_TITLE}}
 
 **CRITICAL SESSION LIFECYCLE RULE**: You MUST NOT exit until ALL work is complete and session-status.json is written. When you spawn subagents, you MUST **wait for each to finish** (run_in_background=false) before proceeding. Do NOT spawn an agent in the background and exit — that kills the session.
 
-**MANDATORY TEAM REQUIREMENT**: You MUST use the `prizm-dev-team` multi-agent team. This is NON-NEGOTIABLE. All implementation and review work MUST be performed by the appropriate team agents (Dev, Reviewer).
+**MANDATORY TEAM REQUIREMENT**: You MUST use the `prizm-dev-team` agents (Dev + Reviewer). This is NON-NEGOTIABLE. All implementation and review work MUST be performed by the appropriate team agents (Dev, Reviewer). You are the orchestrator — handle coordination, planning, and commit phases directly.
 
 **BUG FIX DOCUMENTATION POLICY**: Bug fixes MUST NOT be recorded as new documentation entries:
-- Do NOT run `/prizmkit-summarize` (no REGISTRY.md entries)
+- Run `/prizmkit-retrospective` with structural sync only (Job 1) — skip knowledge injection unless a genuinely new TRAP was discovered
 - Do NOT create spec/plan/tasks under `.prizmkit/specs/`
 - Do NOT update `.prizm-docs/` module docs for pure bug fixes (unless TRAPS update is needed)
 - Commit with `fix(<scope>):` prefix, NOT `feat:`
 
 ### Team Definition Reference
 
-- **Source of truth**: `core/team/prizm-dev-team.json`
-- **Installed team config**: `{{TEAM_CONFIG_PATH}}`
+- **Team config**: `{{TEAM_CONFIG_PATH}}`
 
 ### Bug Description
 
@@ -74,16 +73,11 @@ You are the **bug fix session orchestrator**. Fix Bug {{BUG_ID}}: "{{BUG_TITLE}}
 
 ### Step 1: Initialize
 
-#### Team Setup: Reuse or Create
+#### Agent Setup
 
-1. **Check if a team already exists and can be reused**:
-   - Read the team config file at `{{TEAM_CONFIG_PATH}}`
-   - If valid, reuse it. Set `TEAM_REUSED=true`
-
-2. **If no reusable team**, create a new one:
-   - Reference `core/team/prizm-dev-team.json`
-   - Call `TeamCreate` with `team_name="prizm-dev-team-{{BUG_ID}}"` and `description="Fixing {{BUG_TITLE}}"`
-   - Set `TEAM_REUSED=false`
+Reference `{{TEAM_CONFIG_PATH}}` for agent definitions:
+- Dev: `{{DEV_SUBAGENT_PATH}}`
+- Reviewer: `{{REVIEWER_SUBAGENT_PATH}}`
 
 3. Create bug fix artifacts directory:
    ```bash
@@ -96,7 +90,7 @@ You are the **bug fix session orchestrator**. Fix Bug {{BUG_ID}}: "{{BUG_TITLE}}
 
 **Goal**: Classify the bug, identify scope and severity, check known issues, produce fix-plan.md.
 
-- Spawn Dev agent (Task tool, subagent_type="prizm-dev-team-dev", run_in_background=false)
+- Spawn Dev agent (Agent tool, subagent_type="prizm-dev-team-dev", run_in_background=false)
   Prompt: "Read {{DEV_SUBAGENT_PATH}}. For bug {{BUG_ID}} ('{{BUG_TITLE}}'):
   1. Run `/prizmkit-tool-error-triage` with the bug description and error source
   2. Check `.prizm-docs/` TRAPS sections for matching known issues
@@ -133,7 +127,7 @@ You are the **bug fix session orchestrator**. Fix Bug {{BUG_ID}}: "{{BUG_TITLE}}
 
 **Goal**: Create an automated reproduction that proves the bug exists.
 
-- Spawn Dev agent (Task tool, subagent_type="prizm-dev-team-dev", run_in_background=false)
+- Spawn Dev agent (Agent tool, subagent_type="prizm-dev-team-dev", run_in_background=false)
   Prompt: "Read {{DEV_SUBAGENT_PATH}}. For bug {{BUG_ID}}:
   1. Read the fix plan from `.prizmkit/bugfix/{{BUG_ID}}/fix-plan.md`
   2. Run `/prizmkit-tool-bug-reproducer` with the bug description and triage results
@@ -155,7 +149,7 @@ You are the **bug fix session orchestrator**. Fix Bug {{BUG_ID}}: "{{BUG_TITLE}}
 
 **Goal**: Implement the fix. The reproduction test goes from red to green.
 
-- Spawn Dev agent (Task tool, subagent_type="prizm-dev-team-dev", run_in_background=false)
+- Spawn Dev agent (Agent tool, subagent_type="prizm-dev-team-dev", run_in_background=false)
   Prompt: "Read {{DEV_SUBAGENT_PATH}}. For bug {{BUG_ID}}:
   1. Read the fix plan from `.prizmkit/bugfix/{{BUG_ID}}/fix-plan.md`
   2. Read `.prizm-docs/` for affected modules (TRAPS, RULES, PATTERNS)
@@ -177,7 +171,7 @@ You are the **bug fix session orchestrator**. Fix Bug {{BUG_ID}}: "{{BUG_TITLE}}
 
 **Goal**: Ensure fix correctness and no regressions.
 
-- Spawn Reviewer agent (Task tool, subagent_type="prizm-dev-team-reviewer", run_in_background=false)
+- Spawn Reviewer agent (Agent tool, subagent_type="prizm-dev-team-reviewer", run_in_background=false)
   Prompt: "Read {{REVIEWER_SUBAGENT_PATH}}. For bug {{BUG_ID}}:
   1. Run `/prizmkit-code-review` scoped to CHANGED FILES ONLY
   2. Review dimensions (adjusted for bug fix):
@@ -206,17 +200,19 @@ You are the **bug fix session orchestrator**. Fix Bug {{BUG_ID}}: "{{BUG_TITLE}}
 
 **Goal**: Commit the fix, update TRAPS, generate fix-report.md.
 
-- Spawn Dev agent (Task tool, subagent_type="prizm-dev-team-dev", run_in_background=false)
-  Prompt: "Read {{DEV_SUBAGENT_PATH}}. For bug {{BUG_ID}}:
-  1. Run `/prizmkit-committer` with:
-     - Commit message: `fix({{FIX_SCOPE}}): {{BUG_TITLE}}`
-     - Include both fix code and reproduction test
-     - Do NOT run `/prizmkit-summarize`
-     - Do NOT push (user will push manually)
-  2. If a new pitfall was discovered (not previously in TRAPS):
-     - Update the affected module's TRAPS section in `.prizm-docs/`
-     - Format: `- TRAP: <description> | FIX: <solution> | DATE: YYYY-MM-DD`
-  3. Write the complete fix report to `.prizmkit/bugfix/{{BUG_ID}}/fix-report.md`
+**This phase is executed by YOU (the orchestrator), NOT a subagent.**
+
+1. If a new pitfall was discovered (not previously in TRAPS):
+   - Update the affected module's TRAPS section in `.prizm-docs/`
+   - Format: `- TRAP: <description> | FIX: <solution> | DATE: YYYY-MM-DD`
+
+2. Run `/prizmkit-committer` with:
+   - Commit message: `fix({{FIX_SCOPE}}): {{BUG_TITLE}}`
+   - Include both fix code and reproduction test
+   - Do NOT run `/prizmkit-retrospective` with REGISTRY archiving
+   - Do NOT push (user will push manually)
+
+3. Write the complete fix report to `.prizmkit/bugfix/{{BUG_ID}}/fix-report.md`
 
   The fix-report.md MUST contain these sections:
   - Bug Resolution Summary (ID, title, status, phases completed, duration)
@@ -224,8 +220,7 @@ You are the **bug fix session orchestrator**. Fix Bug {{BUG_ID}}: "{{BUG_TITLE}}
   - Verification Results (reproduction test before/after, regression tests, review verdict)
   - Knowledge Captured (TRAPS updated, prevention recommendation)
   - Acceptance Criteria Verification (checklist with pass/fail for each criterion)
-  "
-- **Wait for Dev to return**
+
 - **CP-BF-5**: Commit recorded, fix-report.md written, TRAPS updated (if applicable)
 
 ### Step 3: Report Session Status
@@ -258,17 +253,11 @@ Write to: `{{SESSION_STATUS_PATH}}`
 
 **Status values**: `success` (all phases done) | `partial` (can resume) | `failed` (unrecoverable)
 
-### Step 4: Team Cleanup (conditional)
-
-**Only if you CREATED the team** (`TEAM_REUSED=false`), clean up with `TeamDelete`.
-**If you REUSED an existing team** (`TEAM_REUSED=true`), do NOT call `TeamDelete`.
-
 ## Critical Paths
 
 | Resource | Path |
 |----------|------|
-| Team Definition (source of truth) | `core/team/prizm-dev-team.json` |
-| Team Config (installed) | `{{TEAM_CONFIG_PATH}}` |
+| Team Definition (source of truth) | `{{TEAM_CONFIG_PATH}}` |
 | Bug Fix Artifacts Dir | `.prizmkit/bugfix/{{BUG_ID}}/` |
 | Fix Plan | `.prizmkit/bugfix/{{BUG_ID}}/fix-plan.md` |
 | Fix Report | `.prizmkit/bugfix/{{BUG_ID}}/fix-report.md` |
@@ -279,13 +268,12 @@ Write to: `{{SESSION_STATUS_PATH}}`
 
 ## Reminders
 
-- **MANDATORY**: Use `prizm-dev-team` — single-agent execution is FORBIDDEN
+- **MANDATORY**: Use `prizm-dev-team` agents — single-agent execution is FORBIDDEN
 - **Only 2 artifact files per bug**: fix-plan.md + fix-report.md — NEVER more
-- **Do NOT create** spec.md, plan.md, or tasks.md for bug fixes
-- **Do NOT run** `/prizmkit-summarize` (no REGISTRY.md entries for bugs)
+- **Do NOT create** spec.md or plan.md for bug fixes
+- **Do NOT run** `/prizmkit-retrospective` knowledge injection for bugs (structural sync only, unless genuinely new TRAP discovered)
 - **Commit with** `fix(<scope>):` prefix, NOT `feat:`
 - **Update TRAPS** in `.prizm-docs/` only if a genuinely new pitfall was discovered
 - Dev agents use TDD approach: reproduction test goes from RED → GREEN
 - ALWAYS write session-status.json before exiting
 - Do NOT use `run_in_background=true` when spawning agents
-- Only call `TeamDelete` if you created the team

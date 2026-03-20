@@ -44,6 +44,7 @@ SESSION_STATUS_VALUES = [
     "timed_out",
     "commit_missing",
     "docs_missing",
+    "merge_conflict",
 ]
 
 TERMINAL_STATUSES = {"completed", "failed", "skipped"}
@@ -441,7 +442,7 @@ def action_update(args, feature_list_path, state_dir):
         if err:
             error_out("Failed to update feature-list.json: {}".format(err))
             return
-    elif session_status in ("commit_missing", "docs_missing"):
+    elif session_status in ("commit_missing", "docs_missing", "merge_conflict"):
         # Degraded outcome: keep artifacts for retry and expose specific status.
         fs["retry_count"] = fs.get("retry_count", 0) + 1
 
@@ -509,7 +510,7 @@ def action_update(args, feature_list_path, state_dir):
         "resume_from_phase": fs.get("resume_from_phase"),
         "updated_at": fs["updated_at"],
     }
-    if session_status in ("commit_missing", "docs_missing"):
+    if session_status in ("commit_missing", "docs_missing", "merge_conflict"):
         summary["degraded_reason"] = session_status
         summary["restart_policy"] = "finalization_retry"
     elif session_status != "success":
