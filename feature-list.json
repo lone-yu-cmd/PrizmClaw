@@ -370,7 +370,7 @@
         "每个会话独立维护后端选择，不同用户可以使用不同后端",
         "Bot 重启后恢复为默认后端（CODEBUDDY_BIN 配置值）"
       ],
-      "status": "in_progress",
+      "status": "completed",
       "session_granularity": "feature",
       "sub_features": []
     },
