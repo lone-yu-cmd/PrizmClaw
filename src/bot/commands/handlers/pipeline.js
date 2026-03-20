@@ -59,7 +59,7 @@ export const pipelineMeta = {
     {
       name: 'type',
       type: 'enum',
-      enum: ['feature', 'bugfix', 'planner'],
+      enum: ['feature', 'bugfix'],
       required: false,
       default: 'feature',
       description: '管道类型'

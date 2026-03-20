@@ -34,7 +34,7 @@ export const plannerMeta = {
 
 /**
  * Handle planner command.
- * Delegates to pipeline handler with type=planner.
+ * Delegates to pipeline handler with type=feature.
  * @param {Object} handlerCtx - Handler context
  */
 export async function handlePlanner(handlerCtx) {
@@ -43,12 +43,13 @@ export async function handlePlanner(handlerCtx) {
   // Determine action
   const _action = parsed.subcommand || 'status';
 
-  // For non-run actions, just use pipeline handler with planner type
+  // For non-run actions, just use pipeline handler with feature type
+  // (planner pipelines use feature pipeline infrastructure)
   const modifiedCtx = {
     ...handlerCtx,
     params: {
       ...params,
-      type: 'planner'
+      type: 'feature'
     }
   };
 

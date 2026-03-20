@@ -15,4 +15,16 @@ DEPENDENCIES:
 - uses: child_process: spawn scripts
 - imports: src/config: base config
 
-UPDATED: 2026-03-16
+TRAPS:
+- ScriptRunner only supports 'feature' and 'bugfix' pipeline types | FIX: Command handlers must map custom types to supported ones before calling
+- Invalid pipelineType throws Error('Invalid pipelineType: ...') | FIX: Ensure all pipeline requests use valid types
+
+RULES:
+- MUST: PIPELINE_TYPES = ['feature', 'bugfix'] - no other types supported
+- MUST: validate pipelineType before building commands
+- PREFER: Type mapping in command handlers rather than extending pipeline infrastructure
+
+CHANGELOG:
+- 2026-03-21 | F-016: Document pipeline type validation constraints
+
+UPDATED: 2026-03-21

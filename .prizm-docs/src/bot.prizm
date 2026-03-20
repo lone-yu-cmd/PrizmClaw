@@ -21,4 +21,15 @@ DEPENDENCIES:
 - imports: src/services: business logic for command execution
 - imports: src/security: permission checks
 
-UPDATED: 2026-03-20
+TRAPS:
+- planner.js delegates to pipeline.js but must map type='planner' to type='feature' | FIX: handlePlanner sets params.type='feature' before calling handlePipeline
+- pipeline.js metadata enum must match script-runner PIPELINE_TYPES | FIX: Remove unsupported 'planner' from params.type.enum
+
+RULES:
+- MUST: All command handlers delegating to pipeline.js must use supported types (feature/bugfix only)
+- PREFER: Use type mapping in delegating handlers rather than modifying pipeline infrastructure
+
+CHANGELOG:
+- 2026-03-21 | F-016: Fix planner command type mapping bug
+
+UPDATED: 2026-03-21
