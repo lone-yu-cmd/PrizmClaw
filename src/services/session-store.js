@@ -16,6 +16,8 @@ class SessionStore {
   #lastActivityBySessionKey = new Map();
   #userIdBySessionKey = new Map();
   #sessionCreatedAtBySessionKey = new Map();
+  // F-015: AI CLI Backend Switcher
+  #currentBackendBySessionKey = new Map();
 
   get(sessionKey) {
     if (!this.#messagesBySessionKey.has(sessionKey)) {
@@ -50,6 +52,8 @@ class SessionStore {
     this.#lastActivityBySessionKey.delete(sessionKey);
     this.#userIdBySessionKey.delete(sessionKey);
     this.#sessionCreatedAtBySessionKey.delete(sessionKey);
+    // F-015: Clear backend selection
+    this.#currentBackendBySessionKey.delete(sessionKey);
   }
 
   toPrompt(sessionKey, channel = 'unknown') {
@@ -330,7 +334,9 @@ class SessionStore {
       envOverrides: { ...this.#envOverridesBySessionKey.get(sessionKey) } || {},
       commandCount: (this.#commandHistoryBySessionKey.get(sessionKey) || []).length,
       createdAt: createdAt || null,
-      lastActivityAt: lastActivityAt || null
+      lastActivityAt: lastActivityAt || null,
+      // F-015: Add backend information
+      currentBackend: this.#currentBackendBySessionKey.get(sessionKey) || null
     };
   }
 
@@ -386,6 +392,35 @@ class SessionStore {
   getUserId(sessionKey) {
     return this.#userIdBySessionKey.get(sessionKey) || null;
   }
+
+  // F-015: AI CLI Backend Switcher methods
+
+  /**
+   * Get current backend for a session.
+   * @param {string} sessionKey - Session identifier
+   * @returns {string|null} Backend name or null if not set
+   */
+  getCurrentBackend(sessionKey) {
+    return this.#currentBackendBySessionKey.get(sessionKey) || null;
+  }
+
+  /**
+   * Set current backend for a session.
+   * @param {string} sessionKey - Session identifier
+   * @param {string} backendName - Backend name to set
+   */
+  setCurrentBackend(sessionKey, backendName) {
+    this.#currentBackendBySessionKey.set(sessionKey, backendName);
+  }
+
+  /**
+   * Reset backend to default for a session.
+   * @param {string} sessionKey - Session identifier
+   */
+  resetBackend(sessionKey) {
+    this.#currentBackendBySessionKey.delete(sessionKey);
+  }
 }
 
 export const sessionStore = new SessionStore();
+export { SessionStore };

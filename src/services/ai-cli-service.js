@@ -11,7 +11,19 @@ import { spawn } from 'node:child_process';
 import { config } from '../config.js';
 import { logger } from '../utils/logger.js';
 import { sessionStore } from './session-store.js';
+import { backendRegistry as defaultBackendRegistry } from './backend-registry.js';
 import { createHeartbeatManager } from '../utils/heartbeat-manager.js';
+
+// Allow dependency injection for testing
+let backendRegistry = defaultBackendRegistry;
+
+/**
+ * Set backend registry for testing purposes.
+ * @param {Object} registry - Backend registry instance
+ */
+export function setBackendRegistry(registry) {
+  backendRegistry = registry;
+}
 
 /**
  * Metrics for AI CLI execution monitoring.
@@ -192,17 +204,42 @@ export async function executeAiCli(options) {
     args: customArgs
   } = options;
 
-  const effectiveBin = bin || config.codebuddyBin;
+  // Get session-specific backend or use default
+  const sessionBackendName = sessionStore.getCurrentBackend(sessionId);
+  const sessionBackend = sessionBackendName ? backendRegistry.getBackend(sessionBackendName) : null;
+  const effectiveBin = bin || (sessionBackend?.binPath) || config.codebuddyBin;
   const effectiveTimeoutMs = timeoutMs ?? config.requestTimeoutMs;
   const effectiveHeartbeatThresholdMs = heartbeatThresholdMs ?? config.aiCliHeartbeatThresholdMs;
   const effectiveHeartbeatIntervalMs = heartbeatIntervalMs ?? config.aiCliHeartbeatIntervalMs;
   const enableHeartbeat = config.aiCliEnableHeartbeat;
 
+  // Validate backend binary exists if using session backend
+  if (sessionBackendName && !backendRegistry.validateBackend(sessionBackendName)) {
+    const defaultBackend = backendRegistry.getDefaultBackend();
+    const fallbackBin = defaultBackend?.binPath || config.codebuddyBin;
+
+    logger.warn(`Backend "${sessionBackendName}" not accessible, falling back to default`);
+
+    // Reset to default backend for this session
+    sessionStore.resetBackend(sessionId);
+
+    return {
+      output: `⚠️ 后端 "${sessionBackendName}" 不可用，已切换回默认后端。\n建议：检查后端配置或使用 /cli reset 重置。`,
+      timedOut: false,
+      interrupted: false,
+      elapsedMs: 0,
+      exitCode: null,
+      stderr: ''
+    };
+  }
+
   // Use custom args if provided (for testing), otherwise build default args
   const args = customArgs ?? (() => {
     const defaultArgs = ['-p', prompt];
-    if (config.codebuddyPermissionFlag) {
-      defaultArgs.push(config.codebuddyPermissionFlag);
+    // Use session backend's permission flag if available, otherwise fallback to config
+    const permissionFlag = sessionBackend?.permissionFlag || config.codebuddyPermissionFlag;
+    if (permissionFlag) {
+      defaultArgs.push(permissionFlag);
     }
     return defaultArgs;
   })();
@@ -247,7 +284,13 @@ export async function executeAiCli(options) {
       userId
     });
 
-    logger.info({ pid: child.pid, bin: effectiveBin, args, sessionId }, 'AI CLI process started');
+    logger.info({
+    pid: child.pid,
+    bin: effectiveBin,
+    backend: sessionBackendName || 'default',
+    args,
+    sessionId
+  }, 'AI CLI process started');
 
     // Handle process error
     child.on('error', (err) => {

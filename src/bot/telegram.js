@@ -49,6 +49,8 @@ import { sessionsMeta, handleSessions } from './commands/handlers/sessions.js';
 import { cronMeta, handleCron } from './commands/handlers/cron.js';
 import { jobsMeta, handleJobs } from './commands/handlers/jobs.js';
 import { watchMeta, handleWatch } from './commands/handlers/watch.js';
+// F-015: AI CLI Backend Switcher command handler
+import { cliMeta, handleCli } from './commands/handlers/cli.js';
 import { generateHelp } from './commands/help.js';
 import { sessionStore } from '../services/session-store.js';
 import { sessionContextService } from '../services/session-context-service.js';
@@ -498,6 +500,8 @@ function registerPipelineCommands() {
   registerCommand(cronMeta, handleCron);
   registerCommand(jobsMeta, handleJobs);
   registerCommand(watchMeta, handleWatch);
+  // F-015: AI CLI Backend Switcher command
+  registerCommand(cliMeta, handleCli);
 }
 
 export async function createTelegramBot() {

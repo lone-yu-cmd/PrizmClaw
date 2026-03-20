@@ -8,7 +8,7 @@ KEY_FILES:
 - commands/parser.js: parse user input into command + args
 - commands/validator.js: validate command permissions and args
 - commands/formatter.js: format output for Telegram MarkdownV2
-- commands/handlers/: one handler per command (alias, audit, bugfix, cat, cd, commit, commits, cron, download, find, head, history, jobs, kill, logs, ls, monitor, more, pipeline, plan, planner, ps, sessions, status, stop, sysinfo, tail, tree, upload, watch)
+- commands/handlers/: one handler per command (alias, audit, bugfix, cat, cd, cli, commit, commits, cron, download, find, head, history, jobs, kill, logs, ls, monitor, more, pipeline, plan, planner, ps, sessions, status, stop, sysinfo, tail, tree, upload, watch)
 
 INTERFACES:
 - createTelegramBot(): creates and configures Telegraf bot
@@ -21,4 +21,4 @@ DEPENDENCIES:
 - imports: src/services: business logic for command execution
 - imports: src/security: permission checks
 
-UPDATED: 2026-03-16
+UPDATED: 2026-03-20

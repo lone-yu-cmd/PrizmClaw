@@ -57,7 +57,12 @@ const schema = z.object({
   FILE_WATCHERS_PATH: z.string().optional().default('data/file-watchers.json'),
   MAX_SCHEDULED_TASKS: z.coerce.number().int().positive().default(100),
   MAX_FILE_WATCHERS: z.coerce.number().int().positive().default(50),
-  TASK_DEBOUNCE_MS: z.coerce.number().int().positive().default(500)
+  TASK_DEBOUNCE_MS: z.coerce.number().int().positive().default(500),
+  // F-015: AI CLI Backend Switcher
+  AI_CLI_BACKENDS: z.string().optional().default(''),
+  AI_CLI_DEFAULT_BACKEND: z.string().optional().default(''),
+  AI_CLI_BACKEND_VALIDATION: z.string().optional().default('true'),
+  AI_CLI_BACKEND_FALLBACK: z.string().optional().default('true')
 });
 
 const parsed = schema.parse(process.env);
@@ -106,6 +111,30 @@ function parseUserPermissions(input) {
     }
   }
   return permissions;
+}
+
+/**
+ * Parse AI CLI backends configuration from environment variable.
+ * Format: "name1:/path/to/bin1,name2:/path/to/bin2"
+ * @param {string} input - Backends configuration string
+ * @returns {Array<{name: string, binPath: string}>} Array of backend configurations
+ */
+function parseAiCliBackends(input) {
+  if (!input || !input.trim()) {
+    return [];
+  }
+
+  const backends = [];
+  const entries = input.split(',').map((s) => s.trim()).filter(Boolean);
+
+  for (const entry of entries) {
+    const [name, binPath] = entry.split(':').map((s) => s.trim());
+    if (name && binPath) {
+      backends.push({ name, binPath });
+    }
+  }
+
+  return backends;
 }
 
 const enableTelegram = parseBoolean(parsed.ENABLE_TELEGRAM);
@@ -175,6 +204,11 @@ export const config = Object.freeze({
   maxScheduledTasks: parsed.MAX_SCHEDULED_TASKS,
   maxFileWatchers: parsed.MAX_FILE_WATCHERS,
   taskDebounceMs: parsed.TASK_DEBOUNCE_MS,
+  // F-015: AI CLI Backend Switcher
+  aiCliBackends: parseAiCliBackends(parsed.AI_CLI_BACKENDS),
+  aiCliDefaultBackend: parsed.AI_CLI_DEFAULT_BACKEND,
+  aiCliBackendValidation: parseBoolean(parsed.AI_CLI_BACKEND_VALIDATION),
+  aiCliBackendFallback: parseBoolean(parsed.AI_CLI_BACKEND_FALLBACK),
   pipelineInfra: Object.freeze({
     ...pipelineInfra,
     daemonLogPaths

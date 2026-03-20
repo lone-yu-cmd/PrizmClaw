@@ -35,4 +35,4 @@ PATTERNS:
 - Registry pattern: commands registered in src/bot/commands/registry.js
 - Barrel exports: index.js files re-export module contents
 
-UPDATED: 2026-03-16
+UPDATED: 2026-03-20
