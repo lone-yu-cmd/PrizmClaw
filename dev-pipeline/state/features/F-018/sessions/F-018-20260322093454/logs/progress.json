@@ -1,0 +1,34 @@
+{
+  "updated_at": "2026-03-22T01:41:30Z",
+  "message_count": 49,
+  "current_tool": "Write",
+  "current_tool_input_summary": "/Users/wylonyu/selfProjects/PrizmClaw/.prizmkit/specs/018-web-telegram-bidirectional-sync/context-sn",
+  "current_phase": null,
+  "detected_phases": [],
+  "tool_calls": [
+    {
+      "name": "Read",
+      "count": 14
+    },
+    {
+      "name": "Write",
+      "count": 13
+    },
+    {
+      "name": "Bash",
+      "count": 12
+    },
+    {
+      "name": "Skill",
+      "count": 1
+    },
+    {
+      "name": "Edit",
+      "count": 1
+    }
+  ],
+  "total_tool_calls": 41,
+  "last_text_snippet": "Reading source files related to Web-Telegram bidirectional sync...",
+  "is_active": true,
+  "errors": []
+}

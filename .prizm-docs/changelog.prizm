@@ -1,4 +1,1 @@
-CHANGELOG:
-- 2026-03-16 | add: initial PrizmKit bootstrap - generated L0 and L1 documentation
-- 2026-03-20 | add: F-015 AI CLI backend switcher - dynamic backend switching via /cli command
-- 2026-03-21 | fix: F-016 Telegram command bug fixes - planner type mapping and pipeline metadata cleanup
+- 2026-03-22 | add: Initial L0 + L1 documentation

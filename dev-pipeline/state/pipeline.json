@@ -1,9 +1,8 @@
 {
-  "run_id": "run-20260317-091756",
-  "status": "paused",
+  "run_id": "run-20260322-013453",
+  "status": "initialized",
   "feature_list_path": "/Users/wylonyu/selfProjects/PrizmClaw/feature-list.json",
-  "created_at": "2026-03-17T09:17:56Z",
+  "created_at": "2026-03-22T01:34:53Z",
   "total_features": 21,
-  "completed_features": 14,
-  "paused_at": "2026-03-17T09:38:02Z"
+  "completed_features": 16
 }

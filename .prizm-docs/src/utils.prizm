@@ -1,14 +1,9 @@
 MODULE: src/utils
-FILES: logger.js, file-utils.js, heartbeat-manager.js, markdown-v2-formatter.js
-RESPONSIBILITY: Shared utilities - logging, file helpers, heartbeat monitoring, Telegram MarkdownV2 formatting
-
+FILES: file-utils.js, heartbeat-manager.js, logger.js, markdown-v2-formatter.js
+RESPONSIBILITY: Utility functions and helpers
 INTERFACES:
-- logger: pino logger instance
-- fileUtils: safe file read/write helpers
-- HeartbeatManager: track CLI session liveness
-- markdownV2Formatter: escape and format text for Telegram MarkdownV2
-
+- logger: createLogger(module) -> Logger
+- file-utils: readJson, writeJson, mkdirp
 DEPENDENCIES:
-- uses: pino: structured logging
-
-UPDATED: 2026-03-16
+- uses: pino: Logging
+UPDATED: 2026-03-22

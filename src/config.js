@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import { loadPipelineInfraConfig } from './pipeline-infra/config-loader.js';
 import { resolveDaemonLogPaths } from './pipeline-infra/path-policy.js';
+import { configService } from './services/config-service.js';
 
 const schema = z.object({
   TELEGRAM_BOT_TOKEN: z.string().optional().default(''),
@@ -212,5 +213,7 @@ export const config = Object.freeze({
   pipelineInfra: Object.freeze({
     ...pipelineInfra,
     daemonLogPaths
-  })
+  }),
+  // F-017: Runtime Config Manager
+  runtimeConfig: configService
 });

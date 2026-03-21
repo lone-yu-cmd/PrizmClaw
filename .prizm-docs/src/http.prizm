@@ -1,12 +1,11 @@
 MODULE: src/http
 FILES: server.js
-RESPONSIBILITY: Express HTTP server for web dashboard and API endpoints
-
+RESPONSIBILITY: HTTP server with SSE for real-time updates
 INTERFACES:
-- createHttpServer({ logger }): Express app instance
-
+- start(): Promise<void> | Start express server
+- getSSERouter(): Router | SSE endpoints
 DEPENDENCIES:
-- uses: express: HTTP framework
-- imports: src/routes: API route handlers
-
-UPDATED: 2026-03-16
+- uses: express: Web framework
+- imports: src/routes: API routes
+- imports: src/services/realtime-hub: Event broadcasting
+UPDATED: 2026-03-22

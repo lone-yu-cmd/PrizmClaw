@@ -1,30 +1,9 @@
 MODULE: src/pipeline-infra
 FILES: index.js, cli-entry.js, config-loader.js, error-codes.js, lock-manager.js, path-policy.js, script-runner.js, state-manager.js
-RESPONSIBILITY: Pipeline infrastructure - config loading, state management, script execution, locking, path resolution
-
+RESPONSIBILITY: Dev pipeline execution framework
 INTERFACES:
-- loadPipelineInfraConfig(): pipeline config from env/files
-- StateManager: read/write pipeline state JSON
-- LockManager: file-based locking for concurrent pipelines
-- ScriptRunner: execute Python/shell pipeline scripts
-- PathPolicy: resolve and validate pipeline paths
-- ErrorCodes: standardized error code enum
-- cliEntry: CLI entrypoint for pipeline commands
-
+- runPipeline(featureSlug: string, runId: string): Promise<void>
 DEPENDENCIES:
-- uses: child_process: spawn scripts
-- imports: src/config: base config
-
-TRAPS:
-- ScriptRunner only supports 'feature' and 'bugfix' pipeline types | FIX: Command handlers must map custom types to supported ones before calling
-- Invalid pipelineType throws Error('Invalid pipelineType: ...') | FIX: Ensure all pipeline requests use valid types
-
-RULES:
-- MUST: PIPELINE_TYPES = ['feature', 'bugfix'] - no other types supported
-- MUST: validate pipelineType before building commands
-- PREFER: Type mapping in command handlers rather than extending pipeline infrastructure
-
-CHANGELOG:
-- 2026-03-21 | F-016: Document pipeline type validation constraints
-
-UPDATED: 2026-03-21
+- uses: simple-git: Git operations
+- imports: dev-pipeline/scripts: Pipeline scripts
+UPDATED: 2026-03-22

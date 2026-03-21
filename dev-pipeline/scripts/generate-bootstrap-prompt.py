@@ -19,7 +19,7 @@ import os
 import re
 import sys
 
-from utils import load_json_file, setup_logging
+from utils import enrich_global_context, load_json_file, setup_logging
 
 
 DEFAULT_MAX_RETRIES = 3
@@ -142,8 +142,15 @@ def format_acceptance_criteria(criteria):
     return "\n".join(lines)
 
 
-def format_global_context(global_context):
-    """Format global_context dict as a key-value list."""
+def format_global_context(global_context, project_root=None):
+    """Format global_context dict as a key-value list.
+
+    If global_context is empty/sparse and project_root is provided,
+    auto-detect tech stack from project files to fill gaps.
+    """
+    if project_root:
+        enrich_global_context(global_context, project_root)
+
     if not global_context:
         return "- (none specified)"
     lines = []
@@ -362,14 +369,23 @@ def determine_pipeline_mode(complexity):
     """Map estimated_complexity to pipeline mode.
 
     Returns: 'lite', 'standard', or 'full'
+
+    Tier assignment rationale:
+    - low + medium → lite (single agent): most features don't benefit from
+      the orchestrator→dev→reviewer overhead. A single agent reading
+      .prizm-docs + implementing directly is faster and cheaper.
+    - high → standard (orchestrator + dev + reviewer): complex features
+      need the spec→plan→analyze→implement→review pipeline.
+    - critical → full (full team + framework guardrails): architectural
+      changes that touch many files and need extra safety checks.
     """
     mapping = {
         "low": "lite",
-        "medium": "standard",
-        "high": "full",
+        "medium": "lite",
+        "high": "standard",
         "critical": "full",
     }
-    return mapping.get(complexity, "standard")
+    return mapping.get(complexity, "lite")
 
 
 def build_replacements(args, feature, features, global_context, script_dir):
@@ -447,12 +463,6 @@ def build_replacements(args, feature, features, global_context, script_dir):
         args.feature_id, feature.get("title", "")
     )
 
-    # Ensure agents/ directory exists for agent knowledge docs
-    agents_dir = os.path.join(
-        project_root, ".prizmkit", "specs", feature_slug, "agents"
-    )
-    os.makedirs(agents_dir, exist_ok=True)
-
     # Detect project state
     init_done = detect_init_status(project_root)
     artifacts = detect_existing_artifacts(project_root, feature_slug)
@@ -487,7 +497,7 @@ def build_replacements(args, feature, features, global_context, script_dir):
         "{{COMPLETED_DEPENDENCIES}}": get_completed_dependencies(
             features, feature
         ),
-        "{{GLOBAL_CONTEXT}}": format_global_context(global_context),
+        "{{GLOBAL_CONTEXT}}": format_global_context(global_context, project_root),
         "{{TEAM_CONFIG_PATH}}": team_config_path,
         "{{DEV_SUBAGENT_PATH}}": dev_subagent,
         "{{REVIEWER_SUBAGENT_PATH}}": reviewer_subagent,

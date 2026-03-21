@@ -1,35 +1,10 @@
 MODULE: src/bot
-FILES: telegram.js, commands/index.js, commands/registry.js, commands/parser.js, commands/validator.js, commands/formatter.js, commands/help.js
-RESPONSIBILITY: Telegram bot setup and command routing system
-
-KEY_FILES:
-- telegram.js: bot creation, middleware setup, message handling
-- commands/registry.js: command registration and lookup
-- commands/parser.js: parse user input into command + args
-- commands/validator.js: validate command permissions and args
-- commands/formatter.js: format output for Telegram MarkdownV2
-- commands/handlers/: one handler per command (alias, audit, bugfix, cat, cd, cli, commit, commits, cron, download, find, head, history, jobs, kill, logs, ls, monitor, more, pipeline, plan, planner, ps, sessions, status, stop, sysinfo, tail, tree, upload, watch)
-
+FILES: telegram.js, commands/index.js, commands/parser.js, commands/formatter.js, commands/help.js, commands/intent-router.js, commands/registry.js, commands/validator.js, commands/handlers/ (20 files)
+RESPONSIBILITY: Telegram bot interface with command routing
 INTERFACES:
-- createTelegramBot(): creates and configures Telegraf bot
-- CommandRegistry: register/lookup/list commands
-- parseCommand(text): { command, args }
-- validateCommand(cmd, ctx): boolean
-
+- start(): Promise<void> | Start bot
+- handleCommand(command: string, ctx: Context): void | Route commands to handlers
 DEPENDENCIES:
-- uses: telegraf: bot framework
-- imports: src/services: business logic for command execution
-- imports: src/security: permission checks
-
-TRAPS:
-- planner.js delegates to pipeline.js but must map type='planner' to type='feature' | FIX: handlePlanner sets params.type='feature' before calling handlePipeline
-- pipeline.js metadata enum must match script-runner PIPELINE_TYPES | FIX: Remove unsupported 'planner' from params.type.enum
-
-RULES:
-- MUST: All command handlers delegating to pipeline.js must use supported types (feature/bugfix only)
-- PREFER: Use type mapping in delegating handlers rather than modifying pipeline infrastructure
-
-CHANGELOG:
-- 2026-03-21 | F-016: Fix planner command type mapping bug
-
-UPDATED: 2026-03-21
+- uses: telegraf: Telegram bot framework
+- imports: src/services: Chat service, session management
+UPDATED: 2026-03-22

@@ -1,38 +1,20 @@
 PRIZM_VERSION: 1.0
 PROJECT: PrizmClaw
-LANG: JavaScript (Node.js ES modules)
-DESCRIPTION: Telegram to AI CLI bridge - sends commands from Telegram to CodeBuddy/Claude CLI, streams output back
-ENTRY_POINT: src/index.js
-
-TECH_STACK:
-- runtime: Node.js (ES modules, --watch for dev)
-- bot: Telegraf 4.x (Telegram Bot API)
-- http: Express 4.x
-- validation: Zod
-- logging: Pino
-- git: simple-git
-- scheduling: croner
-- config: dotenv
-
+LANG: nodejs
 MODULE_INDEX:
-- src -> .prizm-docs/src.prizm
-- dev-pipeline -> .prizm-docs/dev-pipeline.prizm
-- tests: test suite mirroring src/ structure, Node.js test runner
-- data: runtime data (alert-rules.json)
-- public: web dashboard (index.html, styles.css, js/)
-
+- src/bot: bot.prizm
+- src/http: http.prizm
+- src/pipeline-infra: pipeline-infra.prizm
+- src/routes: routes.prizm
+- src/security: security.prizm
+- src/services: services.prizm
+- src/utils: utils.prizm
+- src/adapters: adapters.prizm
 RULES:
-- All source is ESM (import/export, "type": "module")
-- Config via Zod schema validation from .env
-- Security: permission-guard, system-guard, param-sanitizer, confirmation-manager
-- Tests use Node.js built-in test runner (node --test)
-- Conventional Commits format required
-- POSIX shell commands preferred
+- All HTTP routes use src/routes/api-routes.js as entry point
+- Telegram bot uses Telegraf framework with command handlers in src/bot/commands/
+- Services are registered in src/services/index.js
+- Security checks use security/ guards before command execution
+- Config loaded from src/config.js with environment variable support
 
-PATTERNS:
-- Service layer pattern: src/services/ contains business logic
-- Command handler pattern: src/bot/commands/handlers/ one file per command
-- Registry pattern: commands registered in src/bot/commands/registry.js
-- Barrel exports: index.js files re-export module contents
-
-UPDATED: 2026-03-21
+UPDATED: 2026-03-22

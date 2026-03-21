@@ -5,13 +5,13 @@ This project uses PrizmKit with the Prizm documentation system for AI-optimized 
 ### Progressive Loading Protocol
 - ON SESSION START: Always read `.prizm-docs/root.prizm` first (L0 — project map)
 - ON TASK: Read L1 (`.prizm-docs/<module>.prizm`) for relevant modules referenced in MODULE_INDEX
-- ON FILE EDIT: Read L2 (`.prizm-docs/<module>/<submodule>.prizm`) before modifying files. Pay attention to TRAPS and DECISIONS.
+- ON FILE EDIT: Read L2 (`.prizm-docs/<module>/<submodule>.prizm`) before modifying files. Pay attention to TRAPS.
 - NEVER load all .prizm docs at once. Load only what is needed for the current task.
 
 ### Auto-Update Protocol
 - BEFORE EVERY COMMIT: Update affected `.prizm-docs/` files
-- The `.claude/rules/` files will enforce this automatically
-- Use `/prizmkit-committer` command for the complete commit workflow
+- Platform hooks (rules or UserPromptSubmit) will remind you automatically
+- Use `/prizmkit-committer` for the complete commit workflow
 
 ### Doc Format Rules
 - All `.prizm` files use KEY: value format, not prose
@@ -32,7 +32,7 @@ Run `/prizm-kit` to see all available PrizmKit commands.
 Not every change needs the full spec -> plan workflow. Use fast path for:
 - Bug fixes with clear root cause, config tweaks, typo fixes, simple refactors
 - Documentation-only changes, test additions for existing code
-- Directly use `/prizmkit-implement` with inline task description, then `/prizmkit-committer`
+- Fast path: `/prizmkit-plan` (simplified) → `/prizmkit-implement` → `/prizmkit-committer`
 
 Use the full workflow (/prizmkit-specify -> /prizmkit-plan -> /prizmkit-analyze -> /prizmkit-implement) for:
 - New features, multi-file coordinated changes, architectural decisions, data model or API changes

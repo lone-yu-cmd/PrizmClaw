@@ -105,3 +105,114 @@ def _build_progress_bar(percent, width=20):
     empty = width - filled
     bar = "\u2588" * filled + "\u2591" * empty
     return "{} {:>3}%".format(bar, int(percent))
+
+
+def detect_project_context(project_root):
+    """Auto-detect project tech stack from project files.
+
+    Reads package.json, pyproject.toml, and common config files
+    to infer language, test framework, and other stack details.
+    Returns a dict of detected key-value pairs.
+    """
+    detected = {}
+
+    # 1. Node.js / JavaScript / TypeScript project
+    pkg_path = os.path.join(project_root, "package.json")
+    if os.path.isfile(pkg_path):
+        try:
+            with open(pkg_path, "r", encoding="utf-8") as f:
+                pkg = json.load(f)
+
+            # Language detection
+            deps = {}
+            deps.update(pkg.get("dependencies", {}))
+            deps.update(pkg.get("devDependencies", {}))
+            if "typescript" in deps or os.path.isfile(
+                os.path.join(project_root, "tsconfig.json")
+            ):
+                detected["language"] = "TypeScript"
+            else:
+                detected["language"] = "JavaScript"
+
+            # Test framework detection (order: more specific first)
+            scripts = pkg.get("scripts", {})
+            test_script = (
+                scripts.get("test", "")
+                + " "
+                + scripts.get("test:unit", "")
+            )
+            if "vitest" in deps or "vitest" in test_script:
+                detected["testing_framework"] = "Vitest"
+            elif "jest" in deps or "jest" in test_script:
+                detected["testing_framework"] = "Jest"
+            elif "mocha" in deps or "mocha" in test_script:
+                detected["testing_framework"] = "Mocha"
+            elif "--test" in test_script or "node:test" in test_script:
+                detected["testing_framework"] = "Node.js built-in test runner"
+
+            # Framework detection
+            if "next" in deps:
+                detected["framework"] = "Next.js"
+            elif "express" in deps:
+                detected["framework"] = "Express.js"
+            elif "fastify" in deps:
+                detected["framework"] = "Fastify"
+            elif "react" in deps:
+                detected["framework"] = "React"
+            elif "vue" in deps:
+                detected["framework"] = "Vue.js"
+        except (json.JSONDecodeError, IOError):
+            pass
+
+    # 2. Python project detection
+    if not detected:
+        for marker in ["pyproject.toml", "setup.py", "requirements.txt"]:
+            if os.path.isfile(os.path.join(project_root, marker)):
+                detected["language"] = "Python"
+                # Check for pytest
+                toml_path = os.path.join(project_root, "pyproject.toml")
+                if os.path.isfile(toml_path):
+                    try:
+                        with open(toml_path, "r", encoding="utf-8") as f:
+                            content = f.read()
+                        if "pytest" in content:
+                            detected["testing_framework"] = "pytest"
+                    except IOError:
+                        pass
+                break
+
+    return detected
+
+
+def enrich_global_context(global_context, project_root):
+    """Fill gaps in global_context using auto-detected project info.
+
+    Only adds auto-detected values for keys not already present.
+    Mutates global_context in place and returns it.
+    """
+    if not project_root:
+        return global_context
+
+    detected = detect_project_context(project_root)
+    # Map detected keys → global_context convention names
+    key_mapping = {
+        "language": "language",
+        "testing_framework": "testing_strategy",
+        "framework": "framework",
+    }
+    # Alternate key names that should block auto-detection
+    alt_keys = {
+        "testing_strategy": ["testing_framework", "test_framework"],
+    }
+    for det_key, ctx_key in key_mapping.items():
+        if det_key not in detected:
+            continue
+        if ctx_key in global_context:
+            continue
+        already_set = any(
+            k in global_context for k in alt_keys.get(ctx_key, [])
+        )
+        if not already_set:
+            global_context[ctx_key] = detected[det_key] + " (auto-detected)"
+
+    return global_context

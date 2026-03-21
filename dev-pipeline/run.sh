@@ -525,13 +525,30 @@ run_one() {
         exit 1
     fi
 
-    if [[ ! -f "$STATE_DIR/pipeline.json" ]]; then
-        log_error "No pipeline state found. Run './run.sh run' first to initialize."
-        exit 1
-    fi
-
     check_dependencies
     run_log_cleanup
+
+    # Initialize pipeline state if needed (same logic as run_all)
+    if [[ ! -f "$STATE_DIR/pipeline.json" ]]; then
+        log_info "Initializing pipeline state for single-feature run..."
+        local init_result
+        init_result=$(python3 "$SCRIPTS_DIR/init-pipeline.py" \
+            --feature-list "$feature_list" \
+            --state-dir "$STATE_DIR" 2>&1)
+
+        local init_valid
+        init_valid=$(echo "$init_result" | python3 -c "import sys,json; print(json.load(sys.stdin).get('valid', False))" 2>/dev/null || echo "False")
+
+        if [[ "$init_valid" != "True" ]]; then
+            log_error "Pipeline initialization failed:"
+            echo "$init_result"
+            exit 1
+        fi
+
+        local features_count
+        features_count=$(echo "$init_result" | python3 -c "import sys,json; print(json.load(sys.stdin).get('features_count', 0))" 2>/dev/null || echo "0")
+        log_success "Pipeline initialized with $features_count features"
+    fi
 
     # Auto-detect framework repo: if scripts/bundle.js exists, enable self-evolve mode
     local project_root
@@ -703,6 +720,7 @@ sys.exit(1)
     echo -e "${BOLD}════════════════════════════════════════════════════${NC}"
     echo -e "${BOLD}  Run: $feature_id — $feature_title${NC}"
     echo -e "${BOLD}════════════════════════════════════════════════════${NC}"
+    log_info "AI CLI: $CLI_CMD (platform: $PLATFORM)"
     log_info "Session ID: $session_id"
     log_info "Resume Phase: $resume_phase"
     local effective_model="${feature_model:-$MODEL}"

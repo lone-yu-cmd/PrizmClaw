@@ -1,9 +1,0 @@
-# Orchestrator
-
-## FINDINGS
-
-## DECISIONS
-
-## INTERFACES_DISCOVERED
-
-## CONTEXT_BUILT

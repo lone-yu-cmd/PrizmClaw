@@ -54,7 +54,11 @@ const COMMAND_MIN_ROLE = {
   'force-unlock': 'admin',
   exec: 'admin',
   'commit-amend': 'admin',
-  'commit-force': 'admin'
+  'commit-force': 'admin',
+  // F-017: Runtime Config Manager command
+  config: 'admin',
+  cfg: 'admin',
+  settings: 'admin'
 };
 
 /**

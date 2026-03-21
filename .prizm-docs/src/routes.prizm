@@ -1,12 +1,9 @@
 MODULE: src/routes
 FILES: api-routes.js
-RESPONSIBILITY: API route definitions for web dashboard
-
+RESPONSIBILITY: HTTP API endpoints (REST + SSE)
 INTERFACES:
-- apiRoutes: Express router with REST endpoints
-
+- router: Express Router | All API routes
 DEPENDENCIES:
-- imports: src/services: business logic
-- imports: express: Router
-
-UPDATED: 2026-03-16
+- uses: express: Routing
+- imports: src/services: Various service handlers
+UPDATED: 2026-03-22

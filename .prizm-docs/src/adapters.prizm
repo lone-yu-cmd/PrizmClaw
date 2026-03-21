@@ -1,12 +1,8 @@
 MODULE: src/adapters
 FILES: codebuddy.js
-RESPONSIBILITY: AI CLI adapter - abstracts CodeBuddy/Claude CLI binary interaction
-
+RESPONSIBILITY: External service adapters
 INTERFACES:
-- CodeBuddyAdapter: spawn CLI process, send prompts, stream output
-
+- codebuddy: executeCLI(command)
 DEPENDENCIES:
-- uses: child_process: spawn CLI binary
-- imports: src/config: CLI binary path and flags
-
-UPDATED: 2026-03-16
+- imports: src/services: For service integration
+UPDATED: 2026-03-22
