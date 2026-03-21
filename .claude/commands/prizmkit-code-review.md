@@ -24,8 +24,10 @@ Perform a comprehensive code review against the feature spec, implementation pla
    - If `refactor-analysis.md` exists → **Refactor mode**: read `refactor-analysis.md` + `plan.md` as baseline. Review dimensions shift: replace "spec compliance" with **behavior preservation** (observable behavior unchanged), replace "plan adherence" with **structural improvement** (is the code measurably better?). Also check test integrity and code quality.
    - If `fix-plan.md` exists → **Bugfix mode**: read `fix-plan.md` as baseline. Review dimensions: bug is actually fixed, no regressions, reproduction test passes, minimal change scope.
    - If none found → prompt user: "No review baseline found. Which workflow are you in? (feature/refactor/bugfix)"
-2. Read `.prizm-docs/root.prizm` RULES for project conventions
-3. Scan all code files referenced in completed tasks
+2. Read **architecture index**: `.prizm-docs/root.prizm` RULES and PATTERNS for project conventions
+3. Read **project memory**: platform memory file (`CLAUDE.md` for Claude Code, `CODEBUDDY.md` + `memory/MEMORY.md` for CodeBuddy) for past DECISIONS — helps verify implementation respects established conventions
+4. Read `agents/dev-*.md` in the feature directory (if exists) — understand Dev's implementation decisions, trade-offs, and discovered interfaces. This context helps distinguish intentional design choices from accidental patterns during review.
+5. Scan all code files referenced in completed tasks
 4. Review across 6 dimensions:
    - **Spec compliance**: Does code implement all acceptance criteria? Missing criteria are the #1 source of "it works but it's wrong" bugs
    - **Plan adherence**: Does implementation follow architectural decisions in plan.md? Deviations may be improvements or may break assumptions other components depend on

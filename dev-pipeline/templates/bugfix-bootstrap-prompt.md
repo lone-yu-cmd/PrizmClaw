@@ -86,7 +86,7 @@ Reference `{{TEAM_CONFIG_PATH}}` for agent definitions:
 
 ### Step 2: Pipeline Phases
 
-#### Phase 1: Triage — 分诊分类
+#### Phase 1: Triage — Classification
 
 **Goal**: Classify the bug, identify scope and severity, check known issues, produce fix-plan.md.
 
@@ -123,7 +123,7 @@ Reference `{{TEAM_CONFIG_PATH}}` for agent definitions:
 
 ---
 
-#### Phase 2: Reproduce — 复现确认
+#### Phase 2: Reproduce — Reproduction Confirmation
 
 **Goal**: Create an automated reproduction that proves the bug exists.
 
@@ -145,7 +145,7 @@ Reference `{{TEAM_CONFIG_PATH}}` for agent definitions:
 
 ---
 
-#### Phase 3: Fix — 修复实现
+#### Phase 3: Fix — Implementation
 
 **Goal**: Implement the fix. The reproduction test goes from red to green.
 
@@ -167,7 +167,7 @@ Reference `{{TEAM_CONFIG_PATH}}` for agent definitions:
 
 ---
 
-#### Phase 4: Verify — 代码审查与回归验证
+#### Phase 4: Verify — Code Review & Regression Verification
 
 **Goal**: Ensure fix correctness and no regressions.
 
@@ -196,7 +196,7 @@ Reference `{{TEAM_CONFIG_PATH}}` for agent definitions:
 
 ---
 
-#### Phase 5: Commit & Learn — 提交与知识积累
+#### Phase 5: Commit & Learn — Commit & Knowledge Capture
 
 **Goal**: Commit the fix, update TRAPS, generate fix-report.md.
 

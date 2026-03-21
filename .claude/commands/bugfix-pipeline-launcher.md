@@ -1,5 +1,5 @@
 ---
-description: "Launch and manage the bugfix pipeline from within an AI CLI session. Start pipeline in background, monitor logs, check status, stop pipeline. Use this skill whenever the user wants to start fixing bugs, run the bugfix pipeline, check bugfix progress, or stop the bugfix pipeline. Trigger on: 'start fixing bugs', 'run bugfix pipeline', 'bugfix status', 'stop bug fix', '启动 bug 修复', '开始修复 bug', '修复进度', '停止修复'. (project)"
+description: "Launch and manage the bugfix pipeline from within an AI CLI session. Start pipeline in background, monitor logs, check status, stop pipeline. Use this skill whenever the user wants to start fixing bugs, run the bugfix pipeline, check bugfix progress, or stop the bugfix pipeline. Trigger on: 'start fixing bugs', 'run bugfix pipeline', 'bugfix status', 'stop bug fix', 'launch bug fix', 'start fixing bugs', 'fix progress', 'stop fixing'. (project)"
 ---
 
 # Bugfix-Pipeline Launcher
@@ -15,21 +15,21 @@ Always use daemon mode via `dev-pipeline/launch-bugfix-daemon.sh` for start/stop
 **Start bugfix pipeline** -- User says:
 - "start fixing bugs", "run bugfix pipeline", "launch bug fixes", "fix all bugs"
 - "start bug fix", "run bug fix", "execute bug list", "begin fixing"
-- "启动 bug 修复", "开始修复 bug", "运行 bug 修复流水线", "开始修 bug"
-- "修复所有 bug", "批量修复", "启动修复流水线"
-- After bug-planner completes: "fix them", "开始修复"
+- "launch bug fix", "start fixing bugs", "run bug fix pipeline", "start fixing bugs"
+- "fix all bugs", "batch fix", "launch fix pipeline"
+- After bug-planner completes: "fix them", "start fixing"
 
 **Check status** -- User says:
 - "bugfix status", "check bug fixes", "how's the fixing going", "bug fix progress"
-- "修复进度", "bug 修复状态", "查看修复进度", "修复到哪了"
+- "fix progress", "bug fix status", "check fix progress", "how far along are the fixes"
 
 **Stop bugfix pipeline** -- User says:
 - "stop bug fix", "stop fixing", "halt bugfix", "pause bug fix"
-- "停止修复", "暂停 bug 修复", "停止修复流水线"
+- "stop fixing", "pause bug fix", "stop fix pipeline"
 
 **Show logs** -- User says:
 - "bugfix logs", "show fix logs", "what's being fixed"
-- "查看修复日志", "修复日志", "看看修复情况"
+- "view fix logs", "fix logs", "check fix status"
 
 **Do NOT use this skill when:**
 - User wants to plan/collect bugs (use `bug-planner` instead)
@@ -202,9 +202,9 @@ When user specifies custom settings, map to environment variables:
 
 | User says | Environment variable |
 |-----------|---------------------|
-| "timeout 2 hours" / "超时2小时" | `SESSION_TIMEOUT=7200` |
-| "max 5 retries" / "最多重试5次" | `MAX_RETRIES=5` |
-| "verbose mode" / "详细模式" | `VERBOSE=1` |
+| "timeout 2 hours" | `SESSION_TIMEOUT=7200` |
+| "max 5 retries" | `MAX_RETRIES=5` |
+| "verbose mode" | `VERBOSE=1` |
 | "heartbeat every 60s" | `HEARTBEAT_INTERVAL=60` |
 
 Pass via `--env`:
@@ -216,7 +216,7 @@ dev-pipeline/launch-bugfix-daemon.sh start bug-fix-list.json --env "SESSION_TIME
 
 #### Intent F: Retry Single Bug
 
-When user says "retry B-001" or "重试 B-001":
+When user says "retry B-001":
 
 ```bash
 dev-pipeline/retry-bug.sh B-001 bug-fix-list.json

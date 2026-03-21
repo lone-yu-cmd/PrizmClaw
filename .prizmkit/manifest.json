@@ -1,0 +1,84 @@
+{
+  "version": "1.0.76",
+  "installedAt": "2026-03-17T08:37:38.476Z",
+  "updatedAt": "2026-03-20T19:42:02.917Z",
+  "platform": "claude",
+  "suite": "core",
+  "options": {
+    "team": true,
+    "pipeline": true,
+    "rules": "recommended",
+    "aiCli": "claude-internal"
+  },
+  "files": {
+    "skills": [
+      "prizm-kit",
+      "prizmkit-init",
+      "prizmkit-prizm-docs",
+      "prizmkit-specify",
+      "prizmkit-clarify",
+      "prizmkit-plan",
+      "prizmkit-analyze",
+      "prizmkit-implement",
+      "prizmkit-code-review",
+      "prizmkit-committer",
+      "prizmkit-retrospective",
+      "feature-workflow",
+      "refactor-workflow",
+      "app-planner",
+      "bug-planner",
+      "dev-pipeline-launcher",
+      "bugfix-pipeline-launcher",
+      "bug-fix-workflow"
+    ],
+    "agents": [
+      "prizm-dev-team-dev.md",
+      "prizm-dev-team-reviewer.md"
+    ],
+    "rules": [
+      "prizm/prizm-documentation.md",
+      "prizm/prizm-commit-workflow.md",
+      "prizm/prizm-progressive-loading.md",
+      "general/prefer-linux-commands.md"
+    ],
+    "pipeline": [
+      "run.sh",
+      "retry-feature.sh",
+      "reset-feature.sh",
+      "launch-daemon.sh",
+      "run-bugfix.sh",
+      "retry-bug.sh",
+      "launch-bugfix-daemon.sh",
+      "lib/branch.sh",
+      "lib/common.sh",
+      "lib/heartbeat.sh",
+      "scripts/check-session-status.py",
+      "scripts/cleanup-logs.py",
+      "scripts/detect-stuck.py",
+      "scripts/generate-bootstrap-prompt.py",
+      "scripts/generate-bugfix-prompt.py",
+      "scripts/init-bugfix-pipeline.py",
+      "scripts/init-dev-team.py",
+      "scripts/init-pipeline.py",
+      "scripts/parse-stream-progress.py",
+      "scripts/update-bug-status.py",
+      "scripts/update-feature-status.py",
+      "scripts/utils.py",
+      "templates/agent-knowledge-template.md",
+      "templates/bootstrap-prompt.md",
+      "templates/bootstrap-tier1.md",
+      "templates/bootstrap-tier2.md",
+      "templates/bootstrap-tier3.md",
+      "templates/bug-fix-list-schema.json",
+      "templates/bugfix-bootstrap-prompt.md",
+      "templates/feature-list-schema.json",
+      "templates/session-status-schema.json",
+      "assets/feature-list-example.json",
+      "assets/prizm-dev-team-integration.md",
+      "README.md"
+    ],
+    "other": [
+      "CLAUDE.md"
+    ]
+  }
+}

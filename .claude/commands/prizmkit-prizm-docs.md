@@ -31,7 +31,7 @@ This skill handles 6 operations. When invoked, determine the user's intent and e
 | **When** | Project setup, health checks, migrations | After feature completion, before commit |
 | **Writes** | Initial .prizm-docs/ structure (init, rebuild, migrate) | Incremental updates to existing .prizm-docs/ |
 | **Reads** | Source code structure (for init/rebuild) | git diff + code changes (for sync) |
-| **Knowledge** | Defines format rules, size limits, loading protocol | Extracts TRAPS/RULES/DECISIONS from work done |
+| **Knowledge** | Defines format rules, size limits, loading protocol | Extracts TRAPS/RULES into `.prizm-docs/`, sediments DECISIONS to memory files |
 
 **Key principle**: `/prizmkit-prizm-docs` defines WHAT the docs should look like and bootstraps them. `/prizmkit-retrospective` is the SOLE WRITER that keeps docs in sync with code during ongoing development.
 
@@ -161,14 +161,14 @@ When working in a project with .prizm-docs/:
 
 - ON SESSION START: Always read .prizm-docs/root.prizm (L0). This is the project map.
 - ON TASK: Read L1 docs for relevant modules referenced in MODULE_INDEX.
-- ON FILE EDIT: Read L2 doc before modifying files. Check TRAPS and DECISIONS sections.
+- ON FILE EDIT: Read L2 doc before modifying files. Check TRAPS section. For past DECISIONS, read platform memory file instead (`CLAUDE.md` or `CODEBUDDY.md` + `memory/MEMORY.md`).
 - ON DEEP READ: If you need deep understanding of a module without modifying it, generate L2 if it doesn't exist.
 - NEVER load all .prizm docs at once. Progressive loading saves tokens.
 - BUDGET: Typical task should consume 3000-5000 tokens of Prizm docs total.
 
 ## Auto-Update Protocol
 
-- BEFORE EVERY COMMIT: Run `/prizmkit-retrospective` which is the **sole maintainer** of .prizm-docs/. It handles both structural sync and knowledge injection.
+- BEFORE EVERY COMMIT: Run `/prizmkit-retrospective` which is the **sole maintainer** of .prizm-docs/. It handles structural sync and TRAPS/RULES injection to `.prizm-docs/`, plus sediments DECISIONS to platform memory files.
 - The UserPromptSubmit hook will remind you automatically when commit intent is detected.
 - `/prizmkit-committer` does NOT update .prizm-docs/ — it only commits what is already staged.
 - NEVER rewrite entire .prizm files. Only update affected sections.

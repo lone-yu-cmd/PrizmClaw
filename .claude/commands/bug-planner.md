@@ -1,5 +1,5 @@
 ---
-description: "Interactive bug planning that produces bug-fix-list.json for the Bug Fix Pipeline. Supports multiple input formats: error logs, stack traces, user reports, failed tests, monitoring alerts. Use this skill whenever the user has bugs to report, errors to parse, or test failures to organize. Trigger on: 'plan bug fixes', 'report bugs', 'I have some bugs', 'these tests are failing', 'here is an error log', 'parse these errors', '修复 bug', '生成 bug 列表', '规划 bug 修复'. (project)"
+description: "Interactive bug planning that produces bug-fix-list.json for the Bug Fix Pipeline. Supports multiple input formats: error logs, stack traces, user reports, failed tests, monitoring alerts. Use this skill whenever the user has bugs to report, errors to parse, or test failures to organize. Trigger on: 'plan bug fixes', 'report bugs', 'I have some bugs', 'these tests are failing', 'here is an error log', 'parse these errors', 'fix bugs', 'generate bug list', 'plan bug fixes'. (project)"
 ---
 
 # Bug Planner
@@ -10,7 +10,7 @@ Interactive skill that collects bug information from various input formats and g
 
 User says:
 - "plan bug fixes", "report bugs", "create bug list"
-- "修复 bug", "生成 bug 列表", "规划 bug 修复"
+- "fix bugs", "generate bug list", "plan bug fixes"
 - "I have some bugs to fix", "these tests are failing"
 - "here's an error log", "parse these errors"
 - After receiving bug reports, error logs, or failed test output
@@ -26,7 +26,7 @@ This skill handles multiple operations. Determine the user's intent and execute 
 
 | User Intent | Operation | Trigger Phrases |
 |---|---|---|
-| Plan bugs interactively | **Interactive Planning** | "plan bug fixes", "report bugs", "规划 bug 修复" |
+| Plan bugs interactively | **Interactive Planning** | "plan bug fixes", "report bugs", "plan bug fixes" |
 | Parse error logs into bugs | **From Log** | "parse this error log", "here's a stack trace", "parse these errors" |
 | Parse test failures into bugs | **From Tests** | "these tests are failing", "parse test output" |
 | Validate existing bug list | **Validate** | "validate bug list", "check bug-fix-list.json" |
@@ -174,7 +174,7 @@ If any check fails, fix before writing the file.
 
 Next steps:
 - Review: cat bug-fix-list.json
-- Start fixing: say "开始修复" or "start fixing bugs" to launch the bugfix pipeline
+- Start fixing: say "start fixing" or "start fixing bugs" to launch the bugfix pipeline
 - Or run directly: ./dev-pipeline/launch-bugfix-daemon.sh start bug-fix-list.json
 ```
 
@@ -246,7 +246,7 @@ Affected Features: F-003 (1 bug), F-012 (1 bug), none (1 bug)
 
 After `bug-fix-list.json` is generated, the user can:
 
-1. **Say "开始修复" or "start fixing bugs"** — triggers `bugfix-pipeline-launcher` skill to auto-launch pipeline in background (recommended)
+1. **Say "start fixing" or "start fixing bugs"** — triggers `bugfix-pipeline-launcher` skill to auto-launch pipeline in background (recommended)
 2. **Background daemon**: `./dev-pipeline/launch-bugfix-daemon.sh start bug-fix-list.json`
 3. **Foreground run**: `./dev-pipeline/run-bugfix.sh run bug-fix-list.json`
 4. **Fix single bug interactively**: invoke `bug-fix-workflow` in current session

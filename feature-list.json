@@ -389,7 +389,7 @@
         "pipeline meta 的 type enum 与 script-runner PIPELINE_TYPES 保持一致",
         "所有已注册的 Telegram 命令发送后均能正常响应，无未捕获异常"
       ],
-      "status": "pending",
+      "status": "completed",
       "session_granularity": "feature",
       "sub_features": []
     },

@@ -664,9 +664,9 @@ STEPS:
    - Known issues and traps
 
 3. MAP_TO_PRIZM_LEVELS:
-   Project-wide info -> root.prizm (L0): PROJECT, LANG, FRAMEWORK, RULES, PATTERNS, DECISIONS
+   Project-wide info -> root.prizm (L0): PROJECT, LANG, FRAMEWORK, RULES, PATTERNS
    Module-level info -> L1 docs: MODULE, RESPONSIBILITY, INTERFACES, DEPENDENCIES
-   Detailed module info -> L2 docs: KEY_FILES, TRAPS, domain-specific sections, DECISIONS
+   Detailed module info -> L2 docs: KEY_FILES, TRAPS, domain-specific sections
 
 4. CONVERT_FORMAT:
    Strip markdown formatting (headers, tables, horizontal rules, emphasis)
@@ -678,7 +678,7 @@ STEPS:
 5. GENERATE_PRIZM_DOCS:
    Follow standard init procedure (Section 9) but seed with extracted information
    Merge source-code-scanned data with documentation-extracted data
-   Prefer documentation-extracted RULES and DECISIONS (they capture rationale)
+   Prefer documentation-extracted RULES (they capture rationale)
    Prefer source-code-scanned INTERFACES and DEPENDENCIES (they are current)
 
 6. VALIDATE:
@@ -713,7 +713,7 @@ JSON:
         "hooks": [
           {
             "type": "command",
-            "command": "echo 'PRIZMKIT_MEMORY_MAINTENANCE_REQUIRED: Before committing, you MUST run /prizmkit-retrospective to maintain .prizm-docs/ project memory. It handles both structural sync (KEY_FILES, INTERFACES, DEPENDENCIES) and knowledge injection (TRAPS, RULES, DECISIONS). After retrospective completes, proceed with /prizmkit-committer for the actual git commit.'"
+            "command": "echo 'PRIZMKIT_MAINTENANCE_REQUIRED: Before committing, you MUST run /prizmkit-retrospective. It maintains: (1) .prizm-docs/ architecture index — structural sync (KEY_FILES, INTERFACES, DEPENDENCIES) + TRAPS/RULES injection, (2) platform memory files — sediment DECISIONS and interface conventions to CLAUDE.md (Claude Code) or CODEBUDDY.md + memory/MEMORY.md (CodeBuddy). After retrospective completes, proceed with /prizmkit-committer for the actual git commit.'"
           }
         ]
       }
@@ -761,7 +761,7 @@ TEXT:
   ### Progressive Loading Protocol
   - ON SESSION START: Always read .prizm-docs/root.prizm first
   - ON TASK: Read L1 (.prizm-docs/<module>.prizm) for relevant modules referenced in MODULE_INDEX
-  - ON FILE EDIT: Read L2 (.prizm-docs/<module>/<submodule>.prizm) before modifying files. Pay attention to TRAPS and DECISIONS.
+  - ON FILE EDIT: Read L2 (.prizm-docs/<module>/<submodule>.prizm) before modifying files. Pay attention to TRAPS.
   - ON DEEP READ: If you need deep understanding of a module without modifying it, generate L2 if it does not exist.
   - NEVER load all .prizm docs at once. Load only what is needed for the current task.
 
@@ -875,7 +875,7 @@ CONTEXT: When multiple developers (human or AI) work on the same project, .prizm
 
 APPEND_ONLY_SECTIONS:
 - changelog.prizm: Append-only. Use standard git merge. Both sides' entries are kept. Sort by date descending after merge.
-- DECISIONS (in any .prizm file): Append-only. Keep all entries from both sides. Never discard decisions.
+- DECISIONS (in any .prizm file): Legacy — new DECISIONS go to platform memory files (CLAUDE.md / CODEBUDDY.md + memory/MEMORY.md). Existing DECISIONS in .prizm files are kept for backward compatibility. On merge conflicts, keep all entries from both sides.
 - REJECTED (in any .prizm file): Append-only. Keep all entries from both sides.
 - CHANGELOG (in L2 docs): Append-only. Keep all entries from both sides.
 

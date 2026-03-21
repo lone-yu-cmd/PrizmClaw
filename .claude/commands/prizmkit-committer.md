@@ -1,16 +1,16 @@
 ---
-description: "Pure git commit workflow with safety checks. Stages files, analyzes diff, generates Conventional Commits message, and commits. Does NOT modify .prizm-docs/ — memory maintenance is handled by /prizmkit-retrospective before this skill is invoked. Trigger on: 'commit', '提交', 'finish', 'done', 'ship it', 'save my work'. (project)"
+description: "Pure git commit workflow with safety checks. Stages files, analyzes diff, generates Conventional Commits message, and commits. Does NOT modify .prizm-docs/ or memory files — architecture sync and memory sedimentation are handled by /prizmkit-retrospective before this skill is invoked. Trigger on: 'commit', 'submit', 'finish', 'done', 'ship it', 'save my work'. (project)"
 ---
 
 # PrizmKit Committer
 
 Pure git commit workflow. Analyzes changes, generates a Conventional Commits message, performs safety checks, and commits.
 
-**This skill is a pure git commit tool. It does NOT modify any project files — no `.prizm-docs/`, no source code, no documentation.** It only reads diffs, generates a commit message, and commits. For feature/refactor workflows, run `/prizmkit-retrospective` before this skill to sync `.prizm-docs/`. For bug fixes, skip retrospective entirely — bug fixes do not update `.prizm-docs/`.
+**This skill is a pure git commit tool. It does NOT modify any project files — no `.prizm-docs/`, no memory files, no source code.** It only reads diffs, generates a commit message, and commits. For feature/refactor workflows, run `/prizmkit-retrospective` before this skill to sync `.prizm-docs/` (architecture index) and sediment DECISIONS to memory files. For bug fixes, skip retrospective entirely — bug fixes do not update `.prizm-docs/`.
 
 ### When to Use
-- User says "commit", "提交", "finish", "done with this task", "ship it"
-- After `/prizmkit-retrospective` has finished memory maintenance
+- User says "commit", "submit", "finish", "done with this task", "ship it"
+- After `/prizmkit-retrospective` has finished architecture sync and memory sedimentation
 - The UserPromptSubmit hook will remind to use this skill when commit intent is detected
 
 ### Workflow

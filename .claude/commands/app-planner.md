@@ -13,10 +13,10 @@ Always produce a validated `feature-list.json` that conforms to `dev-pipeline-fe
 ## When to Use
 
 Trigger this skill for requests like:
-- "规划应用", "设计项目", "Plan an app", "Design a new application"
-- "给现有系统加功能", "继续规划", "Add features", "Continue planning"
-- "准备 feature-list.json", "Prepare dev-pipeline input"
-- "重排优先级", "拆分功能", "reprioritize/scope features"
+- "Plan an app", "Design a project", "Plan an app", "Design a new application"
+- "Add features to existing system", "Continue planning", "Add features", "Continue planning"
+- "Prepare feature-list.json", "Prepare dev-pipeline input"
+- "Reprioritize features", "Split features", "reprioritize/scope features"
 
 Do NOT use this skill when:
 - user only wants to run pipeline now (invoke `dev-pipeline-launcher`)

@@ -3,14 +3,3 @@ node_modules
 .DS_Store
 
 *.png
-
-# Pipeline runtime state
-dev-pipeline/lib/
-
-# Plan versions (keep _current.json for tracking)
-plans/feature-list/v*.json
-plans/bug-fix-list/v*.json
-
-
-# PrizmKit
-.prizmkit/

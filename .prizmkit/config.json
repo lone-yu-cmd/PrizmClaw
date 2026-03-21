@@ -1,0 +1,7 @@
+{
+  "ai_cli": "claude-internal",
+  "platform": "claude",
+  "adoption_mode": "passive",
+  "speckit_hooks_enabled": false,
+  "initialized_at": "2026-03-16"
+}

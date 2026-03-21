@@ -105,7 +105,7 @@ User can change mode in `.prizmkit/config.json`: `"adoption_mode": "passive" | "
 | Concept | CodeBuddy | Claude Code |
 |---------|-----------|-------------|
 | Command invocation | `/prizmkit-xxx` | `/prizmkit-xxx` |
-| Project memory | `CODEBUDDY.md` | `CLAUDE.md` |
+| Project memory | `CODEBUDDY.md` + `memory/MEMORY.md` | `CLAUDE.md` |
 | Settings | `.codebuddy/settings.json` | `.claude/settings.json` |
 | Skills/Commands | `.codebuddy/skills/` | `.claude/commands/` |
 | Agents | `.codebuddy/agents/` | `.claude/agents/` |

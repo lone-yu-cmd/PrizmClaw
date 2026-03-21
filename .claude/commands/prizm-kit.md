@@ -73,12 +73,17 @@ All documentation records are for: features, projects, code logic, and module in
 
 ## Architecture
 
-PrizmKit produces two complementary knowledge layers:
+PrizmKit produces three complementary knowledge layers:
 
 ```
-.prizm-docs/           → Project "what is" (static: structure, interfaces, rules, traps, decisions)
+.prizm-docs/           → Architecture Index (structure, interfaces, dependencies, traps, rules)
 .prizmkit/specs/       → Feature "what to do" (workflow: spec → plan → code(implement))
+CLAUDE.md / CODEBUDDY.md → Project Memory (decisions, interface conventions, project-level rules)
 ```
+
+**Reading guide**:
+- Need code structure/modules/interfaces/traps? → `.prizm-docs/`
+- Need past decisions/conventions/why? → `CLAUDE.md` (Claude Code) or `CODEBUDDY.md` + `memory/MEMORY.md` (CodeBuddy)
 
 ## Skill Inventory
 
@@ -94,7 +99,7 @@ PrizmKit produces two complementary knowledge layers:
 - **prizmkit-analyze** — Cross-document consistency analysis (spec ↔ plan ↔ tasks)
 - **prizmkit-implement** — Execute tasks following TDD approach
 - **prizmkit-code-review** — Review code against spec and plan
-- **prizmkit-retrospective** — Sole .prizm-docs/ maintainer: structural sync + knowledge injection (TRAPS/RULES/DECISIONS)
+- **prizmkit-retrospective** — Sole .prizm-docs/ maintainer: structural sync + TRAPS/RULES injection. Also sediments DECISIONS to platform memory files
 - **prizmkit-committer** — Pure git commit: diff analysis, safety checks, Conventional Commits
 
 ### Quality Assurance (5)

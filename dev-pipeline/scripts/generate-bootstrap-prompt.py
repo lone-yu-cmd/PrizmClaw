@@ -447,6 +447,12 @@ def build_replacements(args, feature, features, global_context, script_dir):
         args.feature_id, feature.get("title", "")
     )
 
+    # Ensure agents/ directory exists for agent knowledge docs
+    agents_dir = os.path.join(
+        project_root, ".prizmkit", "specs", feature_slug, "agents"
+    )
+    os.makedirs(agents_dir, exist_ok=True)
+
     # Detect project state
     init_done = detect_init_status(project_root)
     artifacts = detect_existing_artifacts(project_root, feature_slug)

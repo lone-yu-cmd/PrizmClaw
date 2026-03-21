@@ -1,5 +1,5 @@
 ---
-description: "Launch and manage the dev-pipeline from within an AI CLI session. Start pipeline in background, monitor logs, check status, stop pipeline. Use this skill whenever the user wants to start building features, run the pipeline, check pipeline progress, retry features, or stop the pipeline. Trigger on: 'run pipeline', 'start pipeline', 'start building', 'pipeline status', 'stop pipeline', 'retry feature', '启动流水线', '开始实现', '流水线状态', '停止流水线'. (project)"
+description: "Launch and manage the dev-pipeline from within an AI CLI session. Start pipeline in background, monitor logs, check status, stop pipeline. Use this skill whenever the user wants to start building features, run the pipeline, check pipeline progress, retry features, or stop the pipeline. Trigger on: 'run pipeline', 'start pipeline', 'start building', 'pipeline status', 'stop pipeline', 'retry feature', 'launch pipeline', 'start implementing', 'check pipeline status', 'stop the pipeline'. (project)"
 ---
 
 # Dev-Pipeline Launcher
@@ -8,7 +8,7 @@ Launch the autonomous development pipeline from within an AI CLI conversation. T
 
 ### Execution Mode
 
-**Default: Foreground mode** via `dev-pipeline/run.sh run` — this provides visible output and direct error feedback. Use `launch-daemon.sh` only when the user explicitly requests background execution (e.g., "run in background", "detached mode", "后台运行").
+**Default: Foreground mode** via `dev-pipeline/run.sh run` — this provides visible output and direct error feedback. Use `launch-daemon.sh` only when the user explicitly requests background execution (e.g., "run in background", "detached mode").
 
 Foreground `run.sh` is preferred because:
 - Immediate visibility of errors and progress
@@ -24,25 +24,25 @@ Use daemon mode (`launch-daemon.sh`) only when:
 **Start pipeline** -- User says:
 - "run pipeline", "start pipeline", "start building", "launch dev-pipeline"
 - "run the features", "execute feature list", "start implementing"
-- "启动流水线", "开始实现", "运行流水线", "开始自动开发"
-- "实现接下来的步骤", "执行 feature list", "开始构建"
-- After app-planner completes: "build it", "按 feature list 开始开发"
+- "launch pipeline", "start implementing", "run the pipeline", "start auto-development"
+- "implement next steps", "execute feature list", "start building"
+- After app-planner completes: "build it", "start developing from the feature list"
 
 **Check status** -- User says:
 - "pipeline status", "check pipeline", "how's it going", "progress"
-- "流水线状态", "查看进度", "现在什么情况"
+- "pipeline status", "check progress", "what's the current situation"
 
 **Stop pipeline** -- User says:
 - "stop pipeline", "kill pipeline", "halt", "pause"
-- "停止流水线", "暂停流水线"
+- "stop the pipeline", "pause the pipeline"
 
 **Show logs** -- User says:
 - "show logs", "pipeline logs", "tail logs", "what's happening"
-- "查看日志", "流水线日志", "看看日志"
+- "view logs", "pipeline logs", "check the logs"
 
 **Retry single feature node** -- User says:
 - "retry F-003", "retry this feature", "retry this node"
-- "重试 F-003", "重试这个节点", "重跑这个 feature"
+- "retry F-003", "retry this node", "re-run this feature"
 
 **Do NOT use this skill when:**
 - User wants to plan features (use `app-planner` instead)
@@ -110,7 +110,7 @@ Detect user intent from their message, then follow the corresponding workflow:
    - **(2) Background daemon**: Pipeline runs fully detached via `launch-daemon.sh`. Survives session closure. Use only when user explicitly requests background execution.
    - **(3) Manual — show commands**: Display the exact commands the user can run themselves. No execution.
 
-   Default to option 1 if user says "just run it" or doesn't specify. Default to option 2 only if user explicitly says "background", "detached", or "后台".
+   Default to option 1 if user says "just run it" or doesn't specify. Default to option 2 only if user explicitly says "background", "detached", or "run in background".
 
    **If option 1 (foreground)**:
    ```bash
@@ -238,9 +238,9 @@ When user specifies custom settings, map to environment variables:
 
 | User says | Environment variable |
 |-----------|---------------------|
-| "timeout 2 hours" / "超时2小时" | `SESSION_TIMEOUT=7200` |
-| "max 5 retries" / "最多重试5次" | `MAX_RETRIES=5` |
-| "verbose mode" / "详细模式" | `VERBOSE=1` |
+| "timeout 2 hours" | `SESSION_TIMEOUT=7200` |
+| "max 5 retries" | `MAX_RETRIES=5` |
+| "verbose mode" | `VERBOSE=1` |
 | "heartbeat every 60s" | `HEARTBEAT_INTERVAL=60` |
 
 Pass via `--env`:
@@ -252,13 +252,13 @@ dev-pipeline/launch-daemon.sh start feature-list.json --env "SESSION_TIMEOUT=720
 
 #### Intent F: Retry Single Feature Node
 
-When user says "retry F-003" or "重试 F-003":
+When user says "retry F-003":
 
 ```bash
 dev-pipeline/retry-feature.sh F-003 feature-list.json
 ```
 
-When user says "从头重试 F-003" or "clean retry F-003":
+When user says "clean retry F-003" or "retry F-003 from scratch":
 
 ```bash
 dev-pipeline/reset-feature.sh F-003 --clean --run feature-list.json

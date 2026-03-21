@@ -1,5 +1,5 @@
 ---
-description: "End-to-end refactor workflow: analyze → plan → implement → review → commit. 5-phase behavior-preserving pipeline with mandatory test gates. Use this skill whenever the user wants to restructure, clean up, or optimize code without changing behavior. Trigger on: 'refactor', 'clean up code', 'restructure', 'optimize code structure', 'extract module', '重构', '优化代码结构', '代码重构'. (project)"
+description: "End-to-end refactor workflow: analyze → plan → implement → review → commit. 5-phase behavior-preserving pipeline with mandatory test gates. Use this skill whenever the user wants to restructure, clean up, or optimize code without changing behavior. Trigger on: 'refactor', 'clean up code', 'restructure', 'optimize code structure', 'extract module', 'code refactoring'. (project)"
 ---
 
 # PrizmKit Refactor Workflow
@@ -7,7 +7,7 @@ description: "End-to-end refactor workflow: analyze → plan → implement → r
 End-to-end orchestration skill for code refactoring and optimization. Chains existing PrizmKit skills into a 5-phase behavior-preserving pipeline with mandatory test gates after each task.
 
 ### When to Use
-- User says "refactor", "clean up code", "restructure", "extract module", "重构", "优化代码结构"
+- User says "refactor", "clean up code", "restructure", "extract module", "code refactoring", "optimize code structure"
 - Code has accumulated tech debt that needs structural improvement
 - Module needs to be split, merged, or reorganized
 - When behavior must remain unchanged but internal quality needs improvement
@@ -32,9 +32,9 @@ refactor-workflow
 
 | Phase | Name | Skill Used | Artifact |
 |-------|------|-----------|----------|
-| 1 | Analyze 代码分析 | Built-in code analysis + code reading | → `refactor-analysis.md` |
-| 2 | Plan 重构方案与任务 | `/prizmkit-plan` | → `plan.md` (含 Tasks section) |
-| 3 | Implement 实现 | `/prizmkit-implement` | (code changes) |
+| 1 | Analyze (Code Analysis) | Built-in code analysis + code reading | → `refactor-analysis.md` |
+| 2 | Plan (Refactor Plan & Tasks) | `/prizmkit-plan` | → `plan.md` (with Tasks section) |
+| 3 | Implement | `/prizmkit-implement` | (code changes) |
 | 4 | Code Review | `/prizmkit-code-review` | (review report) |
 | 5 | Commit | `/prizmkit-committer` | git commit |
 
@@ -54,12 +54,12 @@ Refactor artifacts stored at `.prizmkit/refactor/<refactor-slug>/`:
 
 **INPUT**: Target description. Can be:
 - Module or file path (e.g., "src/auth/")
-- Natural language description (e.g., "重构认证模块，提取公共逻辑")
+- Natural language description (e.g., "refactor the auth module, extract shared logic")
 - Specific refactoring goal (e.g., "extract payment processing into separate service")
 
 ---
 
-## Phase 1: Analyze — 代码分析
+## Phase 1: Analyze — Code Analysis
 
 **Goal**: Assess current code state, identify refactoring targets, establish baseline.
 
@@ -91,7 +91,7 @@ Refactor artifacts stored at `.prizmkit/refactor/<refactor-slug>/`:
 
 ---
 
-## Phase 2: Plan — 重构方案与任务
+## Phase 2: Plan — Refactor Plan & Tasks
 
 **Goal**: Generate technical refactoring plan that preserves behavior, including task breakdown.
 
@@ -113,7 +113,7 @@ Refactor artifacts stored at `.prizmkit/refactor/<refactor-slug>/`:
 
 ---
 
-## Phase 3: Implement — 实现
+## Phase 3: Implement
 
 **Goal**: Execute refactoring tasks with mandatory test verification after each task.
 
@@ -138,7 +138,7 @@ Refactor artifacts stored at `.prizmkit/refactor/<refactor-slug>/`:
 
 ---
 
-## Phase 4: Code Review — 代码审查
+## Phase 4: Code Review
 
 **Goal**: Verify refactoring quality and behavior preservation.
 
@@ -160,7 +160,7 @@ Refactor artifacts stored at `.prizmkit/refactor/<refactor-slug>/`:
 
 ---
 
-## Phase 5: Commit — 提交
+## Phase 5: Commit
 
 **Goal**: Commit with refactor convention.
 
@@ -180,7 +180,7 @@ Refactor artifacts stored at `.prizmkit/refactor/<refactor-slug>/`:
 
 ---
 
-## Fast Path — 快速路径
+## Fast Path
 
 For single-file refactoring (rename, extract method, <30 lines changed):
 
@@ -211,7 +211,7 @@ Skip Phase 2's detailed planning process, but still generate a lightweight `plan
 
 ---
 
-## Resume — 中断恢复
+## Resume — Interruption Recovery
 
 The pipeline supports resuming from the last completed phase by detecting existing artifacts.
 

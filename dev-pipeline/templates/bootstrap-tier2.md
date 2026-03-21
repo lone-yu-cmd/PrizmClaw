@@ -46,12 +46,34 @@ You are the **session orchestrator**. Implement Feature {{FEATURE_ID}}: "{{FEATU
 
 If a subagent times out:
 1. `ls .prizmkit/specs/{{FEATURE_SLUG}}/` — check what exists
-2. Re-spawn with: `"Read .prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md for full context. Do NOT re-read individual source files."` + only remaining steps + `model: "lite"`
+2. Re-spawn with: `"Read .prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md for full context. Also read .prizmkit/specs/{{FEATURE_SLUG}}/agents/*.md for knowledge from previous agents. Do NOT re-read individual source files."` + only remaining steps + `model: "lite"`
 3. Max 2 retries. After 2 failures, complete the work yourself.
 
 ---
 
 ## Execution
+
+### Phase 0.5: Agent Knowledge Setup
+
+Create the agent knowledge directory and initialize your own knowledge doc:
+```bash
+mkdir -p .prizmkit/specs/{{FEATURE_SLUG}}/agents
+```
+
+Write `.prizmkit/specs/{{FEATURE_SLUG}}/agents/orchestrator.md`:
+```markdown
+# Orchestrator
+
+## FINDINGS
+
+## DECISIONS
+
+## INTERFACES_DISCOVERED
+
+## CONTEXT_BUILT
+```
+
+After each phase, append notable DECISIONS/FINDINGS to your `agents/orchestrator.md`.
 
 {{IF_INIT_NEEDED}}
 ### Phase 0: Project Bootstrap
@@ -106,7 +128,8 @@ Prompt:
 > 1. Read `.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md` — all project context, source files, and tests are embedded there.
 > 2. Read `.prizmkit/specs/{{FEATURE_SLUG}}/plan.md` (including Tasks section).
 > 3. Implement task-by-task using TDD. Mark each task `[x]` in plan.md Tasks section immediately after completion.
-> 4. After ALL tasks complete, append an 'Implementation Log' section to `context-snapshot.md`:
+> 4. **Agent Knowledge Doc**: Maintain `.prizmkit/specs/{{FEATURE_SLUG}}/agents/dev-1.md`. After each task, append FINDINGS/DECISIONS/INTERFACES_DISCOVERED if you discovered anything notable. If context-snapshot.md was MISSING, write CONTEXT_BUILT entries after scanning source files.
+> 5. After ALL tasks complete, append an 'Implementation Log' section to `context-snapshot.md`:
 >    - Files created/modified (with paths)
 >    - Key implementation decisions
 >    - Any deviations from plan.md
@@ -127,10 +150,12 @@ Prompt:
 >    - Section 1: acceptance criteria to verify against
 >    - Section 4: original source files (before changes)
 >    - 'Implementation Log': what Dev changed
-> 2. Run prizmkit-code-review: verify all acceptance criteria, check code quality and correctness. Only read files mentioned in the Implementation Log.
-> 3. Run the test suite and report results.
-> 4. Append a 'Review Notes' section to `context-snapshot.md`: issues found (severity), test results, final verdict.
-> 5. If review uncovers durable pitfalls or conventions, add corresponding TRAPS/RULES notes to relevant `.prizm-docs/` files.
+> 2. Read `.prizmkit/specs/{{FEATURE_SLUG}}/agents/dev-*.md` (if exists) — understand Dev's implementation decisions and trade-offs.
+> 3. Run prizmkit-code-review: verify all acceptance criteria, check code quality and correctness. Only read files mentioned in the Implementation Log.
+> 4. Run the test suite and report results.
+> 5. Append a 'Review Notes' section to `context-snapshot.md`: issues found (severity), test results, final verdict.
+> 6. **Agent Knowledge Doc**: Maintain `.prizmkit/specs/{{FEATURE_SLUG}}/agents/reviewer.md`. Write FINDINGS/DECISIONS after review (e.g., patterns discovered, quality issues, architectural observations).
+> 7. If review uncovers durable pitfalls or conventions, add corresponding TRAPS/RULES notes to relevant `.prizm-docs/` files.
 > Report verdict: PASS, PASS_WITH_WARNINGS, or NEEDS_FIXES."
 
 Wait for Reviewer to return.
@@ -138,24 +163,19 @@ Wait for Reviewer to return.
 
 **CP-2**: Tests pass, verdict is not NEEDS_FIXES.
 
-### Phase 4.5: Memory Maintenance (mandatory before commit)
+### Phase 4.5: Architecture Sync & Memory Sedimentation (mandatory before commit)
 
-Run `/prizmkit-retrospective` — the **sole maintainer** of `.prizm-docs/`:
+Run `/prizmkit-retrospective` — maintains `.prizm-docs/` (architecture index) and platform memory files:
 1. **Structural sync**: Use `git diff --cached --name-status` to locate changed modules, update KEY_FILES/INTERFACES/DEPENDENCIES/file counts in affected `.prizm-docs/` files
-2. **Knowledge injection** (feature sessions only): Extract TRAPS/RULES/DECISIONS from completed work into `.prizm-docs/`
-3. Stage all doc changes: `git add .prizm-docs/`
+2. **Architecture knowledge** (feature sessions only): Extract TRAPS/RULES from completed work into `.prizm-docs/`
+3. **Memory sedimentation** (feature sessions only): Sediment DECISIONS and interface conventions to platform memory file (`CLAUDE.md` for Claude Code, BOTH `CODEBUDDY.md` AND `memory/MEMORY.md` for CodeBuddy)
+4. Stage all doc changes: `git add .prizm-docs/`
 
 Doc maintenance pass condition (pipeline-enforced): `.prizm-docs/` changed in the final commit.
 
-### Phase 5: Commit
+### Phase 5: Session Status + Commit
 
-- Run `/prizmkit-committer` → `feat({{FEATURE_ID}}): {{FEATURE_TITLE}}`, do NOT push
-- MANDATORY: commit must be done via `/prizmkit-committer` skill. Do NOT run manual `git add`/`git commit` as a substitute.
-- Do NOT run `update-feature-status.py` here — the pipeline runner handles feature-list.json updates automatically after session exit.
-
----
-
-## Step 3: Write Session Status
+**5a. Write preliminary session-status.json** (safety net — ensures pipeline sees a status file even if session terminates during commit):
 
 Write to: `{{SESSION_STATUS_PATH}}`
 
@@ -165,8 +185,8 @@ Write to: `{{SESSION_STATUS_PATH}}`
   "feature_id": "{{FEATURE_ID}}",
   "feature_slug": "{{FEATURE_SLUG}}",
   "exec_tier": 2,
-  "status": "<success|partial|failed|commit_missing|docs_missing>",
-  "completed_phases": [0, 1, 2, 3, 4, 5],
+  "status": "partial",
+  "completed_phases": [0, 1, 2, 3, 4],
   "current_phase": 5,
   "checkpoint_reached": "CP-2",
   "tasks_completed": 0,
@@ -180,23 +200,31 @@ Write to: `{{SESSION_STATUS_PATH}}`
     "context_snapshot_path": ".prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md",
     "plan_path": ".prizmkit/specs/{{FEATURE_SLUG}}/plan.md"
   },
-  "git_commit": "<commit hash>",
-  "timestamp": "2026-03-04T10:00:00Z"
+  "git_commit": "",
+  "timestamp": "<current ISO timestamp>"
 }
 ```
 
-### Step 3.1: Final Clean Check (before exit)
+**5b. Commit** — Run `/prizmkit-committer` → `feat({{FEATURE_ID}}): {{FEATURE_TITLE}}`, do NOT push
+- MANDATORY: commit must be done via `/prizmkit-committer` skill. Do NOT run manual `git add`/`git commit` as a substitute.
+- Do NOT run `update-feature-status.py` here — the pipeline runner handles feature-list.json updates automatically after session exit.
 
-After writing `session-status.json`, verify repository is clean:
+**5c. Update session-status.json to success** — After commit succeeds, update `{{SESSION_STATUS_PATH}}`:
+- Set `"status": "success"`
+- Set `"completed_phases": [0, 1, 2, 3, 4, 5]`
+- Set `"git_commit": "<actual commit hash from git log -1 --format=%H>"`
+- Set `"timestamp": "<current ISO timestamp>"`
+
+**5d. Final Clean Check** — Verify repository is clean:
 
 ```bash
 git status --short
 ```
 
-If any files remain (e.g. session-status.json), stage and create a follow-up commit:
+If any files remain, stage them **explicitly by name** (do NOT use `git add -A`) and create a follow-up commit:
 
 ```bash
-git add -A
+git add <specific-file-1> <specific-file-2>
 git commit -m "chore({{FEATURE_ID}}): include session artifacts"
 ```
 
@@ -218,7 +246,8 @@ Re-check `git status --short` and ensure it is empty before exiting.
 - Tier 2: orchestrator builds context+plan, Dev implements, Reviewer reviews — use direct Agent spawn for agents
 - Build context-snapshot.md FIRST; all subagents read it instead of re-reading source files
 - Do NOT use `run_in_background=true` when spawning subagents
-- ALWAYS write session-status.json before exiting
+- Session-status.json is written BEFORE commit (as partial), then updated to success AFTER commit — this prevents pipeline from treating a terminated session as crashed
 - `/prizmkit-committer` is mandatory, and must not be replaced with manual git commit commands
 - Before exiting, `git status --short` must be empty
+- When staging leftover files in the final clean check, always use explicit file names — NEVER use `git add -A`
 - On timeout: check snapshot → model:lite → remaining steps only → max 2 retries → orchestrator fallback

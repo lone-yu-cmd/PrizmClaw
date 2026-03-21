@@ -1,5 +1,5 @@
 ---
-description: "One-stop entry point for feature development. Orchestrates app-planner → dev-pipeline-launcher → background execution. Handles multi-feature batch development from a single request. Use this skill whenever the user wants to build an app, develop multiple features at once, or go from idea to running code in one step. Trigger on: 'build an app', 'develop features', 'implement all features', 'one-stop development', 'batch implement', '开发一个新应用', '构建系统', '一键完成', '批量实现'. (project)"
+description: "One-stop entry point for feature development. Orchestrates app-planner → dev-pipeline-launcher → background execution. Handles multi-feature batch development from a single request. Use this skill whenever the user wants to build an app, develop multiple features at once, or go from idea to running code in one step. Trigger on: 'build an app', 'develop features', 'implement all features', 'one-stop development', 'batch implement', 'build a new application', 'build a system', 'one-click complete', 'batch implement'. (project)"
 ---
 
 # Feature Workflow
@@ -9,10 +9,10 @@ One-stop entry point for feature development. Orchestrates the complete flow fro
 ## When to Use
 
 User says:
-- "开发一个新应用", "构建 XXX 系统", "做一个项目"
-- "一键完成这些特性", "批量实现这些需求"
-- "从零开始做一个任务管理 App"
-- "帮我实现用户登录、注册、头像上传这些功能"
+- "Build a new application", "Build XXX system", "Create a project"
+- "One-click complete these features", "Batch implement these requirements"
+- "Build a task management App from scratch"
+- "Help me implement user login, registration, and avatar upload features"
 - After receiving a batch of related feature requests
 
 **Do NOT use this skill when:**
@@ -26,7 +26,7 @@ User says:
 ## Overview
 
 ```
-feature-workflow <需求描述>
+feature-workflow <requirements description>
    │
    ├── Phase 1: Plan → app-planner → feature-list.json
    │
@@ -51,7 +51,7 @@ Without this skill, users must:
 3. Manually check progress
 
 With this skill, users can:
-1. Say "开发一个任务管理 App" and walk away
+1. Say "Build a task management App" and walk away
 2. All planning + execution happens automatically
 
 ---
@@ -61,9 +61,9 @@ With this skill, users can:
 **Mode A: From natural language requirements** (default)
 
 Natural language description of the project or features. Can be:
-- A project vision: "开发一个任务管理 App，支持用户登录、任务增删改查、任务分类"
-- A batch of features: "实现用户注册、登录、找回密码这三个功能"
-- An incremental request: "给现有系统追加用户头像上传和昵称修改功能"
+- A project vision: "Build a task management App with user login, task CRUD, and task categories"
+- A batch of features: "Implement user registration, login, and password recovery features"
+- An incremental request: "Add user avatar upload and nickname modification to the existing system"
 
 Flow: app-planner → dev-pipeline-launcher → monitor
 
@@ -194,9 +194,9 @@ While the pipeline runs in background, the user can continue the conversation:
 
 | User says | Action |
 |-----------|--------|
-| "status" / "进度" | Show current progress |
-| "logs" / "日志" | Show recent log activity |
-| "stop" / "停止" | Stop the pipeline (state preserved) |
+| "status" / "progress" | Show current progress |
+| "logs" | Show recent log activity |
+| "stop" | Stop the pipeline (state preserved) |
 | "show F-002 logs" | Show specific feature's session log |
 
 ---

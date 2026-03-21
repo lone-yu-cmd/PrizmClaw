@@ -193,8 +193,36 @@ spawn_and_wait_session() {
         session_status=$(python3 "$SCRIPTS_DIR/check-session-status.py" \
             --status-file "$session_status_file" 2>/dev/null) || session_status="crashed"
     else
-        log_warn "Session ended without status file — treating as crashed"
-        session_status="crashed"
+        # No session-status.json found. Before treating as crashed, check if the
+        # session produced any git commits. If commits exist, the session likely
+        # completed its work but terminated before writing session-status.json
+        # (e.g., context window exhausted). Treat as commit_missing to preserve
+        # artifacts instead of wiping everything via the crashed cleanup path.
+        local project_root_check
+        project_root_check="$(cd "$SCRIPT_DIR/.." && pwd)"
+        local session_start_iso=""
+        session_start_iso=$(python3 -c "
+import json, sys, os
+p = os.path.join(sys.argv[1], 'current-session.json')
+if os.path.isfile(p):
+    with open(p) as f: print(json.load(f).get('started_at', ''))
+else: print('')
+" "$STATE_DIR" 2>/dev/null) || session_start_iso=""
+
+        local recent_feature_commits=""
+        if [[ -n "$session_start_iso" ]] && git -C "$project_root_check" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+            recent_feature_commits=$(git -C "$project_root_check" log --since="$session_start_iso" --oneline --grep="$feature_id" 2>/dev/null | head -5)
+        fi
+
+        if [[ -n "$recent_feature_commits" ]]; then
+            log_warn "Session ended without status file, but found commits from this session:"
+            echo "$recent_feature_commits" | sed 's/^/  - /'
+            log_warn "Treating as commit_missing (artifacts preserved for retry)"
+            session_status="commit_missing"
+        else
+            log_warn "Session ended without status file — treating as crashed"
+            session_status="crashed"
+        fi
     fi
 
     if [[ "$session_status" == "success" ]]; then

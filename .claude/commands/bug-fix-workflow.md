@@ -1,5 +1,5 @@
 ---
-description: "Interactive single-bug fix in current session. Guides through triage → reproduce → fix → review → commit without the background pipeline. Use this skill when the user wants to fix one specific bug right now, interactively. Trigger on: 'fix this bug', 'debug this', 'fix B-001', 'help me fix', 'let me fix this bug myself', '修这个 bug', '交互式修复', '手动修 bug'. (project)"
+description: "Interactive single-bug fix in current session. Guides through triage → reproduce → fix → review → commit without the background pipeline. Use this skill when the user wants to fix one specific bug right now, interactively. Trigger on: 'fix this bug', 'debug this', 'fix B-001', 'help me fix', 'let me fix this bug myself', 'fix this bug', 'interactive fix', 'manually fix bug'. (project)"
 ---
 
 # Bug Fix Workflow
@@ -9,7 +9,7 @@ Fix a single bug interactively within the current AI CLI session. This is the in
 ## When to Use
 
 - User wants to fix **one specific bug** right now, with full visibility
-- User says "fix this bug", "debug this error", "help me fix B-001", "修这个 bug"
+- User says "fix this bug", "debug this error", "help me fix B-001", "fix this bug"
 - User has a stack trace or error and wants interactive debugging
 - User prefers hands-on fixing over background pipeline
 

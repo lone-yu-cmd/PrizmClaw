@@ -220,6 +220,12 @@ if [[ "$USE_STREAM_JSON" == "true" ]]; then
     STREAM_JSON_FLAG="--output-format stream-json"
 fi
 
+# claude-internal requires --verbose when using stream-json with -p/--print
+VERBOSE_FLAG=""
+if [[ "$USE_STREAM_JSON" == "true" ]]; then
+    VERBOSE_FLAG="--verbose"
+fi
+
 # Mark feature as in-progress before spawning session
 python3 "$SCRIPTS_DIR/update-feature-status.py" \
     --feature-list "$FEATURE_LIST" \
@@ -238,16 +244,11 @@ unset CLAUDECODE 2>/dev/null || true
 case "$CLI_CMD" in
     *claude*)
         # Claude Code: prompt via -p argument, --dangerously-skip-permissions for auto-accept
-        # claude-internal requires --verbose when using --output-format stream-json with -p
-        VERBOSE_FLAG=""
-        if [[ "$USE_STREAM_JSON" == "true" ]]; then
-            VERBOSE_FLAG="--verbose"
-        fi
         "$CLI_CMD" \
             -p "$(cat "$BOOTSTRAP_PROMPT")" \
             --dangerously-skip-permissions \
-            $STREAM_JSON_FLAG \
             $VERBOSE_FLAG \
+            $STREAM_JSON_FLAG \
             $MODEL_FLAG \
             > "$SESSION_LOG" 2>&1 &
         ;;
@@ -330,8 +331,36 @@ elif [[ -f "$SESSION_STATUS_FILE" ]]; then
     SESSION_STATUS=$(python3 "$SCRIPTS_DIR/check-session-status.py" \
         --status-file "$SESSION_STATUS_FILE" 2>/dev/null) || SESSION_STATUS="crashed"
 else
+    # No session-status.json found. Check if session produced git commits
+    # (e.g., context window exhausted after committing but before writing status).
     log_warn "Session ended without status file"
-    SESSION_STATUS="crashed"
+    PROJECT_ROOT_CHECK="$(cd "$SCRIPT_DIR/.." && pwd)"
+    RECENT_FEATURE_COMMITS=""
+    if git -C "$PROJECT_ROOT_CHECK" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        # Use session directory creation time as lower bound for commit search
+        SESSION_START_ISO=$(python3 -c "
+import os, sys
+from datetime import datetime, timezone
+p = sys.argv[1]
+if os.path.isdir(p):
+    ts = os.path.getctime(p)
+    print(datetime.fromtimestamp(ts, tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'))
+else:
+    print('')
+" "$SESSION_DIR" 2>/dev/null) || SESSION_START_ISO=""
+        if [[ -n "$SESSION_START_ISO" ]]; then
+            RECENT_FEATURE_COMMITS=$(git -C "$PROJECT_ROOT_CHECK" log --since="$SESSION_START_ISO" --oneline --grep="$FEATURE_ID" 2>/dev/null | head -5)
+        fi
+    fi
+
+    if [[ -n "$RECENT_FEATURE_COMMITS" ]]; then
+        log_warn "Found commits from this session:"
+        echo "$RECENT_FEATURE_COMMITS" | sed 's/^/  - /'
+        log_warn "Treating as commit_missing (artifacts preserved for retry)"
+        SESSION_STATUS="commit_missing"
+    else
+        SESSION_STATUS="crashed"
+    fi
 fi
 
 if [[ "$SESSION_STATUS" == "success" ]]; then

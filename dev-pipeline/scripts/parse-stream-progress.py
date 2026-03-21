@@ -25,15 +25,45 @@ from collections import Counter
 from datetime import datetime, timezone
 
 
-# Phase keywords for detection
+# Ordered pipeline phases — index defines forward-only progression.
+# Phase detection is monotonic: once a phase is reached, earlier phases
+# cannot be re-entered (prevents false positives from file content mentions).
+PHASE_ORDER = ["specify", "plan", "analyze", "implement", "code-review", "retrospective", "commit"]
+
+# Keywords for phase detection.
+# "strong" keywords are skill invocations — high confidence, but still
+# forward-only (a mention of prizmkit-plan while in commit phase is noise).
+# "weak" keywords are contextual hints — also forward-only, used when no
+# strong keyword matches.
 PHASE_KEYWORDS = {
-    "specify": ["prizmkit-specify", "spec.md", "specification", "gathering requirements"],
-    "plan": ["prizmkit-plan", "plan.md", "architecture", "design plan", "task checklist", "task breakdown"],
-    "analyze": ["prizmkit-analyze", "cross-check", "consistency", "analyzing"],
-    "implement": ["prizmkit-implement", "implement", "TDD", "coding", "writing code"],
-    "code-review": ["prizmkit-code-review", "code review", "review verdict", "reviewing"],
-    "retrospective": ["prizmkit-retrospective", "retrospective", "knowledge distillation", "TRAPS", ".prizm-docs/ sync", "structural sync"],
-    "commit": ["prizmkit-committer", "git commit", "feat(", "fix(", "committing"],
+    "specify": {
+        "strong": ["prizmkit-specify"],
+        "weak": ["gathering requirements"],
+    },
+    "plan": {
+        "strong": ["prizmkit-plan"],
+        "weak": ["task checklist", "task breakdown"],
+    },
+    "analyze": {
+        "strong": ["prizmkit-analyze"],
+        "weak": ["cross-check", "consistency analysis"],
+    },
+    "implement": {
+        "strong": ["prizmkit-implement"],
+        "weak": ["writing code", "TDD cycle"],
+    },
+    "code-review": {
+        "strong": ["prizmkit-code-review"],
+        "weak": ["review verdict"],
+    },
+    "retrospective": {
+        "strong": ["prizmkit-retrospective"],
+        "weak": ["structural sync", "knowledge distillation", "memory sedimentation"],
+    },
+    "commit": {
+        "strong": ["prizmkit-committer"],
+        "weak": ["git commit -m"],
+    },
 }
 
 
@@ -171,15 +201,42 @@ class ProgressTracker:
             pass
 
     def _detect_phase(self, text):
-        """Detect pipeline phase from text content."""
+        """Detect pipeline phase from text content.
+
+        Uses monotonic (forward-only) progression to avoid false positives.
+        Strong keywords (skill invocations) always trigger; weak keywords
+        only trigger for phases at or ahead of the current position.
+        """
         text_lower = text.lower()
-        for phase, keywords in PHASE_KEYWORDS.items():
-            for keyword in keywords:
+        current_idx = (
+            PHASE_ORDER.index(self.current_phase)
+            if self.current_phase in PHASE_ORDER
+            else -1
+        )
+
+        for phase, kw_groups in PHASE_KEYWORDS.items():
+            phase_idx = PHASE_ORDER.index(phase)
+
+            # Check strong keywords — high confidence but still forward-only
+            for keyword in kw_groups.get("strong", []):
                 if keyword.lower() in text_lower:
-                    self.current_phase = phase
-                    if phase not in self.detected_phases:
-                        self.detected_phases.append(phase)
-                    return
+                    if phase_idx >= current_idx:
+                        self.current_phase = phase
+                        if phase not in self.detected_phases:
+                            self.detected_phases.append(phase)
+                        return
+                    # Backward strong match — skip this phase but do NOT
+                    # early-return, so forward weak matches can still fire.
+                    break
+
+            # Check weak keywords — only trigger for forward phases
+            if phase_idx >= current_idx:
+                for keyword in kw_groups.get("weak", []):
+                    if keyword.lower() in text_lower:
+                        self.current_phase = phase
+                        if phase not in self.detected_phases:
+                            self.detected_phases.append(phase)
+                        return
 
     def _extract_tool_summary(self, raw_input):
         """Extract a human-readable summary from tool input JSON string."""
