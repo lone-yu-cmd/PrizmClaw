@@ -38,31 +38,31 @@ PHASE_ORDER = ["specify", "plan", "analyze", "implement", "code-review", "retros
 PHASE_KEYWORDS = {
     "specify": {
         "strong": ["prizmkit-specify"],
-        "weak": ["gathering requirements"],
+        "weak": ["spec.md", "specification", "gathering requirements"],
     },
     "plan": {
         "strong": ["prizmkit-plan"],
-        "weak": ["task checklist", "task breakdown"],
+        "weak": ["plan.md", "architecture", "task checklist", "task breakdown"],
     },
     "analyze": {
         "strong": ["prizmkit-analyze"],
-        "weak": ["cross-check", "consistency analysis"],
+        "weak": ["cross-check", "consistency analysis", "analyzing"],
     },
     "implement": {
         "strong": ["prizmkit-implement"],
-        "weak": ["writing code", "TDD cycle"],
+        "weak": ["implement", "writing code", "TDD", "coding"],
     },
     "code-review": {
         "strong": ["prizmkit-code-review"],
-        "weak": ["review verdict"],
+        "weak": ["code review", "review verdict", "reviewing"],
     },
     "retrospective": {
         "strong": ["prizmkit-retrospective"],
-        "weak": ["structural sync", "knowledge distillation", "memory sedimentation"],
+        "weak": ["retrospective", "structural sync", "knowledge distillation", ".prizm-docs/ sync", "memory sedimentation"],
     },
     "commit": {
         "strong": ["prizmkit-committer"],
-        "weak": ["git commit -m"],
+        "weak": ["git commit", "committing", "feat(", "fix("],
     },
 }
 

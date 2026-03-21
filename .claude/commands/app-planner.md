@@ -48,6 +48,7 @@ Before questions, check optional context files (never block if absent):
 - `.prizm-docs/root.prizm` (architecture/project context)
 - `.prizmkit/config.json` (existing stack preferences)
 - existing `feature-list.json` (required for incremental mode)
+- `.prizmkit/available-models.json` (detected AI models, from detect-models.sh)
 
 Note:
 - This skill **reads** `.prizmkit/config.json` if present.
@@ -82,6 +83,12 @@ Execute the selected scenario workflow in conversation mode with mandatory check
 ### Interactive Phases
 1. clarify business goal and scope
 2. confirm constraints and tech assumptions
+2b. (optional) if `.prizmkit/available-models.json` exists and `model_switch_supported == true`:
+    - read the file and show available models to user
+    - ask: "要为 feature 指定 AI 模型吗？" with options:
+      a) 全部使用某个模型（写入每个 feature 的 model 字段）
+      b) 不指定（使用 $MODEL 环境变量或 CLI 默认）
+    - if user chooses a model, remember it for Phase 6 JSON generation
 3. propose feature set with dependencies
 4. refine descriptions and acceptance criteria
 5. verify DAG/order/priorities
@@ -150,6 +157,12 @@ AI: "Ready to proceed to dev-pipeline."
 - valid dependency DAG
 - new items default `status: "pending"`
 - English feature titles for stable slug generation
+- if `.prizmkit/available-models.json` exists and `model_switch_supported == true`:
+  - if user specified model preference during planning:
+    - set `model` field on every feature with user's chosen model
+  - if user said "no preference" → omit `model` field
+- model IDs should come from `.prizmkit/available-models.json` models list
+- `model` field is optional — omitting it means the pipeline uses $MODEL env or CLI default
 
 ## Next-Step Execution Policy (after planning)
 

@@ -207,6 +207,11 @@ echo -e "${BOLD}  Retry Bug Fix: $BUG_ID — $BUG_TITLE${NC}"
 echo -e "${BOLD}  Severity: $BUG_SEVERITY${NC}"
 echo -e "${BOLD}════════════════════════════════════════════════════${NC}"
 log_info "CLI: $CLI_CMD (platform: $PLATFORM)"
+if [[ -n "${MODEL:-}" ]]; then
+    log_info "Model: $MODEL"
+else
+    log_info "Model: (CLI default)"
+fi
 if [[ $SESSION_TIMEOUT -gt 0 ]]; then
     log_info "Session timeout: ${SESSION_TIMEOUT}s"
 else

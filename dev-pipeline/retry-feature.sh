@@ -170,6 +170,9 @@ python3 "$SCRIPTS_DIR/update-feature-status.py" \
     log_warn "Failed to clean feature artifacts (continuing with fresh session only)"
 }
 
+# Auto-detect available models (quiet, non-blocking)
+bash "$SCRIPT_DIR/scripts/detect-models.sh" --quiet 2>/dev/null || true
+
 # ============================================================
 # Generate bootstrap prompt
 # ============================================================
@@ -182,7 +185,7 @@ mkdir -p "$SESSION_DIR/logs"
 BOOTSTRAP_PROMPT="$SESSION_DIR/bootstrap-prompt.md"
 
 log_info "Generating bootstrap prompt..."
-python3 "$SCRIPTS_DIR/generate-bootstrap-prompt.py" \
+GEN_OUTPUT=$(python3 "$SCRIPTS_DIR/generate-bootstrap-prompt.py" \
     --feature-list "$FEATURE_LIST" \
     --feature-id "$FEATURE_ID" \
     --session-id "$SESSION_ID" \
@@ -190,7 +193,11 @@ python3 "$SCRIPTS_DIR/generate-bootstrap-prompt.py" \
     --retry-count 0 \
     --resume-phase "null" \
     --state-dir "$STATE_DIR" \
-    --output "$BOOTSTRAP_PROMPT" >/dev/null 2>&1
+    --output "$BOOTSTRAP_PROMPT" 2>/dev/null) || {
+    log_error "Failed to generate bootstrap prompt"
+    exit 1
+}
+FEATURE_MODEL=$(echo "$GEN_OUTPUT" | python3 -c "import json,sys; print(json.load(sys.stdin).get('model',''))" 2>/dev/null || echo "")
 
 # ============================================================
 # Run single AI CLI session
@@ -201,6 +208,12 @@ echo -e "${BOLD}═════════════════════�
 echo -e "${BOLD}  Retry: $FEATURE_ID — $FEATURE_TITLE${NC}"
 echo -e "${BOLD}════════════════════════════════════════════════════${NC}"
 log_info "CLI: $CLI_CMD (platform: $PLATFORM)"
+EFFECTIVE_MODEL="${FEATURE_MODEL:-${MODEL:-}}"
+if [[ -n "$EFFECTIVE_MODEL" ]]; then
+    log_info "Model: $EFFECTIVE_MODEL"
+else
+    log_info "Model: (CLI default)"
+fi
 if [[ $SESSION_TIMEOUT -gt 0 ]]; then
     log_info "Session timeout: ${SESSION_TIMEOUT}s"
 else
@@ -234,9 +247,12 @@ python3 "$SCRIPTS_DIR/update-feature-status.py" \
     --action start >/dev/null 2>&1 || true
 
 # Spawn AI CLI session
+# Spawn AI CLI session — model priority: feature.model > $MODEL env > none
+EFFECTIVE_MODEL="${FEATURE_MODEL:-${MODEL:-}}"
 MODEL_FLAG=""
-if [[ -n "${MODEL:-}" ]]; then
-    MODEL_FLAG="--model $MODEL"
+if [[ -n "$EFFECTIVE_MODEL" ]]; then
+    MODEL_FLAG="--model $EFFECTIVE_MODEL"
+    log_info "Model: $EFFECTIVE_MODEL"
 fi
 
 unset CLAUDECODE 2>/dev/null || true

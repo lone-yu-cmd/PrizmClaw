@@ -65,6 +65,20 @@ LLM context is frozen at prompt time. Modifying a skill source file during this 
 **When you modify any file in `dev-pipeline/scripts/`, `dev-pipeline/templates/`, or `core/skills/` that this pipeline actively uses**: set `reload_needed: true` in `session-status.json`. The pipeline runner will warn the operator after session completion.
 {{END_IF_MODE_SELF_EVOLVE}}
 
+## ⚠️ Context Budget Rules (CRITICAL — read before any phase)
+
+You are running in headless mode with a FINITE context window. Exceeding it will crash the session and lose all work. Follow these rules strictly:
+
+1. **context-snapshot.md is your single source of truth** — After Phase 1-2 builds it, ALWAYS read context-snapshot.md instead of re-reading individual source files
+2. **Never re-read your own writes** — After you create/modify a file, do NOT read it back to verify. Trust your write was correct.
+3. **Stay focused** — Do NOT explore code unrelated to this feature. No curiosity-driven reads.
+4. **One task at a time** — In Phase 4 (implement), complete and test one task before starting the next.
+5. **Minimize tool output** — When running commands, use `| head -20` or `| tail -20` to limit output. Never dump entire test suites or logs.
+6. **Write session-status.json early** — Write a preliminary status file at the START of Phase 4, not just at the end.
+7. **Incremental commits when possible** — If a feature has multiple independent tasks, commit after each completed task rather than one big commit at the end.
+
+---
+
 ## PrizmKit Directory Convention
 
 ```
@@ -223,6 +237,18 @@ Wait for Reviewer to return.
 **CP-2**: No CRITICAL issues.
 
 ### Phase 4: Implement — Dev Agent
+
+**Before spawning Dev**, write a preliminary session-status.json to `{{SESSION_STATUS_PATH}}`:
+```json
+{
+  "status": "partial",
+  "current_phase": 4,
+  "feature_id": "{{FEATURE_ID}}",
+  "session_id": "{{SESSION_ID}}",
+  "started_at": "<current ISO timestamp>"
+}
+```
+This ensures the pipeline sees a "partial" status even if the session crashes mid-implementation.
 
 Before spawning Dev, check plan.md Tasks section:
 ```bash

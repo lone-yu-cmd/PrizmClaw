@@ -515,6 +515,9 @@ main() {
         log_info "Session timeout: none"
     fi
     log_info "AI CLI: $CLI_CMD (platform: $PLATFORM)"
+    if [[ -n "${MODEL:-}" ]]; then
+        log_info "Default Model: $MODEL"
+    fi
     echo -e "${BOLD}════════════════════════════════════════════════════${NC}"
     echo ""
 

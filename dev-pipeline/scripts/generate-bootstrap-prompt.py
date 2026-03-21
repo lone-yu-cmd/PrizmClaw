@@ -630,9 +630,11 @@ def main():
         emit_failure(err)
 
     # Success
+    feature_model = feature.get("model", "")
     output = {
         "success": True,
         "output_path": os.path.abspath(args.output),
+        "model": feature_model,
     }
     print(json.dumps(output, indent=2, ensure_ascii=False))
     sys.exit(0)

@@ -1,7 +1,7 @@
 {
-  "version": "1.0.76",
+  "version": "1.0.79",
   "installedAt": "2026-03-17T08:37:38.476Z",
-  "updatedAt": "2026-03-20T19:42:02.917Z",
+  "updatedAt": "2026-03-21T15:10:29.647Z",
   "platform": "claude",
   "suite": "core",
   "options": {
@@ -54,6 +54,7 @@
       "lib/heartbeat.sh",
       "scripts/check-session-status.py",
       "scripts/cleanup-logs.py",
+      "scripts/detect-models.sh",
       "scripts/detect-stuck.py",
       "scripts/generate-bootstrap-prompt.py",
       "scripts/generate-bugfix-prompt.py",
@@ -64,6 +65,7 @@
       "scripts/update-bug-status.py",
       "scripts/update-feature-status.py",
       "scripts/utils.py",
+      "scripts/validate-feature-models.py",
       "templates/agent-knowledge-template.md",
       "templates/bootstrap-prompt.md",
       "templates/bootstrap-tier1.md",

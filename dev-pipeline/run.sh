@@ -90,6 +90,7 @@ spawn_and_wait_session() {
     local bootstrap_prompt="$4"
     local session_dir="$5"
     local max_retries="$6"
+    local feature_model="${7:-}"
 
     local session_log="$session_dir/logs/session.log"
     local progress_json="$session_dir/logs/progress.json"
@@ -108,8 +109,9 @@ spawn_and_wait_session() {
     fi
 
     local model_flag=""
-    if [[ -n "$MODEL" ]]; then
-        model_flag="--model $MODEL"
+    local effective_model="${feature_model:-$MODEL}"
+    if [[ -n "$effective_model" ]]; then
+        model_flag="--model $effective_model"
     fi
 
     # Unset CLAUDECODE to prevent "nested session" error when launched from
@@ -648,7 +650,13 @@ sys.exit(1)
     fi
 
     log_info "Generating bootstrap prompt..."
-    python3 "$SCRIPTS_DIR/generate-bootstrap-prompt.py" "${prompt_args[@]}" >/dev/null 2>&1
+    local gen_output
+    gen_output=$(python3 "$SCRIPTS_DIR/generate-bootstrap-prompt.py" "${prompt_args[@]}" 2>/dev/null) || {
+        log_error "Failed to generate bootstrap prompt for $feature_id"
+        return 1
+    }
+    local feature_model
+    feature_model=$(echo "$gen_output" | python3 -c "import json,sys; print(json.load(sys.stdin).get('model',''))" 2>/dev/null || echo "")
 
     # Dry-Run: Print info and exit
     if [[ "$dry_run" == true ]]; then
@@ -663,6 +671,13 @@ sys.exit(1)
             log_info "Mode Override: $mode_override"
         else
             log_info "Mode:          auto-detect (from complexity)"
+        fi
+        if [[ -n "$feature_model" ]]; then
+            log_info "Feature Model: $feature_model"
+        elif [[ -n "${MODEL:-}" ]]; then
+            log_info "Model (env):   $MODEL"
+        else
+            log_info "Model:         (CLI default)"
         fi
         echo ""
         log_info "Bootstrap prompt written to:"
@@ -690,6 +705,12 @@ sys.exit(1)
     echo -e "${BOLD}════════════════════════════════════════════════════${NC}"
     log_info "Session ID: $session_id"
     log_info "Resume Phase: $resume_phase"
+    local effective_model="${feature_model:-$MODEL}"
+    if [[ -n "$effective_model" ]]; then
+        log_info "Model: $effective_model"
+    else
+        log_info "Model: (CLI default)"
+    fi
     if [[ -n "$mode_override" ]]; then
         log_info "Mode Override: $mode_override"
     fi
@@ -736,7 +757,7 @@ sys.exit(1)
 
     spawn_and_wait_session \
         "$feature_id" "$feature_list" "$session_id" \
-        "$bootstrap_prompt" "$session_dir" 999
+        "$bootstrap_prompt" "$session_dir" 999 "$feature_model"
     local session_status="$_SPAWN_RESULT"
 
     # Auto-push after successful session
@@ -850,6 +871,14 @@ main() {
         log_info "Resuming existing pipeline..."
     fi
 
+    # Auto-detect available models + validate feature model fields
+    bash "$SCRIPT_DIR/scripts/detect-models.sh" --quiet 2>/dev/null || true
+    if [[ -f ".prizmkit/available-models.json" ]]; then
+        python3 "$SCRIPTS_DIR/validate-feature-models.py" \
+            --feature-list "$feature_list" \
+            --models-file ".prizmkit/available-models.json" 2>&1 | head -5 || true
+    fi
+
     # Print header
     echo ""
     echo -e "${BOLD}════════════════════════════════════════════════════${NC}"
@@ -863,6 +892,9 @@ main() {
         log_info "Session timeout: none"
     fi
     log_info "AI CLI: $CLI_CMD (platform: $PLATFORM)"
+    if [[ -n "${MODEL:-}" ]]; then
+        log_info "Default Model: $MODEL"
+    fi
     echo -e "${BOLD}════════════════════════════════════════════════════${NC}"
     echo ""
 
@@ -992,7 +1024,13 @@ for f in data.get('stuck_features', []):
             fi
         fi
 
-        python3 "$SCRIPTS_DIR/generate-bootstrap-prompt.py" "${main_prompt_args[@]}" >/dev/null 2>&1
+        local gen_output
+        gen_output=$(python3 "$SCRIPTS_DIR/generate-bootstrap-prompt.py" "${main_prompt_args[@]}" 2>/dev/null) || {
+            log_error "Failed to generate bootstrap prompt for $feature_id"
+            continue
+        }
+        local feature_model
+        feature_model=$(echo "$gen_output" | python3 -c "import json,sys; print(json.load(sys.stdin).get('model',''))" 2>/dev/null || echo "")
 
         # Update current session tracking (atomic write via temp file)
         python3 -c "
@@ -1020,11 +1058,14 @@ os.replace(tmp, target)
 
         # Spawn session and wait
         log_info "Spawning AI CLI session: $session_id"
+        if [[ -n "$feature_model" ]]; then
+            log_info "Feature model: $feature_model"
+        fi
         _SPAWN_RESULT=""
 
         spawn_and_wait_session \
             "$feature_id" "$feature_list" "$session_id" \
-            "$bootstrap_prompt" "$session_dir" "$MAX_RETRIES"
+            "$bootstrap_prompt" "$session_dir" "$MAX_RETRIES" "$feature_model"
         local session_status="$_SPAWN_RESULT"
 
         # Auto-push after successful session

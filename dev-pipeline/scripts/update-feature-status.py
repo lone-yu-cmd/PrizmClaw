@@ -462,14 +462,10 @@ def action_update(args, feature_list_path, state_dir):
             error_out("Failed to update feature-list.json: {}".format(err))
             return
     else:
+        # crashed / failed / timed_out — preserve all artifacts for debugging.
+        # Previous behavior deleted everything via cleanup_feature_artifacts(),
+        # making it impossible to diagnose why the session failed.
         fs["retry_count"] = fs.get("retry_count", 0) + 1
-
-        cleaned = cleanup_feature_artifacts(
-            feature_list_path=feature_list_path,
-            state_dir=state_dir,
-            feature_id=feature_id,
-            project_root=args.project_root,
-        )
 
         if fs["retry_count"] >= max_retries:
             fs["status"] = "failed"
@@ -479,8 +475,9 @@ def action_update(args, feature_list_path, state_dir):
             target_status = "pending"
 
         fs["resume_from_phase"] = None
-        fs["sessions"] = []
-        fs["last_session_id"] = None
+        # Keep sessions list and last_session_id for debugging
+        # fs["sessions"] = []
+        # fs["last_session_id"] = None
 
         err = update_feature_in_list(feature_list_path, feature_id, target_status)
         if err:
@@ -514,8 +511,8 @@ def action_update(args, feature_list_path, state_dir):
         summary["degraded_reason"] = session_status
         summary["restart_policy"] = "finalization_retry"
     elif session_status != "success":
-        summary["restart_policy"] = "full_restart"
-        summary["cleanup_performed"] = cleaned
+        summary["restart_policy"] = "preserve_and_retry"
+        summary["artifacts_preserved"] = True
 
     print(json.dumps(summary, indent=2, ensure_ascii=False))
 
