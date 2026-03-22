@@ -15,6 +15,7 @@ const testFixturesDir = path.join(__dirname, 'fixtures/session-bind-f018');
 describe('F-018 Session Binding Service', () => {
   let sessionBindingService;
   let SessionBindingService;
+  let createSessionBindService;
 
   beforeEach(async () => {
     // Clean up test fixtures directory
@@ -24,6 +25,7 @@ describe('F-018 Session Binding Service', () => {
     // Import module after cleaning
     const module = await import('../../src/services/session-bind.js');
     SessionBindingService = module.SessionBindingService;
+    createSessionBindService = module.createSessionBindService;
 
     // Create new instance with test persistence dir
     sessionBindingService = new SessionBindingService({
@@ -70,8 +72,8 @@ describe('F-018 Session Binding Service', () => {
   });
 
   describe('bindSession', () => {
-    test('should throw error if not initialized', async () => {
-      assert.rejects(
+    test('should throw error if not initialized', () => {
+      assert.throws(
         () => sessionBindingService.bindSession('web-1', '123456'),
         /not initialized/
       );
@@ -80,12 +82,12 @@ describe('F-018 Session Binding Service', () => {
     test('should throw error if webSessionId is empty', async () => {
       await sessionBindingService.init();
 
-      assert.rejects(
+      assert.throws(
         () => sessionBindingService.bindSession('', '123456'),
         /webSessionId cannot be empty/
       );
 
-      assert.rejects(
+      assert.throws(
         () => sessionBindingService.bindSession('  ', '123456'),
         /webSessionId cannot be empty/
       );
@@ -94,7 +96,7 @@ describe('F-018 Session Binding Service', () => {
     test('should throw error if telegramChatId is empty', async () => {
       await sessionBindingService.init();
 
-      assert.rejects(
+      assert.throws(
         () => sessionBindingService.bindSession('web-1', ''),
         /telegramChatId cannot be empty/
       );
@@ -112,6 +114,7 @@ describe('F-018 Session Binding Service', () => {
     test('should persist binding to file', async () => {
       await sessionBindingService.init();
       sessionBindingService.bindSession('web-session-1', '123456789');
+      await sessionBindingService.flush();
 
       // Create new instance to verify persistence
       const newService = new SessionBindingService({
@@ -133,8 +136,8 @@ describe('F-018 Session Binding Service', () => {
   });
 
   describe('unbindSession', () => {
-    test('should throw error if not initialized', async () => {
-      assert.rejects(
+    test('should throw error if not initialized', () => {
+      assert.throws(
         () => sessionBindingService.unbindSession('web-1'),
         /not initialized/
       );
@@ -178,8 +181,8 @@ describe('F-018 Session Binding Service', () => {
   });
 
   describe('getBoundChatId', () => {
-    test('should throw error if not initialized', async () => {
-      assert.rejects(
+    test('should throw error if not initialized', () => {
+      assert.throws(
         () => sessionBindingService.getBoundChatId('web-1'),
         /not initialized/
       );
@@ -200,8 +203,8 @@ describe('F-018 Session Binding Service', () => {
   });
 
   describe('getBoundWebSessions', () => {
-    test('should throw error if not initialized', async () => {
-      assert.rejects(
+    test('should throw error if not initialized', () => {
+      assert.throws(
         () => sessionBindingService.getBoundWebSessions('123456'),
         /not initialized/
       );
@@ -227,8 +230,8 @@ describe('F-018 Session Binding Service', () => {
   });
 
   describe('getAllBindings', () => {
-    test('should throw error if not initialized', async () => {
-      assert.rejects(
+    test('should throw error if not initialized', () => {
+      assert.throws(
         () => sessionBindingService.getAllBindings(),
         /not initialized/
       );
@@ -248,8 +251,8 @@ describe('F-018 Session Binding Service', () => {
   });
 
   describe('clearAllBindings', () => {
-    test('should throw error if not initialized', async () => {
-      assert.rejects(
+    test('should throw error if not initialized', () => {
+      assert.throws(
         () => sessionBindingService.clearAllBindings(),
         /not initialized/
       );
@@ -265,6 +268,34 @@ describe('F-018 Session Binding Service', () => {
       assert.strictEqual(result.ok, true);
       assert.strictEqual(sessionBindingService.getBoundChatId('web-1'), null);
       assert.strictEqual(sessionBindingService.getBoundChatId('web-2'), null);
+    });
+  });
+
+  describe('createSessionBindService factory', () => {
+    test('should create an instance with bindingsPath option', async () => {
+      const bindingsPath = path.join(testFixturesDir, 'session-bindings.json');
+      const service = createSessionBindService({ bindingsPath });
+
+      // Wait for auto-init to complete
+      await service.flush();
+      await service.init(); // safe to call again (idempotent)
+
+      // Should work after init
+      const result = service.bindSession('web-1', '123456');
+      assert.strictEqual(result.ok, true);
+      assert.strictEqual(service.getBoundChatId('web-1'), '123456');
+    });
+
+    test('should create an instance with persistenceDir option', async () => {
+      const service = createSessionBindService({ persistenceDir: testFixturesDir });
+
+      // Wait for auto-init to complete
+      await service.flush();
+      await service.init();
+
+      const result = service.bindSession('web-2', '789012');
+      assert.strictEqual(result.ok, true);
+      assert.strictEqual(service.getBoundChatId('web-2'), '789012');
     });
   });
 });

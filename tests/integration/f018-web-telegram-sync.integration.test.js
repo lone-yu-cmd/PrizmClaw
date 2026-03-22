@@ -13,7 +13,6 @@ import os from 'node:os';
 import http from 'node:http';
 
 import { createHttpServer } from '../../src/http/server.js';
-import { config } from '../../src/config.js';
 
 /**
  * Helper to create temp directory for test state
@@ -68,18 +67,8 @@ function makeRequest(options, data) {
  * Helper to start HTTP server
  */
 function startServer(bindingsPath) {
-  // Override config for testing
-  const originalBindingsPath = config.sessionBindingsPath;
-  const testBindingsPath = bindingsPath;
-
-  // Create a mock config object
-  const mockConfig = {
-    ...config,
-    sessionBindingsPath: testBindingsPath
-  };
-
   const logger = { info: () => {}, error: () => {} };
-  const app = createHttpServer({ logger });
+  const app = createHttpServer({ logger, sessionBindingsPath: bindingsPath });
 
   return new Promise((resolve) => {
     const server = http.createServer(app);
@@ -109,10 +98,17 @@ test('F-018: POST /api/bind creates session binding', async (t) => {
       assert.strictEqual(response.statusCode, 200);
       assert.strictEqual(response.body.ok, true);
 
-      // Verify binding persisted
-      const raw = fs.readFileSync(bindingsPath, 'utf-8');
-      const data = JSON.parse(raw);
-      assert.strictEqual(data.bindings['web-session-123'], '456');
+      // Verify binding via GET /api/bindings (more reliable than file read)
+      const verifyResponse = await makeRequest({
+        hostname: 'localhost',
+        port,
+        path: '/api/bindings?webSessionId=web-session-123',
+        method: 'GET'
+      });
+
+      assert.strictEqual(verifyResponse.statusCode, 200);
+      assert.strictEqual(verifyResponse.body.ok, true);
+      assert.strictEqual(verifyResponse.body.telegramChatId, '456');
     } finally {
       cleanupServer();
     }
@@ -162,6 +158,16 @@ test('F-018: POST /api/unbind removes session binding', async (t) => {
 
     const { server, port, cleanup: cleanupServer } = await startServer(bindingsPath);
     try {
+      // First verify the binding exists
+      const beforeResponse = await makeRequest({
+        hostname: 'localhost',
+        port,
+        path: '/api/bindings?webSessionId=web-session-123',
+        method: 'GET'
+      });
+      assert.strictEqual(beforeResponse.body.telegramChatId, '456');
+
+      // Unbind
       const response = await makeRequest({
         hostname: 'localhost',
         port,
@@ -174,10 +180,14 @@ test('F-018: POST /api/unbind removes session binding', async (t) => {
       assert.strictEqual(response.statusCode, 200);
       assert.strictEqual(response.body.ok, true);
 
-      // Verify binding removed
-      const raw = fs.readFileSync(bindingsPath, 'utf-8');
-      const data = JSON.parse(raw);
-      assert.strictEqual(data.bindings['web-session-123'], undefined);
+      // Verify binding removed via API
+      const afterResponse = await makeRequest({
+        hostname: 'localhost',
+        port,
+        path: '/api/bindings?webSessionId=web-session-123',
+        method: 'GET'
+      });
+      assert.strictEqual(afterResponse.body.telegramChatId, null);
     } finally {
       cleanupServer();
     }

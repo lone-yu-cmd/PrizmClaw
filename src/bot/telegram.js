@@ -8,6 +8,9 @@ import { logger } from '../utils/logger.js';
 import { isAllowedUser } from '../security/guard.js';
 import { chatWithSession, resetSession } from '../services/chat-service.js';
 import { executeAiCli, interruptAiCli, isAiCliRunning } from '../services/ai-cli-service.js';
+import { createMessageRouter } from '../services/message-router.js';
+import { realtimeHub } from '../services/realtime-hub.js';
+import { createSessionBindService } from '../services/session-bind.js';
 import { captureScreenshot } from '../services/screenshot-service.js';
 import { executeCommand, confirmHighRiskCommand } from '../services/command-executor-service.js';
 import { createPlanIngestionService } from '../services/plan-ingestion-service.js';
@@ -620,6 +623,88 @@ export async function createTelegramBot() {
   // Register pipeline commands
   registerPipelineCommands();
 
+  // F-018: Create unified message router for bidirectional sync
+  const messageRouter = createMessageRouter({
+    aiCliExecutor: executeAiCli,
+    sessionStore,
+    realtimeHub
+  });
+
+  // F-018: Initialize session bind service for cross-channel push
+  const sessionBind = createSessionBindService({
+    bindingsPath: config.sessionBindingsPath
+  });
+
+  // F-018: Cross-channel push — forward web-originated AI replies to bound Telegram chats.
+  // Track active subscriptions to avoid duplicates.
+  const crossChannelSubs = new Map(); // sessionKey -> unsubscribe fn
+
+  /**
+   * Subscribe to realtimeHub for a specific Telegram chat session key.
+   * When a web-originated assistant_done event arrives, push the reply to Telegram.
+   */
+  function subscribeCrossChannel(telegramChatId) {
+    const sessionKey = `telegram:${telegramChatId}`;
+    if (crossChannelSubs.has(sessionKey)) {
+      return; // already subscribed
+    }
+
+    const unsubscribe = realtimeHub.subscribe(sessionKey, (event) => {
+      // Only forward assistant_done events from web channel
+      if (event.type === 'assistant_done' && event.payload?.channel === 'web') {
+        const reply = event.payload.reply;
+        if (reply) {
+          const chunks = splitMessage(reply);
+          for (const chunk of chunks) {
+            bot.telegram.sendMessage(telegramChatId, chunk).catch((err) => {
+              logger.warn(
+                { telegramChatId, err: err.message },
+                'F-018: Failed to push web-originated reply to Telegram'
+              );
+            });
+          }
+        }
+      }
+
+      // Forward user_message events from web channel to notify Telegram
+      if (event.type === 'user_message' && event.payload?.channel === 'web') {
+        const msg = event.payload.message;
+        if (msg) {
+          bot.telegram.sendMessage(
+            telegramChatId,
+            `[Web] ${msg.length > 200 ? msg.substring(0, 200) + '...' : msg}`
+          ).catch((err) => {
+            logger.warn(
+              { telegramChatId, err: err.message },
+              'F-018: Failed to push web user message notification to Telegram'
+            );
+          });
+        }
+      }
+    });
+
+    crossChannelSubs.set(sessionKey, unsubscribe);
+    logger.info({ sessionKey }, 'F-018: Cross-channel push subscription active');
+  }
+
+  // Subscribe for all existing bindings on startup
+  // Wait for sessionBind to initialize before reading bindings
+  sessionBind.init().then(() => {
+    const allBindings = sessionBind.getAllBindings();
+    for (const telegramChatId of new Set(Object.values(allBindings))) {
+      subscribeCrossChannel(telegramChatId);
+    }
+    logger.info(
+      { boundChats: Object.keys(allBindings).length },
+      'F-018: Cross-channel push initialized for existing bindings'
+    );
+  }).catch((err) => {
+    logger.error({ err: err.message }, 'F-018: Failed to initialize cross-channel push');
+  });
+
+  // Expose subscribeCrossChannel for dynamic binding (called when new bindings are created)
+  bot._f018 = { subscribeCrossChannel, sessionBind, messageRouter };
+
   bot.catch(async (error, ctx) => {
     const message = error instanceof Error ? error.message : String(error);
     logger.error({ err: message, chatId: ctx?.chat?.id, updateType: ctx?.updateType }, 'Unhandled error while processing telegram update');
@@ -902,45 +987,30 @@ export async function createTelegramBot() {
         ctx.sendChatAction('typing').catch(() => undefined);
       }, TYPING_INTERVAL_MS);
 
-      // F-011: Use ai-cli-service for execution with process tracking
+      // F-018: Use message-router for unified processing
       const sessionKey = `telegram:${sessionId}`;
-
-      // Append user message to session history
-      sessionStore.append(sessionKey, 'user', ctx.message.text);
-
-      // Build prompt with context
-      const prompt = sessionStore.toPrompt(sessionKey, 'telegram');
 
       // Track last heartbeat message for updates
       /** @type {{ message_id: number } | null} */
       let lastHeartbeatMsg = null;
 
-      const result = await executeAiCli({
+      const routerResult = await messageRouter.processMessage({
+        channel: 'telegram',
         sessionId,
-        prompt,
+        message: ctx.message.text,
+        telegramChatId: sessionId,
+        userId,
         hooks: {
-          onChunk: (text) => {
-            streamPublisher.push(text);
-          },
-          onHeartbeat: config.aiCliEnableHeartbeat ? (info) => {
-            // Send/update heartbeat progress message
-            const elapsedSec = Math.floor(info.elapsedMs / 1000);
-            const progressText = `⏳ 任务执行中... (${elapsedSec}s, ${Math.floor(info.stdoutBytes / 1024)}KB)`;
-
-            // Don't await - fire and forget
-            if (lastHeartbeatMsg) {
-              ctx.telegram.editMessageText(ctx.chat.id, lastHeartbeatMsg.message_id, undefined, progressText)
-                .catch(() => {});
-            } else {
-              ctx.reply(progressText)
-                .then((msg) => { lastHeartbeatMsg = msg; })
-                .catch(() => {});
-            }
-          } : undefined,
-          onStatus: (status) => {
-            if (status === 'running') {
+          onStatus: (payload) => {
+            if (payload.stage === 'running') {
               ctx.sendChatAction('typing').catch(() => undefined);
             }
+          },
+          onAssistantChunk: (data) => {
+            streamPublisher.push(data.text);
+          },
+          onAssistantDone: (data) => {
+            // Done event handled below after processMessage resolves
           }
         }
       });
@@ -950,21 +1020,10 @@ export async function createTelegramBot() {
         ctx.telegram.deleteMessage(ctx.chat.id, lastHeartbeatMsg.message_id).catch(() => {});
       }
 
-      // Append assistant reply to session history
-      sessionStore.append(sessionKey, 'assistant', result.output);
-
-      // F-011: Format output with MarkdownV2
-      const formattedOutput = convertToMarkdownV2(result.output);
-
-      // Handle result states
-      if (result.interrupted) {
-        await ctx.reply('⏹️ 任务已被中断。');
-      } else if (result.timedOut) {
-        await ctx.reply(`⏰ 任务执行超时。\n建议：使用 /stop 中断或增加 REQUEST_TIMEOUT_MS 配置。`);
-      }
+      const replyText = routerResult.reply;
 
       // Extract file markers and send
-      const { fileRefs, cleanedText } = extractFileMarkers(result.output);
+      const { fileRefs, cleanedText } = extractFileMarkers(replyText);
       logger.info({ sessionId, fileRefsCount: fileRefs.length, fileRefs }, 'Parsed file markers from assistant reply');
       const finalText = cleanedText || (fileRefs.length > 0 ? '已执行，正在发送文件。' : '已执行。');
 

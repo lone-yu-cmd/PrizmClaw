@@ -10,6 +10,8 @@ class SessionBindingService {
   #reverseBindings = null; // Map: telegramChatId -> Set<webSessionId>
   #initialized = false;
   #persistencePath;
+  #lastPersistPromise = Promise.resolve();
+  #initPromise = null;
 
   constructor({ persistenceDir = config.sessionPersistenceDir } = {}) {
     this.#persistencePath = path.join(persistenceDir, BINDINGS_FILE);
@@ -20,6 +22,16 @@ class SessionBindingService {
       return;
     }
 
+    // If init is already in progress, wait for it
+    if (this.#initPromise) {
+      return this.#initPromise;
+    }
+
+    this.#initPromise = this.#doInit();
+    return this.#initPromise;
+  }
+
+  async #doInit() {
     try {
       const data = await readFile(this.#persistencePath, 'utf-8');
       const parsed = JSON.parse(data);
@@ -44,6 +56,7 @@ class SessionBindingService {
         await mkdir(path.dirname(this.#persistencePath), { recursive: true });
         this.#bindings = new Map();
         this.#reverseBindings = new Map();
+        await this.#persist();
         logger.info('Session bindings file created');
       } else {
         logger.warn({ err: error.message }, 'Failed to load session bindings, starting empty');
@@ -53,6 +66,21 @@ class SessionBindingService {
     }
 
     this.#initialized = true;
+  }
+
+  /**
+   * Ensure the service is initialized. If init was triggered by the factory,
+   * this will await completion. For manual usage, callers should call init() first.
+   */
+  async #ensureInitialized() {
+    if (this.#initialized) {
+      return;
+    }
+    if (this.#initPromise) {
+      await this.#initPromise;
+      return;
+    }
+    throw new Error('SessionBindingService not initialized. Call init() first.');
   }
 
   async #persist() {
@@ -101,7 +129,7 @@ class SessionBindingService {
     }
     this.#reverseBindings.get(normalizedChatId).add(normalizedWebId);
 
-    this.#persist();
+    this.#lastPersistPromise = this.#persist();
 
     logger.info(
       { webSessionId: normalizedWebId, telegramChatId: normalizedChatId },
@@ -132,7 +160,7 @@ class SessionBindingService {
     // Update reverse index
     this.#reverseBindings.get(telegramChatId)?.delete(normalizedWebId);
 
-    this.#persist();
+    this.#lastPersistPromise = this.#persist();
 
     logger.info(
       { webSessionId: normalizedWebId },
@@ -176,12 +204,74 @@ class SessionBindingService {
 
     this.#bindings.clear();
     this.#reverseBindings.clear();
-    this.#persist();
+    this.#lastPersistPromise = this.#persist();
 
     logger.info('All session bindings cleared');
 
     return { ok: true };
   }
+
+  /**
+   * Wait for any pending persistence operation to complete.
+   * Also waits for initialization if it's in progress.
+   * Useful for tests that need to verify file contents after mutation.
+   * @returns {Promise<void>}
+   */
+  async flush() {
+    if (this.#initPromise) {
+      await this.#initPromise;
+    }
+    await this.#lastPersistPromise;
+  }
+
+  /**
+   * Check if the service is initialized.
+   * @returns {boolean}
+   */
+  get isInitialized() {
+    return this.#initialized;
+  }
+
+  /**
+   * Ensure initialization is complete (awaits pending init).
+   * Use this in async contexts to guarantee the service is ready.
+   * @returns {Promise<void>}
+   */
+  async ensureReady() {
+    await this.#ensureInitialized();
+  }
+}
+
+/**
+ * Factory function to create and auto-initialize a SessionBindingService instance.
+ * Matches the import pattern expected by server.js.
+ *
+ * The returned service starts initialization immediately. Callers must
+ * await service.ensureReady() or service.init() before calling synchronous
+ * methods (bindSession, getBoundChatId, etc.) in async contexts.
+ *
+ * @param {Object} [options]
+ * @param {string} [options.bindingsPath] - Full path to the bindings JSON file.
+ *   If provided, persistenceDir is derived from its directory.
+ * @param {string} [options.persistenceDir] - Directory for persistence (used if bindingsPath not provided).
+ * @returns {SessionBindingService} A SessionBindingService instance with init in progress
+ */
+export function createSessionBindService({ bindingsPath, persistenceDir } = {}) {
+  const opts = {};
+  if (bindingsPath) {
+    opts.persistenceDir = path.dirname(bindingsPath);
+  } else if (persistenceDir) {
+    opts.persistenceDir = persistenceDir;
+  }
+
+  const service = new SessionBindingService(opts);
+
+  // Start initialization immediately
+  service.init().catch((err) => {
+    logger.error({ err: err.message }, 'Failed to auto-initialize SessionBindingService');
+  });
+
+  return service;
 }
 
 export const sessionBindingService = new SessionBindingService();

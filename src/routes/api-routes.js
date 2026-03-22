@@ -12,8 +12,9 @@ export function createApiRouter({ realtimeHub, sessionBind, messageRouter, sessi
   const router = Router();
 
   // F-018: Session binding endpoints
-  router.post('/bind', (req, res, next) => {
+  router.post('/bind', async (req, res, next) => {
     try {
+      await sessionBind.ensureReady();
       const { webSessionId, telegramChatId } = req.body ?? {};
 
       if (!webSessionId || !telegramChatId) {
@@ -28,8 +29,9 @@ export function createApiRouter({ realtimeHub, sessionBind, messageRouter, sessi
     }
   });
 
-  router.post('/unbind', (req, res, next) => {
+  router.post('/unbind', async (req, res, next) => {
     try {
+      await sessionBind.ensureReady();
       const { webSessionId } = req.body ?? {};
 
       if (!webSessionId) {
@@ -44,8 +46,9 @@ export function createApiRouter({ realtimeHub, sessionBind, messageRouter, sessi
     }
   });
 
-  router.get('/bindings', (req, res, next) => {
+  router.get('/bindings', async (req, res, next) => {
     try {
+      await sessionBind.ensureReady();
       const { webSessionId } = req.query;
 
       if (webSessionId) {
@@ -115,6 +118,7 @@ export function createApiRouter({ realtimeHub, sessionBind, messageRouter, sessi
   // F-018: Modified /api/chat to use message-router and support Telegram binding
   router.post('/chat', async (req, res, next) => {
     try {
+      await sessionBind.ensureReady();
       const { channel = 'web', sessionId, message, telegramChatId } = req.body ?? {};
 
       let effectiveTelegramChatId = telegramChatId;
@@ -150,6 +154,7 @@ export function createApiRouter({ realtimeHub, sessionBind, messageRouter, sessi
 
   router.post('/chat/reset', async (req, res, next) => {
     try {
+      await sessionBind.ensureReady();
       const { channel = 'web', sessionId, telegramChatId } = req.body ?? {};
 
       let sessionKey;

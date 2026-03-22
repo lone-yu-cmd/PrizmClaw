@@ -7,11 +7,12 @@ import { createSessionBindService } from '../services/session-bind.js';
 import { createMessageRouter } from '../services/message-router.js';
 import { executeAiCli } from '../services/ai-cli-service.js';
 
-export function createHttpServer({ logger }) {
+export function createHttpServer({ logger, sessionBindingsPath } = {}) {
   const app = express();
 
   // Initialize F-018 services
-  const sessionBind = createSessionBindService({ bindingsPath: config.sessionBindingsPath });
+  const effectiveBindingsPath = sessionBindingsPath || config.sessionBindingsPath;
+  const sessionBind = createSessionBindService({ bindingsPath: effectiveBindingsPath });
   const messageRouter = createMessageRouter({
     aiCliExecutor: executeAiCli,
     sessionStore,

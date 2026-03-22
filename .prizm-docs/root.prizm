@@ -16,5 +16,7 @@ RULES:
 - Services are registered in src/services/index.js
 - Security checks use security/ guards before command execution
 - Config loaded from src/config.js with environment variable support
+- MUST use messageRouter.processMessage() for all chat messages (Web + Telegram) — do not call executeAiCli directly for chat
+- MUST call sessionBind.ensureReady() before any sync method in async route handlers
 
 UPDATED: 2026-03-22
