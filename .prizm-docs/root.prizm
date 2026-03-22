@@ -24,5 +24,6 @@ RULES:
 - ANSI stripping happens in onAssistantChunk hook via ansiProcessChunk() — never strip in final reply path
 - .btn:disabled uses pointer-events: none to prevent hover CSS from firing on disabled buttons
 - .panel and .sub-panel are separate CSS rules (not grouped) to allow different box-shadow depths; shadow colors use rgba derived from --text (#1f2633) for cool-tone palette coordination
+- .app-header uses position: sticky + background: var(--bg) + z-index: 10 — always pair sticky with background to prevent content bleed-through; padding-bottom + negative margin-bottom offsets border-bottom from grid gap
 
 UPDATED: 2026-03-23

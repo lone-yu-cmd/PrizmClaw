@@ -1,18 +1,18 @@
 [
   {
-    "id": "20f0c339-e383-4ae4-96b7-aa0c8e08e756",
+    "id": "34d0df1a-b0ff-408b-9d44-c9514798358b",
     "metric": "cpu",
     "operator": ">",
     "threshold": 80,
     "enabled": true,
-    "createdAt": 1774198146969
+    "createdAt": 1774198690233
   },
   {
-    "id": "25925a76-3d77-40ba-8fea-b766d94c21bf",
+    "id": "47083bb9-816a-4eff-be4b-417441278eaa",
     "metric": "cpu",
     "operator": ">",
     "threshold": 80,
     "enabled": true,
-    "createdAt": 1774198146972
+    "createdAt": 1774198690238
   }
 ]

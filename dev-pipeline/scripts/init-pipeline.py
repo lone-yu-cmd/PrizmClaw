@@ -231,7 +231,7 @@ def create_state_directory(state_dir, feature_list_path, features):
     features_dir = os.path.join(abs_state_dir, "features")
 
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    run_id = "run-" + datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    run_id = "run-" + datetime.now(timezone.utc).strftime("%Y%m%d%H%M")
 
     # Create top-level state directory
     os.makedirs(abs_state_dir, exist_ok=True)

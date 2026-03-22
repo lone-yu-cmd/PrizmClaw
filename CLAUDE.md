@@ -60,6 +60,10 @@ Use the full workflow (/prizmkit-specify -> /prizmkit-plan -> /prizmkit-analyze 
 - DECISION: `.panel` and `.sub-panel` are defined as separate CSS rules (not grouped selector) — allows different box-shadow depths to express visual hierarchy: `.panel` uses two-layer shadow (ambient + contact), `.sub-panel` uses single lighter shadow as nested card.
 - DECISION: Shadow color uses `rgba(31, 38, 51, ...)` derived from `--text: #1f2633` — ensures cool-tone coordination with `#f4f6fb` background and `#dfe3ef` borders without introducing new color variables.
 
+### F-025: Web Header Sticky Behavior
+- DECISION: `.app-header` uses `position: sticky; top: 0` (not `fixed`) — sticky participates in normal document flow at top of page, fixing only when scrolled past. Must pair with `background: var(--bg)` to prevent content bleed-through and `z-index: 10` to overlay panel cards.
+- DECISION: `padding-bottom: 12px; margin-bottom: -12px` offsets the `border-bottom` separator from affecting grid gap — keeps visual spacing consistent while showing the separator line.
+
 ### F-017: Runtime Config Manager
 - DECISION: Safe-to-modify keys whitelist: LOG_LEVEL, REQUEST_TIMEOUT_MS, AI_CLI_HEARTBEAT_MS, MAX_PROMPT_CHARS, MAX_HISTORY_TURNS, SYSTEM_MONITOR_INTERVAL_MS, SESSION_TIMEOUT_MS, TASK_DEBOUNCE_MS — all others are read-only via /config
 - DECISION: Hot-reload via `process.env[key] = newValue` — modifying process.env directly makes changes immediately visible to all modules that re-read config at call time (not frozen objects)
