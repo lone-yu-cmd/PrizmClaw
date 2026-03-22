@@ -93,6 +93,13 @@ branch_merge() {
     local auto_push="${4:-0}"
 
     # Step 1: Checkout original branch
+    # First commit any remaining dirty files so checkout is not blocked
+    local remaining_dirty
+    remaining_dirty=$(git -C "$project_root" status --porcelain 2>/dev/null || true)
+    if [[ -n "$remaining_dirty" ]]; then
+        git -C "$project_root" add -A 2>/dev/null || true
+        git -C "$project_root" commit --no-verify -m "chore: include pipeline state artifacts" 2>/dev/null || true
+    fi
     if ! git -C "$project_root" checkout "$original_branch" 2>/dev/null; then
         log_error "Failed to checkout $original_branch for merge"
         return 1

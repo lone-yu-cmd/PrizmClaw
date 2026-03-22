@@ -537,6 +537,166 @@
         "Given 输入框处于聚焦状态，When 用户点击其他区域失焦，Then 阴影效果消失并恢复默认边框样式",
         "Given 所有浏览器渲染，When 渲染聚焦输入框，Then 原生 outline 被移除，由自定义 box-shadow 替代，无双重轮廓"
       ],
+      "status": "completed",
+      "session_granularity": "feature",
+      "sub_features": []
+    },
+    {
+      "id": "F-023",
+      "title": "Web Button Hover Animation",
+      "description": "为 Web 管理台所有按钮添加鼠标悬停时的动画过渡效果。在 public/styles.css 中为 .btn 添加 transition 和 :hover 状态的 transform/brightness 变化，提升按钮交互的视觉反馈。无后端变更。",
+      "priority": 23,
+      "estimated_complexity": "low",
+      "dependencies": ["F-018"],
+      "acceptance_criteria": [
+        "Given 用户将鼠标悬停在任意按钮上，When 鼠标进入按钮区域，Then 按钮显示可见的过渡动画效果",
+        "Given 按钮处于悬停状态，When 鼠标离开按钮，Then 动画还原至默认样式",
+        "Given 按钮处于 disabled 状态，When 鼠标悬停，Then 不显示悬停动画"
+      ],
+      "status": "pending",
+      "session_granularity": "feature",
+      "sub_features": []
+    },
+    {
+      "id": "F-024",
+      "title": "Web Panel Card Shadow Depth",
+      "description": "为 Web 管理台各 panel 卡片添加层次感阴影。在 public/styles.css 中为 .panel 和 .sub-panel 添加 box-shadow，区分卡片与背景层次，提升视觉深度。无后端变更。",
+      "priority": 24,
+      "estimated_complexity": "low",
+      "dependencies": ["F-018"],
+      "acceptance_criteria": [
+        "Given 页面加载完成，When 渲染 panel 卡片，Then 卡片显示与背景有层次感的阴影效果",
+        "Given 页面在不同分辨率下渲染，When 查看 panel，Then 阴影在各断点下均正确显示",
+        "Given 深色背景与浅色面板，When 查看卡片阴影，Then 阴影颜色与整体配色协调"
+      ],
+      "status": "pending",
+      "session_granularity": "feature",
+      "sub_features": []
+    },
+    {
+      "id": "F-025",
+      "title": "Web Header Sticky Behavior",
+      "description": "为 Web 管理台页面头部（.app-header）添加滚动时的粘性定位行为。在 public/styles.css 中为 .app-header 添加 position: sticky 和滚动时的视觉分隔线，确保长页面操作时标题区域始终可见。无后端变更。",
+      "priority": 25,
+      "estimated_complexity": "low",
+      "dependencies": ["F-018"],
+      "acceptance_criteria": [
+        "Given 页面内容超出视口高度，When 用户向下滚动，Then 页面头部固定在顶部持续可见",
+        "Given 头部处于 sticky 状态，When 用户向上滚动至顶部，Then 头部恢复正常文档流位置",
+        "Given 头部固定时，When 渲染头部下边框，Then 显示分隔线以区分头部与内容区"
+      ],
+      "status": "pending",
+      "session_granularity": "feature",
+      "sub_features": []
+    },
+    {
+      "id": "F-026",
+      "title": "Web Status Indicator Color States",
+      "description": "为 Web 管理台状态指示器（#status）添加多种颜色状态（就绪/连接中/错误）的视觉区分。在 public/styles.css 中新增 .status.connected、.status.error 样式类，通过不同背景色和文字色传达连接状态。",
+      "priority": 26,
+      "estimated_complexity": "low",
+      "dependencies": ["F-018"],
+      "acceptance_criteria": [
+        "Given 连接就绪状态，When 渲染状态指示器，Then 显示默认中性样式",
+        "Given 连接成功状态，When JS 为元素添加 .connected 类，Then 指示器显示绿色调样式",
+        "Given 连接错误状态，When JS 为元素添加 .error 类，Then 指示器显示红色调样式"
+      ],
+      "status": "pending",
+      "session_granularity": "feature",
+      "sub_features": []
+    },
+    {
+      "id": "F-027",
+      "title": "Web Chat Message Fade-In Animation",
+      "description": "为 Web 管理台聊天消息列表中新增消息添加淡入动画。在 public/styles.css 中为 .message 添加 @keyframes fade-in 动画，使新消息出现时有平滑过渡效果，提升对话界面的流畅感。无后端变更。",
+      "priority": 27,
+      "estimated_complexity": "low",
+      "dependencies": ["F-018"],
+      "acceptance_criteria": [
+        "Given 用户发送消息或收到 AI 回复，When 新消息被插入到聊天列表，Then 消息以淡入动画出现",
+        "Given 消息淡入动画，When 动画完成，Then 消息以完全不透明状态静止显示",
+        "Given 页面中已有历史消息，When 页面首次加载，Then 已有消息不触发淡入动画"
+      ],
+      "status": "pending",
+      "session_granularity": "feature",
+      "sub_features": []
+    },
+    {
+      "id": "F-028",
+      "title": "Web Input Character Counter",
+      "description": "为 Web 管理台聊天输入框（chatInput）添加字符计数显示。在 public/index.html 和 public/styles.css 中新增字符计数元素，接近字符上限时以警告色高亮提示，帮助用户感知输入长度。无后端变更。",
+      "priority": 28,
+      "estimated_complexity": "low",
+      "dependencies": ["F-022"],
+      "acceptance_criteria": [
+        "Given 用户在聊天输入框中输入内容，When 字符数变化，Then 计数器实时显示当前字符数",
+        "Given 字符数超过上限的 80%，When 渲染计数器，Then 计数器以警告色（--warning）高亮显示",
+        "Given 输入框为空，When 渲染计数器，Then 计数器显示 0 且为默认样式"
+      ],
+      "status": "pending",
+      "session_granularity": "feature",
+      "sub_features": []
+    },
+    {
+      "id": "F-029",
+      "title": "Web Output Box Syntax Highlight",
+      "description": "为 Web 管理台 stdout/stderr 输出框（.output-box）添加基础语法高亮样式。在 public/styles.css 中为 .output-box 内的关键输出模式（错误行、路径、数字）添加颜色区分，提升命令输出的可读性。无后端变更。",
+      "priority": 29,
+      "estimated_complexity": "low",
+      "dependencies": ["F-019"],
+      "acceptance_criteria": [
+        "Given 命令执行完成，When stdout 输出显示在 .output-box，Then 普通文本以默认文字色显示",
+        "Given stderr 有输出，When stderrOutput 框有内容，Then 框体以红色调边框或背景区分",
+        "Given exit code 非零，When exitCodeOutput 显示值，Then 以警告或危险色高亮显示"
+      ],
+      "status": "pending",
+      "session_granularity": "feature",
+      "sub_features": []
+    },
+    {
+      "id": "F-030",
+      "title": "Web Responsive Mobile Layout",
+      "description": "优化 Web 管理台在移动端（<600px）的布局适配。在 public/styles.css 中补充更小断点的媒体查询，调整 header、chat-form、panel padding 等元素在手机屏幕下的显示方式，确保移动端可用性。无后端变更。",
+      "priority": 30,
+      "estimated_complexity": "low",
+      "dependencies": ["F-018"],
+      "acceptance_criteria": [
+        "Given 屏幕宽度小于 600px，When 渲染页面，Then 所有 panel 以单列布局排列",
+        "Given 移动端，When 渲染聊天输入区域，Then 发送按钮与输入框垂直排列不溢出屏幕",
+        "Given 移动端，When 渲染页面头部，Then 标题与状态指示器不发生文字截断或重叠"
+      ],
+      "status": "pending",
+      "session_granularity": "feature",
+      "sub_features": []
+    },
+    {
+      "id": "F-031",
+      "title": "Web Dark Mode Support",
+      "description": "为 Web 管理台添加深色模式支持。在 public/styles.css 中通过 @media (prefers-color-scheme: dark) 覆盖 CSS 变量，使界面跟随操作系统深色主题自动切换，不需要额外的切换按钮。无后端变更。",
+      "priority": 31,
+      "estimated_complexity": "low",
+      "dependencies": ["F-024"],
+      "acceptance_criteria": [
+        "Given 操作系统切换为深色模式，When 加载或刷新 Web 管理台，Then 界面自动切换为深色配色方案",
+        "Given 深色模式，When 渲染所有 panel、input、button，Then 各组件颜色对比度符合可读性要求",
+        "Given 操作系统切换回浅色模式，When 加载或刷新页面，Then 界面恢复浅色配色方案"
+      ],
+      "status": "pending",
+      "session_granularity": "feature",
+      "sub_features": []
+    },
+    {
+      "id": "F-032",
+      "title": "Web Screenshot Preview Lightbox",
+      "description": "为 Web 管理台截图预览图片（#screenshotImage）添加点击放大的 lightbox 效果。在 public/styles.css 和 public/index.html 中实现纯 CSS 或轻量 JS 的模态预览，用户点击截图后可查看原始尺寸图片。无后端变更。",
+      "priority": 32,
+      "estimated_complexity": "low",
+      "dependencies": ["F-018"],
+      "acceptance_criteria": [
+        "Given 截图加载完成，When 用户点击截图预览图，Then 以 lightbox 模态框展示原始尺寸截图",
+        "Given lightbox 已打开，When 用户点击模态框背景或按 Esc 键，Then 模态框关闭返回正常页面",
+        "Given 截图尚未加载（.hidden 状态），When 渲染页面，Then 不显示 lightbox 触发元素"
+      ],
       "status": "pending",
       "session_granularity": "feature",
       "sub_features": []
