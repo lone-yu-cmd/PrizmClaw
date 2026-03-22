@@ -438,14 +438,14 @@ After updating `session-status.json`, verify repository is clean:
 git status --short
 ```
 
-If any files remain, stage them **explicitly by name** (do NOT use `git add -A`) and create a follow-up commit:
+**Note**: The pipeline runner will auto-commit any remaining dirty files after your session exits. You do NOT need to manually commit pipeline state files (`dev-pipeline/state/`) or runtime logs — just focus on committing your feature code via `/prizmkit-committer`.
+
+If any feature-related source files remain uncommitted, stage them **explicitly by name** (do NOT use `git add -A`) and create a follow-up commit:
 
 ```bash
 git add <specific-file-1> <specific-file-2>
 git commit -m "chore({{FEATURE_ID}}): include session artifacts"
 ```
-
-Re-check `git status --short` and ensure it is empty before exiting.
 
 ## Critical Paths
 
@@ -468,6 +468,6 @@ Re-check `git status --short` and ensure it is empty before exiting.
 - Do NOT use `run_in_background=true` when spawning agents
 - ALWAYS write preliminary session-status.json BEFORE commit (as partial), then update to success AFTER commit — this prevents pipeline from treating a terminated session as crashed
 - Commit phase must use `/prizmkit-committer`; do NOT replace with manual git commit commands
-- Before exiting, `git status --short` must be empty
+- Before exiting, commit your feature code via `/prizmkit-committer` — the pipeline runner auto-commits any remaining files after session exit
 - When staging leftover files in the final clean check, always use explicit file names — NEVER use `git add -A`
 - On timeout: check snapshot → model:lite → remaining steps only → max 2 retries → orchestrator fallback

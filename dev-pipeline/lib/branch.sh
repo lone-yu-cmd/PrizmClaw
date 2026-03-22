@@ -9,6 +9,7 @@
 # Functions:
 #   branch_create  — Create and checkout a new branch
 #   branch_return  — Checkout back to original branch
+#   branch_merge   — Merge dev branch into original and optionally push
 #
 # Environment:
 #   DEV_BRANCH    — Optional custom branch name override
@@ -72,5 +73,57 @@ branch_return() {
     fi
 
     log_info "Returned to branch: $original_branch"
+    return 0
+}
+
+# branch_merge <project_root> <dev_branch> <original_branch> [auto_push]
+#
+# Merges dev_branch into original_branch, then optionally pushes.
+# Steps:
+#   1. Checkout original_branch
+#   2. Merge dev_branch (fast-forward when possible)
+#   3. Push to remote if auto_push == "1"
+#   4. Delete dev_branch (local only, it's been merged)
+#
+# Returns 0 on success, 1 on failure.
+branch_merge() {
+    local project_root="$1"
+    local dev_branch="$2"
+    local original_branch="$3"
+    local auto_push="${4:-0}"
+
+    # Step 1: Checkout original branch
+    if ! git -C "$project_root" checkout "$original_branch" 2>/dev/null; then
+        log_error "Failed to checkout $original_branch for merge"
+        return 1
+    fi
+
+    # Step 2: Merge dev branch
+    log_info "Merging $dev_branch into $original_branch..."
+    if ! git -C "$project_root" merge "$dev_branch" 2>&1; then
+        log_error "Merge failed — resolve conflicts manually:"
+        log_error "  git checkout $original_branch && git merge $dev_branch"
+        # Return to dev branch so state is not lost
+        git -C "$project_root" merge --abort 2>/dev/null || true
+        git -C "$project_root" checkout "$dev_branch" 2>/dev/null || true
+        return 1
+    fi
+
+    log_success "Merged $dev_branch into $original_branch"
+
+    # Step 3: Push if AUTO_PUSH enabled
+    if [[ "$auto_push" == "1" ]]; then
+        log_info "Pushing $original_branch to remote..."
+        if git -C "$project_root" push 2>/dev/null; then
+            log_success "Pushed $original_branch to remote"
+        else
+            log_warn "Push failed — run 'git push' manually"
+        fi
+    fi
+
+    # Step 4: Delete merged dev branch
+    git -C "$project_root" branch -d "$dev_branch" 2>/dev/null && \
+        log_info "Deleted merged branch: $dev_branch" || true
+
     return 0
 }

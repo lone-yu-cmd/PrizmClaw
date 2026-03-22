@@ -231,7 +231,17 @@ else: print('')
         local project_root
         project_root="$(cd "$SCRIPT_DIR/.." && pwd)"
         if git -C "$project_root" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+            # Auto-commit any remaining dirty files produced during the session
+            # (pipeline state, runtime data, files the AI session missed)
             local dirty_files=""
+            dirty_files=$(git -C "$project_root" status --porcelain 2>/dev/null || true)
+            if [[ -n "$dirty_files" ]]; then
+                log_info "Auto-committing remaining session artifacts..."
+                git -C "$project_root" add -A 2>/dev/null || true
+                git -C "$project_root" commit -m "chore($feature_id): include remaining session artifacts" 2>/dev/null || true
+            fi
+
+            # Re-check: if still dirty after auto-commit, flag as commit_missing
             dirty_files=$(git -C "$project_root" status --porcelain 2>/dev/null || true)
             if [[ -n "$dirty_files" ]]; then
                 log_warn "Session reported success but git working tree is not clean."
@@ -778,12 +788,13 @@ sys.exit(1)
         "$bootstrap_prompt" "$session_dir" 999 "$feature_model"
     local session_status="$_SPAWN_RESULT"
 
-    # Auto-push after successful session
-    if [[ "$session_status" == "success" && "$AUTO_PUSH" == "1" ]]; then
-        local _proj_root
-        _proj_root="$(cd "$SCRIPT_DIR/.." && pwd)"
-        log_info "AUTO_PUSH enabled; pushing to remote..."
-        git -C "$_proj_root" push -u origin "$_DEV_BRANCH_NAME" 2>/dev/null || log_warn "Auto-push failed"
+    # Merge dev branch back to original on success
+    if [[ "$session_status" == "success" && -n "$_DEV_BRANCH_NAME" ]]; then
+        if branch_merge "$_proj_root" "$_DEV_BRANCH_NAME" "$_ORIGINAL_BRANCH" "$AUTO_PUSH"; then
+            _DEV_BRANCH_NAME=""
+        else
+            log_warn "Auto-merge failed — dev branch preserved: $_DEV_BRANCH_NAME"
+        fi
     fi
 
     echo ""
@@ -971,12 +982,18 @@ for f in data.get('stuck_features', []):
             log_success "════════════════════════════════════════════════════"
             log_success "  All features completed! Pipeline finished."
             log_success "  Total sessions: $session_count"
-            if [[ -n "$_DEV_BRANCH_NAME" ]]; then
-                log_success "  Dev branch: $_DEV_BRANCH_NAME"
-                log_success "  Merge with: git checkout $_ORIGINAL_BRANCH && git merge $_DEV_BRANCH_NAME"
-            fi
             log_success "════════════════════════════════════════════════════"
             rm -f "$STATE_DIR/current-session.json"
+
+            # Merge dev branch back to original
+            if [[ -n "$_DEV_BRANCH_NAME" ]]; then
+                if branch_merge "$_proj_root" "$_DEV_BRANCH_NAME" "$_ORIGINAL_BRANCH" "$AUTO_PUSH"; then
+                    _DEV_BRANCH_NAME=""
+                else
+                    log_warn "Auto-merge failed — dev branch preserved: $_DEV_BRANCH_NAME"
+                    log_warn "Merge manually: git checkout $_ORIGINAL_BRANCH && git merge $_DEV_BRANCH_NAME"
+                fi
+            fi
             break
         fi
 
@@ -1085,14 +1102,6 @@ os.replace(tmp, target)
             "$feature_id" "$feature_list" "$session_id" \
             "$bootstrap_prompt" "$session_dir" "$MAX_RETRIES" "$feature_model"
         local session_status="$_SPAWN_RESULT"
-
-        # Auto-push after successful session
-        if [[ "$session_status" == "success" && "$AUTO_PUSH" == "1" ]]; then
-            local _proj_root
-            _proj_root="$(cd "$SCRIPT_DIR/.." && pwd)"
-            log_info "AUTO_PUSH enabled; pushing to remote..."
-            git -C "$_proj_root" push 2>/dev/null || log_warn "Auto-push failed"
-        fi
 
         session_count=$((session_count + 1))
 

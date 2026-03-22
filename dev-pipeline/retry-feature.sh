@@ -382,7 +382,17 @@ fi
 if [[ "$SESSION_STATUS" == "success" ]]; then
     PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
     if git -C "$PROJECT_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        # Auto-commit any remaining dirty files produced during the session
         DIRTY_FILES=$(git -C "$PROJECT_ROOT" status --porcelain 2>/dev/null || true)
+        if [[ -n "$DIRTY_FILES" ]]; then
+            log_info "Auto-committing remaining session artifacts..."
+            git -C "$PROJECT_ROOT" add -A 2>/dev/null || true
+            git -C "$PROJECT_ROOT" commit -m "chore($FEATURE_ID): include remaining session artifacts" 2>/dev/null || true
+        fi
+
+        # Re-check: if still dirty after auto-commit, flag as failed
+        DIRTY_FILES=$(git -C "$PROJECT_ROOT" status --porcelain 2>/dev/null || true)
+        if [[ -n "$DIRTY_FILES" ]]; then
         if [[ -n "$DIRTY_FILES" ]]; then
             log_error "Session reported success but git working tree is not clean."
             echo "$DIRTY_FILES" | sed 's/^/  - /'

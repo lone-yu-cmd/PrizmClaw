@@ -71,7 +71,8 @@ Then verify working tree is clean:
 git status
 ```
 - If "nothing to commit, working tree clean": commit verified successfully, proceed
-- If there are uncommitted changes remaining: **STOP** and report what files were missed. Stage the missed files explicitly by name and create a new commit (do NOT amend the previous commit — amending risks destroying unrelated changes from prior commits)
+- **Ignore `dev-pipeline/state/` files** — these are pipeline runtime artifacts written by the pipeline runner process, not part of your changes. They will always appear dirty during pipeline sessions.
+- If there are other uncommitted changes remaining (excluding `dev-pipeline/state/`): **STOP** and report what files were missed. Stage the missed files explicitly by name and create a new commit (do NOT amend the previous commit — amending risks destroying unrelated changes from prior commits)
 
 #### Step 6: Optional Push
 Ask user: "Push to remote?"
