@@ -1,0 +1,38 @@
+{
+  "updated_at": "2026-03-22T16:31:33Z",
+  "message_count": 44,
+  "current_tool": "Bash",
+  "current_tool_input_summary": "Verify commit and check working tree",
+  "current_phase": "commit",
+  "detected_phases": [
+    "implement",
+    "retrospective",
+    "commit"
+  ],
+  "tool_calls": [
+    {
+      "name": "Bash",
+      "count": 14
+    },
+    {
+      "name": "Edit",
+      "count": 5
+    },
+    {
+      "name": "Read",
+      "count": 4
+    },
+    {
+      "name": "Write",
+      "count": 2
+    },
+    {
+      "name": "Skill",
+      "count": 2
+    }
+  ],
+  "total_tool_calls": 27,
+  "last_text_snippet": "Commit verified. Remaining dirty files are `feature-list.json` (pipeline-managed) and `dev-pipeline/state/features/F-023",
+  "is_active": true,
+  "errors": []
+}

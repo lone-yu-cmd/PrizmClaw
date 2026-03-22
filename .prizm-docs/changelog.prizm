@@ -13,3 +13,4 @@
 - 2026-03-22 | src/bot | update: L1 doc — added /output handler, F-020 ANSI/segmentation TRAPS, updated dependencies
 - 2026-03-22 | public/index.html | update: chatInput textarea placeholder text → 「请输入对话」(F-022)
 - 2026-03-23 | public/styles.css | add: input:focus and textarea:focus shadow glow effect using --primary color (F-022)
+- 2026-03-23 | public/styles.css | add: .btn hover transition animation with transform/brightness, pointer-events:none on :disabled (F-023)

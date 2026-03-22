@@ -52,6 +52,10 @@ Use the full workflow (/prizmkit-specify -> /prizmkit-plan -> /prizmkit-analyze 
 - INTERFACE: `processChunk(text)` from `src/utils/ansi-adapter.js` — wraps each raw stdout chunk: strips ANSI then collapses `\r` progress lines. Import as named `ansiProcessChunk` alias.
 - INTERFACE: `segmentOutput(text, maxChunkSize=3800)` from `src/utils/output-segmenter.js` — replaces `splitMessage` inside `render()` closure of `createEditableStreamPublisher`.
 
+### F-023: Web Button Hover Animation
+- DECISION: `.btn:disabled` uses `pointer-events: none` in addition to `opacity: 0.6` — ensures hover CSS rules never fire on disabled buttons, providing clean visual separation between enabled and disabled states.
+- DECISION: Hover effect uses `transform: translateY(-1px)` + `filter: brightness(1.08)` on `.btn:hover` with `transition: transform 0.15s ease, filter 0.15s ease` on `.btn` — applies to all button variants (primary, warning, ghost) without variant-specific overrides.
+
 ### F-017: Runtime Config Manager
 - DECISION: Safe-to-modify keys whitelist: LOG_LEVEL, REQUEST_TIMEOUT_MS, AI_CLI_HEARTBEAT_MS, MAX_PROMPT_CHARS, MAX_HISTORY_TURNS, SYSTEM_MONITOR_INTERVAL_MS, SESSION_TIMEOUT_MS, TASK_DEBOUNCE_MS — all others are read-only via /config
 - DECISION: Hot-reload via `process.env[key] = newValue` — modifying process.env directly makes changes immediately visible to all modules that re-read config at call time (not frozen objects)
