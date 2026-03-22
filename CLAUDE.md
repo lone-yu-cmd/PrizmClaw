@@ -56,6 +56,10 @@ Use the full workflow (/prizmkit-specify -> /prizmkit-plan -> /prizmkit-analyze 
 - DECISION: `.btn:disabled` uses `pointer-events: none` in addition to `opacity: 0.6` — ensures hover CSS rules never fire on disabled buttons, providing clean visual separation between enabled and disabled states.
 - DECISION: Hover effect uses `transform: translateY(-1px)` + `filter: brightness(1.08)` on `.btn:hover` with `transition: transform 0.15s ease, filter 0.15s ease` on `.btn` — applies to all button variants (primary, warning, ghost) without variant-specific overrides.
 
+### F-024: Web Panel Card Shadow Depth
+- DECISION: `.panel` and `.sub-panel` are defined as separate CSS rules (not grouped selector) — allows different box-shadow depths to express visual hierarchy: `.panel` uses two-layer shadow (ambient + contact), `.sub-panel` uses single lighter shadow as nested card.
+- DECISION: Shadow color uses `rgba(31, 38, 51, ...)` derived from `--text: #1f2633` — ensures cool-tone coordination with `#f4f6fb` background and `#dfe3ef` borders without introducing new color variables.
+
 ### F-017: Runtime Config Manager
 - DECISION: Safe-to-modify keys whitelist: LOG_LEVEL, REQUEST_TIMEOUT_MS, AI_CLI_HEARTBEAT_MS, MAX_PROMPT_CHARS, MAX_HISTORY_TURNS, SYSTEM_MONITOR_INTERVAL_MS, SESSION_TIMEOUT_MS, TASK_DEBOUNCE_MS — all others are read-only via /config
 - DECISION: Hot-reload via `process.env[key] = newValue` — modifying process.env directly makes changes immediately visible to all modules that re-read config at call time (not frozen objects)

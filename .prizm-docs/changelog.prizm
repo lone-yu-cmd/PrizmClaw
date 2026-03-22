@@ -1,0 +1,7 @@
+MODULE: changelog
+RESPONSIBILITY: Append-only record of prizm-docs structural changes
+
+CHANGELOG:
+- 2026-03-23 | root.prizm | add: initial L0 doc generated during F-024 bootstrap
+- 2026-03-23 | root.prizm | update: add panel/sub-panel shadow rule (F-024)
+UPDATED: 2026-03-23

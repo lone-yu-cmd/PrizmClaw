@@ -1,0 +1,28 @@
+PRIZM_VERSION: 1.0
+PROJECT: PrizmClaw
+LANG: JavaScript (ESM), Node.js 22
+DESCRIPTION: Telegram → AI CLI bridge with web admin panel; bidirectional sync, pipeline orchestration
+ENTRY: src/index.js
+TEST_CMD: node --test tests/**/*.test.js
+
+MODULE_INDEX:
+- src -> .prizm-docs/src/
+- src/adapters -> .prizm-docs/src/adapters.prizm
+- src/bot -> .prizm-docs/src/bot.prizm
+- src/http -> .prizm-docs/src/http.prizm
+- src/pipeline-infra -> .prizm-docs/src/pipeline-infra.prizm
+- src/routes -> .prizm-docs/src/routes.prizm
+- src/security -> .prizm-docs/src/security.prizm
+- src/services -> .prizm-docs/src/services.prizm
+- src/utils -> .prizm-docs/src/utils.prizm
+- public -> (static web panel assets — no L1 doc)
+
+RULES:
+- All chat messages route through messageRouter.processMessage() — never call executeAiCli directly for chat
+- Session keys: bound sessions use telegram:{chatId}, unbound web sessions use web:{sessionId}
+- Safe-to-modify config keys: LOG_LEVEL, REQUEST_TIMEOUT_MS, AI_CLI_HEARTBEAT_MS, MAX_PROMPT_CHARS, MAX_HISTORY_TURNS, SYSTEM_MONITOR_INTERVAL_MS, SESSION_TIMEOUT_MS, TASK_DEBOUNCE_MS
+- ANSI stripping happens in onAssistantChunk hook via ansiProcessChunk() — never strip in final reply path
+- .btn:disabled uses pointer-events: none to prevent hover CSS from firing on disabled buttons
+- .panel and .sub-panel are separate CSS rules (not grouped) to allow different box-shadow depths; shadow colors use rgba derived from --text (#1f2633) for cool-tone palette coordination
+
+UPDATED: 2026-03-23

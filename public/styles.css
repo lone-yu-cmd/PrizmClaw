@@ -61,12 +61,20 @@ p {
   color: var(--muted);
 }
 
-.panel,
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px;
+  box-shadow: 0 2px 8px rgba(31, 38, 51, 0.08), 0 1px 2px rgba(31, 38, 51, 0.04);
+}
+
 .sub-panel {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 14px;
+  box-shadow: 0 1px 4px rgba(31, 38, 51, 0.06);
 }
 
 .form-grid {
