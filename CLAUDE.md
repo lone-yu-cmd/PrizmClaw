@@ -69,3 +69,13 @@ Use the full workflow (/prizmkit-specify -> /prizmkit-plan -> /prizmkit-analyze 
 - DECISION: Hot-reload via `process.env[key] = newValue` — modifying process.env directly makes changes immediately visible to all modules that re-read config at call time (not frozen objects)
 - DECISION: `configService.originalEnvValues` uses lazy capture — if env var not present at module init, setConfig captures it on first modification. Reset relies on this map; always call setConfig before reset in tests that set env after module import.
 - INTERFACE: `configService.{getAllConfig, getConfig, setConfig, resetConfig, isSafeConfigKey}` — all async, exported from `src/services/config-service.js`
+
+### F-021: Multi-Backend Profile Manager
+- DECISION: Default profile name is `'default'` (seeded from `CODEBUDDY_BIN` on first startup) — cannot be removed via `/cli remove`; other profiles can be removed freely.
+- DECISION: Profile persistence uses `profileStore.init({persistencePath})` singleton pattern — call `init()` once at startup with the configured path (`config.cliProfilesPath`), then use the singleton throughout. Tests must create isolated `new ProfileStore({persistencePath})` instances.
+- DECISION: `backendRegistry.registerBackend()` throws if name already registered — startup code always wraps in try/catch to handle re-registration after restart gracefully.
+- DECISION: `/cli add` with inaccessible binary saves the profile to disk but warns the user instead of rejecting — profile is loaded and binary is retried on next `/cli use` or restart.
+- DECISION: `/cli use` delegates to existing `sessionStore.setCurrentBackend()` — same F-015 session mechanism; no new session state introduced.
+- INTERFACE: `profileStore` singleton from `src/services/profile-store.js` — `init({persistencePath?})`, `addProfile(profile)`, `removeProfile(name)`, `listProfiles()`, `hasProfile(name)`, `setDefaultProfileName(name)`
+- INTERFACE: `backendRegistry.updateBackend(name, fields)` from `src/services/backend-registry.js` — updates `permissionFlag`, `timeoutMs`, `description` on an existing registered backend in-place
+

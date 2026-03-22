@@ -1,5 +1,5 @@
 MODULE: src/services
-FILES: 30
+FILES: 31
 RESPONSIBILITY: Core service layer — AI CLI execution, session management, messaging, pipeline control, monitoring
 INTERFACES:
 - executeAiCli(options): Promise<AiCliExecutionResult> — unified AI CLI executor with process tracking
@@ -17,10 +17,16 @@ INTERFACES:
 - realtimeHub.publish(key, event) — broadcast event to subscribers
 - chatWithSession({channel, sessionId, message, realtimeHooks}): Promise<reply> — legacy Web chat (deprecated by F-018)
 - createOutputHistoryService(maxEntries?): {addOutput, getHistory, clearHistory} — F-020 per-session output ring buffer
+- profileStore.init({persistencePath?}): Promise<void> — F-021 load profiles from disk (accepts path override)
+- profileStore.addProfile(profile): Promise<Profile> — F-021 add/update profile, persists to disk
+- profileStore.removeProfile(name): Promise<void> — F-021 remove profile (throws if default protected name)
+- profileStore.listProfiles(): Profile[] — F-021 all profiles
+- profileStore.hasProfile(name): boolean — F-021 existence check
+- backendRegistry.updateBackend(name, fields): void — F-021 update permissionFlag/timeoutMs on existing backend
 DEPENDENCIES:
 - uses: node:child_process: spawn for AI CLI process
 - uses: zod: config validation
-- uses: node:fs/promises: session persistence, bindings file
+- uses: node:fs/promises: session persistence, bindings file, profile file
 - imports: src/config.js: runtime configuration
 - imports: src/security/guard.js: sanitizeInput
 KEY_FILES:
@@ -32,6 +38,8 @@ KEY_FILES:
 - chat-service.js: legacy chat via codebuddy adapter (80 lines, deprecated)
 - config-service.js: F-017 runtime config manager — hot-reload via process.env, safe key whitelist, sensitive masking (337 lines)
 - output-history-service.js: F-020 per-session output ring buffer factory (~80 lines)
+- profile-store.js: F-021 profile CRUD + JSON persistence (~160 lines)
+- backend-registry.js: F-015/F-021 backend registry with permissionFlag/timeoutMs support (~230 lines)
 SUBDIRS:
 - src/services/output-history-service.prizm -> L2 detail for output history
 TRAPS:
@@ -40,5 +48,8 @@ TRAPS:
 - messageRouter does not expose heartbeat hooks — Telegram heartbeat progress disabled after F-018 migration
 - Runtime bindings created via POST /api/bind do NOT auto-subscribe realtimeHub for cross-channel push (F-018 gap)
 - config-service originalEnvValues captured at module init; if env vars set after import, use setConfig first (which lazy-captures original) before reset | FIX: ensure env vars are set before module import in tests, or setConfig will lazy-capture the pre-modification value
-- output-history-service singleton lives in output.js — tests must inject mock via handlerCtx.outputHistoryService to avoid mutating shared singleton
-UPDATED: 2026-03-22
+- output-history-service singleton lives in output.js — tests must inject mock via handlerCtx.outputHistoryService to avoid mutating shared singleton state
+- profileStore singleton must be init()d at startup with {persistencePath} — tests must create isolated ProfileStore instances, not the singleton
+- backendRegistry.registerBackend() throws if name already registered — wrap in try/catch at startup when re-registering profiles after restart | FIX: check getBackend() before registerBackend() or catch the throw
+- ai-cli-service reads sessionBackend.permissionFlag and sessionBackend.timeoutMs at execution time — these fields must be set at registerBackend() time or via updateBackend() for profile switching to fully apply
+UPDATED: 2026-03-23

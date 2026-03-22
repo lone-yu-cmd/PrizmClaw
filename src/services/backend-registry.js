@@ -34,6 +34,8 @@ export class BackendRegistry {
    * @param {Object} options - Additional backend options
    * @param {string} [options.description] - Backend description
    * @param {string[]} [options.aliases] - Backend aliases
+   * @param {string} [options.permissionFlag] - Permission flag (e.g. '-y')
+   * @param {number} [options.timeoutMs] - Custom timeout in milliseconds
    * @throws {Error} If backend is already registered or binary path is invalid
    */
   registerBackend(name, binPath, options = {}) {
@@ -49,6 +51,8 @@ export class BackendRegistry {
       binPath,
       description: options.description || `${name} CLI backend`,
       aliases: options.aliases || [],
+      permissionFlag: options.permissionFlag ?? null,
+      timeoutMs: options.timeoutMs ?? null,
       registeredAt: Date.now()
     };
 
@@ -61,6 +65,23 @@ export class BackendRegistry {
     }
 
     return backend;
+  }
+
+  /**
+   * Update fields on an already-registered backend.
+   * @param {string} name - Backend name
+   * @param {Object} fields - Fields to update (description, permissionFlag, timeoutMs)
+   * @throws {Error} If backend is not registered
+   */
+  updateBackend(name, fields) {
+    const backend = this.#backends.get(name);
+    if (!backend) {
+      throw new Error(`Backend "${name}" is not registered`);
+    }
+    if (fields.description !== undefined) backend.description = fields.description;
+    if (fields.permissionFlag !== undefined) backend.permissionFlag = fields.permissionFlag;
+    if (fields.timeoutMs !== undefined) backend.timeoutMs = fields.timeoutMs;
+    logger.debug(`Updated backend: ${name}`);
   }
 
   /**

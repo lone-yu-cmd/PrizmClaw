@@ -65,7 +65,9 @@ const schema = z.object({
   AI_CLI_BACKEND_VALIDATION: z.string().optional().default('true'),
   AI_CLI_BACKEND_FALLBACK: z.string().optional().default('true'),
   // F-018: Web-Telegram Bidirectional Sync
-  SESSION_BINDINGS_PATH: z.string().optional().default('data/session-bindings.json')
+  SESSION_BINDINGS_PATH: z.string().optional().default('data/session-bindings.json'),
+  // F-021: Multi-Backend Profile Manager
+  CLI_PROFILES_PATH: z.string().optional().default('data/cli-profiles.json')
 });
 
 const parsed = schema.parse(process.env);
@@ -214,6 +216,8 @@ export const config = Object.freeze({
   aiCliBackendFallback: parseBoolean(parsed.AI_CLI_BACKEND_FALLBACK),
   // F-018: Web-Telegram Bidirectional Sync
   sessionBindingsPath: parsed.SESSION_BINDINGS_PATH,
+  // F-021: Multi-Backend Profile Manager
+  cliProfilesPath: parsed.CLI_PROFILES_PATH,
   pipelineInfra: Object.freeze({
     ...pipelineInfra,
     daemonLogPaths

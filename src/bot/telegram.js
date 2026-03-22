@@ -54,6 +54,9 @@ import { jobsMeta, handleJobs } from './commands/handlers/jobs.js';
 import { watchMeta, handleWatch } from './commands/handlers/watch.js';
 // F-015: AI CLI Backend Switcher command handler
 import { cliMeta, handleCli } from './commands/handlers/cli.js';
+// F-021: Multi-Backend Profile Manager
+import { profileStore } from '../services/profile-store.js';
+import { backendRegistry } from '../services/backend-registry.js';
 // F-017: Runtime Config Manager command handler
 import { configMeta, handleConfig } from './commands/handlers/config.js';
 // F-020: Enhanced Terminal Output Streaming
@@ -625,6 +628,45 @@ export async function createTelegramBot() {
 
   // F-014: Restore file watchers
   await fileWatcherService.restoreWatches();
+
+  // F-021: Load persisted CLI profiles and register them in backendRegistry
+  profileStore.setDefaultProfileName('default');
+  await profileStore.init({ persistencePath: config.cliProfilesPath });
+  // Seed default profile if not yet in store
+  if (!profileStore.hasProfile('default')) {
+    await profileStore.addProfile({
+      name: 'default',
+      binPath: config.codebuddyBin,
+      permissionFlag: config.codebuddyPermissionFlag || null,
+      timeoutMs: null,
+      description: 'Default backend (CODEBUDDY_BIN)'
+    });
+  }
+  // Register default profile in backendRegistry
+  try {
+    backendRegistry.registerBackend('default', config.codebuddyBin, {
+      description: 'Default backend (CODEBUDDY_BIN)',
+      permissionFlag: config.codebuddyPermissionFlag || null
+    });
+  } catch {
+    // Already registered — ok
+  }
+  // Load and register persisted non-default profiles
+  for (const p of profileStore.listProfiles()) {
+    if (p.name === 'default') continue;
+    if (!backendRegistry.getBackend(p.name)) {
+      try {
+        backendRegistry.registerBackend(p.name, p.binPath, {
+          description: p.description,
+          permissionFlag: p.permissionFlag,
+          timeoutMs: p.timeoutMs
+        });
+        logger.info(`F-021: Loaded profile "${p.name}" from ${config.cliProfilesPath}`);
+      } catch (err) {
+        logger.warn(`F-021: Profile "${p.name}" could not be registered: ${err.message}`);
+      }
+    }
+  }
 
   // Register pipeline commands
   registerPipelineCommands();

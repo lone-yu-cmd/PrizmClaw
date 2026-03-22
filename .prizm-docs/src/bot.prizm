@@ -1,14 +1,15 @@
 MODULE: src/bot
-FILES: 8 (+31 command handlers in commands/handlers/)
+FILES: 8 (+32 command handlers in commands/handlers/)
 RESPONSIBILITY: Telegram bot — message handling, command routing, file delivery, streaming output
 INTERFACES:
 - createTelegramBot(): Promise<Telegraf> — initialize bot with all command handlers and services
 - bot._f018.subscribeCrossChannel(chatId): void — subscribe realtimeHub for cross-channel push
 KEY_FILES:
-- telegram.js: Main bot setup, text handler, file handling, stream publisher (~1040 lines)
+- telegram.js: Main bot setup, text handler, file handling, stream publisher (~1080 lines)
 - commands/index.js: Command registry and routing
 - commands/help.js: Help text generation
 - commands/handlers/output.js: F-020 /output [N] command — view recent AI CLI output history
+- commands/handlers/cli.js: F-021 /cli command — backend switcher + profile manager
 DEPENDENCIES:
 - uses: telegraf: Telegram bot framework
 - imports: src/services/ai-cli-service.js: executeAiCli, interruptAiCli
@@ -17,6 +18,8 @@ DEPENDENCIES:
 - imports: src/services/realtime-hub.js: F-018 event subscription for cross-channel push
 - imports: src/services/session-store.js: session state
 - imports: src/services/chat-service.js: legacy (still imported for /reset command)
+- imports: src/services/profile-store.js: F-021 CLI profile persistence singleton
+- imports: src/services/backend-registry.js: F-021 backend registration at startup
 - imports: src/utils/ansi-adapter.js: F-020 processChunk — strips ANSI before Telegram display
 - imports: src/utils/output-segmenter.js: F-020 segmentOutput — logical boundary splitting
 - imports: src/bot/commands/handlers/output.js: F-020 /output command + outputHistoryService singleton
@@ -29,4 +32,5 @@ TRAPS:
 - segmentOutput() replaces splitMessage() in render() inside createEditableStreamPublisher — ONLY in streaming path; cross-channel push (subscribeCrossChannel) still uses splitMessage()
 - STREAM_MIN_CHARS (220) and STREAM_FLUSH_INTERVAL_MS (1200) are preserved unchanged — segmentation only changes where cuts happen, not how often
 - outputHistoryService singleton exported from output.js — telegram.js imports it; tests must inject mock via handlerCtx to avoid mutating shared singleton state
-UPDATED: 2026-03-22
+- F-021 startup block calls profileStore.init({persistencePath}) then seeds default 'default' profile; must run before registerPipelineCommands() to ensure backendRegistry has profiles when handlers initialize
+UPDATED: 2026-03-23
