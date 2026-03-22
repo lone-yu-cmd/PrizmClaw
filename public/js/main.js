@@ -6,7 +6,9 @@ const state = {
   busy: false,
   eventSource: null,
   streamingMessageBody: null,
-  streamedText: ''
+  streamedText: '',
+  availableCommands: [],
+  commandDropdownVisible: false
 };
 
 const els = {
@@ -75,7 +77,7 @@ function loadSessionConfig() {
   }
 }
 
-function createMessageElement(role, text, isError = false) {
+function createMessageElement(role, text, isError = false, isHtml = false) {
   const item = document.createElement('div');
   item.className = `message ${role} ${isError ? 'error' : ''}`.trim();
 
@@ -85,14 +87,18 @@ function createMessageElement(role, text, isError = false) {
 
   const body = document.createElement('div');
   body.className = 'body';
-  body.textContent = text;
+  if (isHtml) {
+    body.innerHTML = text;
+  } else {
+    body.textContent = text;
+  }
 
   item.append(roleEl, body);
   return { item, body };
 }
 
-function appendMessage(role, text, isError = false) {
-  const node = createMessageElement(role, text, isError);
+function appendMessage(role, text, isError = false, isHtml = false) {
+  const node = createMessageElement(role, text, isError, isHtml);
   els.chatMessages.appendChild(node.item);
   els.chatMessages.scrollTop = els.chatMessages.scrollHeight;
   return node;
@@ -119,6 +125,71 @@ function closeRealtime() {
   if (state.eventSource) {
     state.eventSource.close();
     state.eventSource = null;
+  }
+}
+
+// ── Command Autocomplete ──────────────────────────────────────────────────────
+
+let commandDropdown = null;
+
+function createCommandDropdown() {
+  commandDropdown = document.createElement('div');
+  commandDropdown.className = 'command-dropdown';
+  commandDropdown.style.cssText = 'position:absolute;background:#1e1e2e;border:1px solid #444;border-radius:4px;max-height:200px;overflow-y:auto;z-index:100;width:100%;box-sizing:border-box;display:none;';
+  els.chatForm.style.position = 'relative';
+  els.chatForm.appendChild(commandDropdown);
+}
+
+function showCommandDropdown(commands) {
+  if (!commandDropdown) createCommandDropdown();
+  commandDropdown.innerHTML = '';
+
+  if (commands.length === 0) {
+    commandDropdown.style.display = 'none';
+    state.commandDropdownVisible = false;
+    return;
+  }
+
+  commands.forEach((cmd) => {
+    const item = document.createElement('div');
+    item.style.cssText = 'padding:6px 10px;cursor:pointer;font-family:monospace;font-size:13px;';
+    item.innerHTML = `<strong>/${cmd.name}</strong> — ${cmd.description}`;
+    item.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      els.chatInput.value = `/${cmd.name} `;
+      hideCommandDropdown();
+      els.chatInput.focus();
+    });
+    item.addEventListener('mouseover', () => { item.style.background = '#313244'; });
+    item.addEventListener('mouseout', () => { item.style.background = ''; });
+    commandDropdown.appendChild(item);
+  });
+
+  commandDropdown.style.display = 'block';
+  state.commandDropdownVisible = true;
+}
+
+function hideCommandDropdown() {
+  if (commandDropdown) commandDropdown.style.display = 'none';
+  state.commandDropdownVisible = false;
+}
+
+function filterCommands(prefix) {
+  const query = prefix.slice(1).toLowerCase(); // Remove leading /
+  return state.availableCommands.filter((cmd) => {
+    return cmd.name.startsWith(query) || (cmd.aliases || []).some((a) => a.startsWith(query));
+  });
+}
+
+async function loadAvailableCommands() {
+  try {
+    const response = await fetch(getApiUrl('/api/commands'));
+    const data = await response.json();
+    if (data.ok && Array.isArray(data.commands)) {
+      state.availableCommands = data.commands;
+    }
+  } catch {
+    // Non-critical — autocomplete just won't work
   }
 }
 
@@ -170,6 +241,9 @@ function connectRealtime() {
     const payload = JSON.parse(event.data);
     if (state.streamingMessageBody) {
       state.streamingMessageBody.textContent = payload.reply ?? state.streamedText;
+    } else if (payload.isCommand) {
+      // Command result came via SSE (not via HTTP response) — render as HTML
+      appendMessage('assistant', payload.reply || '(命令已执行)', false, true);
     }
     setStatus('就绪');
   });
@@ -218,8 +292,9 @@ function init() {
   els.baseUrlInput.value = state.baseUrl;
   els.sessionIdInput.value = state.sessionId;
 
-  appendMessage('system', '欢迎使用 PrizmClaw。你可以聊天、抓取截图、执行受控系统命令。');
+  appendMessage('system', '欢迎使用 PrizmClaw。你可以聊天、抓取截图、执行受控系统命令。输入 / 查看可用命令。');
   connectRealtime();
+  loadAvailableCommands();
 }
 
 els.baseUrlInput.addEventListener('change', () => {
@@ -263,7 +338,8 @@ els.chatForm.addEventListener('submit', async (event) => {
     });
 
     if (!state.streamedText) {
-      appendMessage('assistant', data.reply || '(空响应)');
+      const isHtml = data.isCommand === true;
+      appendMessage('assistant', data.reply || '(空响应)', false, isHtml);
     }
   } catch (error) {
     appendMessage('system', error instanceof Error ? error.message : String(error), true);
@@ -274,10 +350,32 @@ els.chatForm.addEventListener('submit', async (event) => {
 });
 
 els.chatInput.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && state.commandDropdownVisible) {
+    hideCommandDropdown();
+    return;
+  }
   if (event.key === 'Enter' && !event.shiftKey) {
     event.preventDefault();
+    hideCommandDropdown();
     els.chatForm.requestSubmit();
   }
+});
+
+els.chatInput.addEventListener('input', () => {
+  const value = els.chatInput.value;
+  const firstWord = value.split(/\s/)[0];
+  if (firstWord.startsWith('/') && value === firstWord) {
+    // User is still typing the command name (no space yet)
+    const matches = filterCommands(firstWord);
+    showCommandDropdown(matches);
+  } else {
+    hideCommandDropdown();
+  }
+});
+
+els.chatInput.addEventListener('blur', () => {
+  // Delay hide to allow mousedown on dropdown item to fire first
+  setTimeout(hideCommandDropdown, 150);
 });
 
 els.takeScreenshotBtn.addEventListener('click', async () => {

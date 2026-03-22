@@ -464,7 +464,7 @@
         "输入 / 时展示可用命令列表作为自动补全提示",
         "命令执行过程中显示加载状态，长输出支持分段展示"
       ],
-      "status": "pending",
+      "status": "completed",
       "session_granularity": "feature",
       "sub_features": []
     },

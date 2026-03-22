@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { buildSessionContext, resetSession } from '../services/chat-service.js';
 import { captureScreenshot } from '../services/screenshot-service.js';
 import { executeSystemCommand } from '../services/system-exec-service.js';
+import { routeWebCommand, getAvailableCommands } from './web-command-router.js';
 
 function writeSseEvent(res, event, payload) {
   res.write(`event: ${event}\n`);
@@ -115,11 +116,32 @@ export function createApiRouter({ realtimeHub, sessionBind, messageRouter, sessi
     }
   });
 
+  // F-019: Commands list for web autocomplete
+  router.get('/commands', (_req, res) => {
+    const commands = getAvailableCommands();
+    res.json({ ok: true, commands });
+  });
+
   // F-018: Modified /api/chat to use message-router and support Telegram binding
   router.post('/chat', async (req, res, next) => {
     try {
       await sessionBind.ensureReady();
       const { channel = 'web', sessionId, message, telegramChatId } = req.body ?? {};
+
+      // F-019: Detect and route slash commands for web channel
+      if (channel === 'web' && typeof message === 'string' && message.trim().startsWith('/')) {
+        const commandResult = await routeWebCommand(message.trim(), sessionId);
+        if (commandResult !== null) {
+          // Publish as assistant message via realtimeHub
+          const session = buildSessionContext(channel, sessionId);
+          const sessionKey = session.sessionKey;
+          realtimeHub.publish(sessionKey, {
+            type: 'assistant_done',
+            payload: { reply: commandResult, isCommand: true }
+          });
+          return res.json({ ok: true, reply: commandResult, isCommand: true });
+        }
+      }
 
       let effectiveTelegramChatId = telegramChatId;
 

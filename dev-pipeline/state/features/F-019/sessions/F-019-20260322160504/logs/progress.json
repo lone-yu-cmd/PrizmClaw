@@ -1,0 +1,45 @@
+{
+  "updated_at": "2026-03-22T08:23:54Z",
+  "message_count": 122,
+  "current_tool": "Read",
+  "current_tool_input_summary": "/Users/loneyu/SelfProjects/PrizmClaw/src/security/permission-guard.js",
+  "current_phase": "code-review",
+  "detected_phases": [
+    "implement",
+    "code-review"
+  ],
+  "tool_calls": [
+    {
+      "name": "Bash",
+      "count": 37
+    },
+    {
+      "name": "Read",
+      "count": 25
+    },
+    {
+      "name": "Edit",
+      "count": 14
+    },
+    {
+      "name": "TodoWrite",
+      "count": 9
+    },
+    {
+      "name": "Write",
+      "count": 5
+    },
+    {
+      "name": "Grep",
+      "count": 2
+    },
+    {
+      "name": "Skill",
+      "count": 1
+    }
+  ],
+  "total_tool_calls": 93,
+  "last_text_snippet": "I now have all the information needed for the review. This is a critical finding \u2014 `getUserRole(null)` returns `'admin'`",
+  "is_active": true,
+  "errors": []
+}
