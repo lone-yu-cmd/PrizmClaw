@@ -522,6 +522,24 @@
       "status": "pending",
       "session_granularity": "feature",
       "sub_features": []
+    },
+    {
+      "id": "F-022",
+      "title": "Web Input Focus Shadow Effect",
+      "description": "为 Web 管理台所有输入框（textarea、input）添加聚焦时的阴影视觉反馈。在 public/styles.css 中为 input:focus 和 textarea:focus 添加 box-shadow 与 outline 样式，使用 --primary 色调，提升交互可感知性和界面一致性。无后端变更。",
+      "priority": 22,
+      "estimated_complexity": "low",
+      "dependencies": [
+        "F-018"
+      ],
+      "acceptance_criteria": [
+        "Given 用户点击或 Tab 聚焦到任意输入框，When 输入框获得焦点，Then 输入框显示基于 --primary 色的可见阴影光晕效果",
+        "Given 输入框处于聚焦状态，When 用户点击其他区域失焦，Then 阴影效果消失并恢复默认边框样式",
+        "Given 所有浏览器渲染，When 渲染聚焦输入框，Then 原生 outline 被移除，由自定义 box-shadow 替代，无双重轮廓"
+      ],
+      "status": "pending",
+      "session_granularity": "feature",
+      "sub_features": []
     }
   ],
   "global_context": {

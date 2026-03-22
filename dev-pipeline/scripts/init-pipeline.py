@@ -226,6 +226,8 @@ def create_state_directory(state_dir, feature_list_path, features):
     """Create the state directory structure with pipeline.json and per-feature status files."""
     abs_state_dir = os.path.abspath(state_dir)
     abs_feature_list_path = os.path.abspath(feature_list_path)
+    # Store as relative path from state_dir so pipeline.json is portable across machines
+    rel_feature_list_path = os.path.relpath(abs_feature_list_path, abs_state_dir)
     features_dir = os.path.join(abs_state_dir, "features")
 
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -245,7 +247,7 @@ def create_state_directory(state_dir, feature_list_path, features):
     pipeline_state = {
         "run_id": run_id,
         "status": "initialized",
-        "feature_list_path": abs_feature_list_path,
+        "feature_list_path": rel_feature_list_path,
         "created_at": now,
         "total_features": len(features),
         "completed_features": completed_count,

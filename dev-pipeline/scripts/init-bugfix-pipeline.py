@@ -190,6 +190,8 @@ def create_state_directory(state_dir, bug_list_path, bugs):
     """Create the state directory structure with pipeline.json and per-bug status files."""
     abs_state_dir = os.path.abspath(state_dir)
     abs_bug_list_path = os.path.abspath(bug_list_path)
+    # Store as relative path from state_dir so pipeline.json is portable across machines
+    rel_bug_list_path = os.path.relpath(abs_bug_list_path, abs_state_dir)
     bugs_dir = os.path.join(abs_state_dir, "bugs")
 
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -204,7 +206,7 @@ def create_state_directory(state_dir, bug_list_path, bugs):
         "run_id": run_id,
         "pipeline_type": "bugfix",
         "status": "initialized",
-        "bug_list_path": abs_bug_list_path,
+        "bug_list_path": rel_bug_list_path,
         "created_at": now,
         "total_bugs": len(bugs),
         "completed_bugs": 0,

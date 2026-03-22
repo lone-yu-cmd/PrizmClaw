@@ -13,6 +13,7 @@ features are found, 0 otherwise.
 Usage:
     python3 detect-stuck.py --state-dir <path> [--feature-id <id>]
                             [--max-retries <n>] [--stale-threshold <seconds>]
+                            [--feature-list <path>]
 """
 
 import argparse
@@ -52,6 +53,11 @@ def parse_args():
         type=int,
         default=600,
         help="Heartbeat staleness threshold in seconds (default: 600)",
+    )
+    parser.add_argument(
+        "--feature-list",
+        default=None,
+        help="Path to feature-list.json (overrides pipeline.json reference)",
     )
     return parser.parse_args()
 
@@ -289,14 +295,26 @@ def check_dependency_deadlock(feature_id, feature_list_data, state_dir):
 
 
 def find_feature_list(state_dir):
-    """Attempt to locate and load feature-list.json via pipeline.json reference."""
+    """Attempt to locate and load feature-list.json via pipeline.json reference.
+
+    Resolves feature_list_path relative to state_dir when it is a relative path,
+    so that pipeline.json is portable across machines and directory structures.
+    """
     pipeline_path = os.path.join(state_dir, "pipeline.json")
     pipeline = load_json(pipeline_path)
     if pipeline is None:
         return None
 
     fl_path = pipeline.get("feature_list_path")
-    if fl_path and os.path.isfile(fl_path):
+    if not fl_path:
+        return None
+
+    # Resolve relative paths relative to state_dir (not process cwd)
+    if not os.path.isabs(fl_path):
+        fl_path = os.path.join(state_dir, fl_path)
+
+    fl_path = os.path.normpath(fl_path)
+    if os.path.isfile(fl_path):
         return load_json(fl_path)
 
     return None
@@ -354,7 +372,11 @@ def main():
         feature_ids = discover_feature_ids(state_dir)
 
     # Load feature list for dependency checks
-    feature_list_data = find_feature_list(state_dir)
+    # Prefer CLI-provided path; fall back to pipeline.json reference
+    if args.feature_list:
+        feature_list_data = load_json(os.path.abspath(args.feature_list))
+    else:
+        feature_list_data = find_feature_list(state_dir)
 
     stuck_features = []
     for fid in feature_ids:

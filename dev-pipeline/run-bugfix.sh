@@ -533,6 +533,9 @@ main() {
         log_info "Resuming existing bugfix pipeline..."
     fi
 
+    # Auto-detect available models (must run before any git commit operations)
+    bash "$SCRIPT_DIR/scripts/detect-models.sh" --quiet 2>/dev/null || true
+
     # Print header
     echo ""
     echo -e "${BOLD}════════════════════════════════════════════════════${NC}"
@@ -594,7 +597,7 @@ main() {
                     _DEV_BRANCH_NAME=""
                 else
                     log_warn "Auto-merge failed — dev branch preserved: $_DEV_BRANCH_NAME"
-                    log_warn "Merge manually: git checkout $_ORIGINAL_BRANCH && git merge $_DEV_BRANCH_NAME"
+                    log_warn "Merge manually: git checkout $_ORIGINAL_BRANCH && git rebase $_DEV_BRANCH_NAME"
                 fi
             fi
             break

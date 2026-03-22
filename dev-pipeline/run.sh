@@ -959,7 +959,7 @@ for f in data.get('stuck_features', []):
                     _DEV_BRANCH_NAME=""
                 else
                     log_warn "Auto-merge failed — dev branch preserved: $_DEV_BRANCH_NAME"
-                    log_warn "Merge manually: git checkout $_ORIGINAL_BRANCH && git merge $_DEV_BRANCH_NAME"
+                    log_warn "Merge manually: git checkout $_ORIGINAL_BRANCH && git rebase $_DEV_BRANCH_NAME"
                 fi
             fi
             break

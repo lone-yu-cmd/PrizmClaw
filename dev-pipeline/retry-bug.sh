@@ -175,6 +175,9 @@ python3 "$SCRIPTS_DIR/update-bug-status.py" \
     log_warn "Failed to clean bug artifacts (continuing with fresh session only)"
 }
 
+# Auto-detect available models (must run before any git commit operations)
+bash "$SCRIPT_DIR/scripts/detect-models.sh" --quiet 2>/dev/null || true
+
 # ============================================================
 # Generate bootstrap prompt
 # ============================================================

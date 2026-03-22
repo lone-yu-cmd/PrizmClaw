@@ -98,13 +98,11 @@ branch_merge() {
         return 1
     fi
 
-    # Step 2: Merge dev branch
+    # Step 2: Merge dev branch (fast-forward only — avoids interactive merge commit editor)
     log_info "Merging $dev_branch into $original_branch..."
-    if ! git -C "$project_root" merge "$dev_branch" 2>&1; then
-        log_error "Merge failed — resolve conflicts manually:"
-        log_error "  git checkout $original_branch && git merge $dev_branch"
-        # Return to dev branch so state is not lost
-        git -C "$project_root" merge --abort 2>/dev/null || true
+    if ! git -C "$project_root" merge --ff-only "$dev_branch" 2>&1; then
+        log_error "Merge failed (non-fast-forward) — resolve manually:"
+        log_error "  git checkout $original_branch && git rebase $dev_branch"
         git -C "$project_root" checkout "$dev_branch" 2>/dev/null || true
         return 1
     fi
