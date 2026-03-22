@@ -11,3 +11,4 @@
 - 2026-03-22 | src/utils | update: L1 doc — added ansi-adapter, output-segmenter interfaces and SUBDIRS pointers
 - 2026-03-22 | src/services | update: L1 doc — restored correct interfaces, added output-history-service, SUBDIRS pointer, TRAPS
 - 2026-03-22 | src/bot | update: L1 doc — added /output handler, F-020 ANSI/segmentation TRAPS, updated dependencies
+- 2026-03-22 | public/index.html | update: chatInput textarea placeholder text → 「请输入对话」(F-022)
