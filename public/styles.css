@@ -68,6 +68,18 @@ p {
   color: var(--muted);
 }
 
+.status.connected {
+  border-color: #a6f4c5;
+  background: #ecfdf3;
+  color: #027a48;
+}
+
+.status.error {
+  border-color: #f9d3d0;
+  background: #fef3f2;
+  color: var(--danger);
+}
+
 .panel {
   background: var(--panel);
   border: 1px solid var(--line);

@@ -79,3 +79,7 @@ Use the full workflow (/prizmkit-specify -> /prizmkit-plan -> /prizmkit-analyze 
 - INTERFACE: `profileStore` singleton from `src/services/profile-store.js` — `init({persistencePath?})`, `addProfile(profile)`, `removeProfile(name)`, `listProfiles()`, `hasProfile(name)`, `setDefaultProfileName(name)`
 - INTERFACE: `backendRegistry.updateBackend(name, fields)` from `src/services/backend-registry.js` — updates `permissionFlag`, `timeoutMs`, `description` on an existing registered backend in-place
 
+### F-026: Web Status Indicator Color States
+- DECISION: `.status.connected` and `.status.error` are CSS modifier classes — base `.status` keeps layout/sizing; modifiers override only border/background/color. Error palette (#fef3f2, #f9d3d0, var(--danger)) reuses `.message.error` values for visual system consistency.
+- DECISION: `setStatus(text, state)` manages class swap via `classList.remove('connected', 'error')` then conditional `classList.add(state)` — null/undefined state = neutral (no class). 'running' and 'accepted' SSE stages use neutral; only 'connected'/'online' and onerror get color states.
+- INTERFACE: `setStatus(text, state?)` in `public/js/main.js` — state is `'connected' | 'error' | undefined`; manages CSS class on `#status` element

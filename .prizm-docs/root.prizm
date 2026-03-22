@@ -25,5 +25,6 @@ RULES:
 - .btn:disabled uses pointer-events: none to prevent hover CSS from firing on disabled buttons
 - .panel and .sub-panel are separate CSS rules (not grouped) to allow different box-shadow depths; shadow colors use rgba derived from --text (#1f2633) for cool-tone palette coordination
 - .app-header uses position: sticky + background: var(--bg) + z-index: 10 — always pair sticky with background to prevent content bleed-through; padding-bottom + negative margin-bottom offsets border-bottom from grid gap
+- .status uses modifier classes .connected (green: #ecfdf3/#a6f4c5/#027a48) and .error (red: #fef3f2/#f9d3d0/--danger) — setStatus(text, state) manages class swap; error palette reuses .message.error values for system consistency
 
 UPDATED: 2026-03-23

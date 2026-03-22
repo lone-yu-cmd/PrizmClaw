@@ -609,7 +609,7 @@
         "Given 连接成功状态，When JS 为元素添加 .connected 类，Then 指示器显示绿色调样式",
         "Given 连接错误状态，When JS 为元素添加 .error 类，Then 指示器显示红色调样式"
       ],
-      "status": "pending",
+      "status": "in_progress",
       "session_granularity": "feature",
       "sub_features": []
     },

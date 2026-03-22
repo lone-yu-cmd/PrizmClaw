@@ -36,8 +36,10 @@ function randomSessionId() {
   return `web-${Date.now()}-${rand}`;
 }
 
-function setStatus(text) {
+function setStatus(text, state) {
   els.status.textContent = text;
+  els.status.classList.remove('connected', 'error');
+  if (state) els.status.classList.add(state);
 }
 
 function setBusy(busy, text) {
@@ -205,7 +207,7 @@ function connectRealtime() {
   state.eventSource = es;
 
   es.addEventListener('connected', () => {
-    setStatus('实时通道已连接');
+    setStatus('实时通道已连接', 'connected');
   });
 
   es.addEventListener('status', (event) => {
@@ -220,7 +222,7 @@ function connectRealtime() {
       return;
     }
 
-    setStatus('实时通道在线');
+    setStatus('实时通道在线', 'connected');
   });
 
   es.addEventListener('assistant_chunk', (event) => {
@@ -249,7 +251,7 @@ function connectRealtime() {
   });
 
   es.onerror = () => {
-    setStatus('实时通道重连中...');
+    setStatus('实时通道重连中...', 'error');
   };
 }
 
