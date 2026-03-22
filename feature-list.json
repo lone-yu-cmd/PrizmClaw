@@ -555,7 +555,7 @@
         "Given 按钮处于悬停状态，When 鼠标离开按钮，Then 动画还原至默认样式",
         "Given 按钮处于 disabled 状态，When 鼠标悬停，Then 不显示悬停动画"
       ],
-      "status": "pending",
+      "status": "completed",
       "session_granularity": "feature",
       "sub_features": []
     },
