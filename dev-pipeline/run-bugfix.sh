@@ -163,6 +163,7 @@ spawn_and_wait_session() {
         local final_lines=$(wc -l < "$session_log" 2>/dev/null | tr -d ' ')
         log_info "Session log: $final_lines lines, $((final_size / 1024))KB"
     fi
+    log_info "exit_code=$exit_code"
 
     # ── Determine session outcome from observable signals ──────────────
     local session_status

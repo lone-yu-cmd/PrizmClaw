@@ -627,7 +627,7 @@
         "Given 消息淡入动画，When 动画完成，Then 消息以完全不透明状态静止显示",
         "Given 页面中已有历史消息，When 页面首次加载，Then 已有消息不触发淡入动画"
       ],
-      "status": "pending",
+      "status": "completed",
       "session_granularity": "feature",
       "sub_features": []
     },
@@ -716,6 +716,166 @@
         "Given 截图加载完成，When 用户点击截图预览图，Then 以 lightbox 模态框展示原始尺寸截图",
         "Given lightbox 已打开，When 用户点击模态框背景或按 Esc 键，Then 模态框关闭返回正常页面",
         "Given 截图尚未加载（.hidden 状态），When 渲染页面，Then 不显示 lightbox 触发元素"
+      ],
+      "status": "pending",
+      "session_granularity": "feature",
+      "sub_features": []
+    },
+    {
+      "id": "F-033",
+      "title": "Web Toast Notification System",
+      "description": "为 Web 管理台添加轻量 Toast 通知组件，用于操作成功/失败的临时提示。在 public/styles.css 和 public/index.html 中实现固定定位的 toast 容器，支持 success/error/info 三种类型，3 秒后自动消失。无后端变更。",
+      "priority": 33,
+      "estimated_complexity": "low",
+      "dependencies": ["F-018"],
+      "acceptance_criteria": [
+        "Given 操作成功（如发送消息），When JS 调用 showToast(msg, 'success')，Then 页面右下角出现绿色 toast 提示",
+        "Given 操作失败，When JS 调用 showToast(msg, 'error')，Then 出现红色 toast 提示",
+        "Given toast 显示后 3 秒，When 计时结束，Then toast 以淡出动画消失"
+      ],
+      "status": "pending",
+      "session_granularity": "feature",
+      "sub_features": []
+    },
+    {
+      "id": "F-034",
+      "title": "Web Loading Spinner Component",
+      "description": "为 Web 管理台各异步操作（发送消息、截图、命令执行）添加 loading spinner 状态指示。在 public/styles.css 中实现 CSS 纯动画 spinner，按钮触发操作时显示 spinner 并禁用，操作完成后恢复。无后端变更。",
+      "priority": 34,
+      "estimated_complexity": "low",
+      "dependencies": ["F-023"],
+      "acceptance_criteria": [
+        "Given 用户点击发送按钮，When 请求进行中，Then 按钮显示 spinner 动画并变为 disabled 状态",
+        "Given 请求完成或失败，When 响应返回，Then spinner 消失，按钮恢复可点击状态",
+        "Given spinner 动画，When 渲染，Then 动画流畅无抖动，不影响布局"
+      ],
+      "status": "pending",
+      "session_granularity": "feature",
+      "sub_features": []
+    },
+    {
+      "id": "F-035",
+      "title": "Web Keyboard Shortcut Hints",
+      "description": "在 Web 管理台关键交互元素上显示键盘快捷键提示标签。在 public/styles.css 中为 .kbd 组件添加样式，在发送按钮旁显示 Ctrl+Enter 提示，在命令输入框旁显示 Enter 提示。无后端变更。",
+      "priority": 35,
+      "estimated_complexity": "low",
+      "dependencies": ["F-018"],
+      "acceptance_criteria": [
+        "Given 渲染聊天发送区域，When 页面加载，Then 发送按钮旁显示 Ctrl+Enter 快捷键提示标签",
+        "Given 渲染命令执行区域，When 页面加载，Then 执行按钮旁显示 Enter 快捷键提示标签",
+        "Given .kbd 标签，When 渲染，Then 以等宽字体、圆角边框样式展示，视觉上类似物理键盘按键"
+      ],
+      "status": "pending",
+      "session_granularity": "feature",
+      "sub_features": []
+    },
+    {
+      "id": "F-036",
+      "title": "Web Empty State Illustrations",
+      "description": "为 Web 管理台聊天消息区和命令输出区的空状态添加引导文案和图标。在 public/styles.css 和 public/index.html 中实现 .empty-state 组件，当列表为空时居中展示提示图标与说明文字。无后端变更。",
+      "priority": 36,
+      "estimated_complexity": "low",
+      "dependencies": ["F-018"],
+      "acceptance_criteria": [
+        "Given 聊天消息区无消息，When 渲染页面，Then 显示空状态提示（图标+文字），引导用户发送第一条消息",
+        "Given 命令输出区无内容，When 渲染页面，Then 显示空状态提示，引导用户执行命令",
+        "Given 用户发送消息或执行命令后，When 内容出现，Then 空状态提示自动隐藏"
+      ],
+      "status": "pending",
+      "session_granularity": "feature",
+      "sub_features": []
+    },
+    {
+      "id": "F-037",
+      "title": "Web Scroll To Bottom Button",
+      "description": "为 Web 管理台聊天消息区添加「滚动到底部」浮动按钮。在 public/styles.css 和 public/index.html 中实现当用户向上滚动时出现的固定定位按钮，点击后平滑滚动至最新消息。无后端变更。",
+      "priority": 37,
+      "estimated_complexity": "low",
+      "dependencies": ["F-027"],
+      "acceptance_criteria": [
+        "Given 聊天消息区内容超出高度且用户向上滚动，When 滚动距离超过 100px，Then 显示滚动到底部浮动按钮",
+        "Given 浮动按钮显示，When 用户点击，Then 消息区平滑滚动至最新消息",
+        "Given 消息区已在底部，When 渲染，Then 浮动按钮不显示"
+      ],
+      "status": "pending",
+      "session_granularity": "feature",
+      "sub_features": []
+    },
+    {
+      "id": "F-038",
+      "title": "Web Copy To Clipboard Button",
+      "description": "为 Web 管理台所有 .output-box 输出框添加一键复制按钮。在 public/styles.css 和 public/index.html 中为每个输出框右上角添加复制图标按钮，点击后将框内文本写入剪贴板并以 toast 提示反馈。无后端变更。",
+      "priority": 38,
+      "estimated_complexity": "low",
+      "dependencies": ["F-033"],
+      "acceptance_criteria": [
+        "Given 输出框有内容，When 渲染，Then 右上角显示复制按钮图标",
+        "Given 复制按钮可见，When 用户点击，Then 框内文本写入剪贴板并显示「已复制」toast 提示",
+        "Given 输出框为空，When 渲染，Then 复制按钮显示但点击时提示「内容为空」"
+      ],
+      "status": "pending",
+      "session_granularity": "feature",
+      "sub_features": []
+    },
+    {
+      "id": "F-039",
+      "title": "Web Session Info Display Panel",
+      "description": "在 Web 管理台连接设置区域下方添加当前会话信息展示面板，显示 Session ID、连接状态、已绑定 Telegram Chat ID 等运行时信息。在 public/styles.css 和 public/index.html 中实现只读信息卡片组件。无后端变更。",
+      "priority": 39,
+      "estimated_complexity": "low",
+      "dependencies": ["F-026"],
+      "acceptance_criteria": [
+        "Given 页面加载完成，When 渲染会话信息面板，Then 显示当前 Session ID 和连接状态",
+        "Given SSE 连接建立，When 状态更新，Then 面板中连接状态实时刷新",
+        "Given 已绑定 Telegram Chat ID，When 渲染面板，Then 显示绑定的 Chat ID 信息"
+      ],
+      "status": "pending",
+      "session_granularity": "feature",
+      "sub_features": []
+    },
+    {
+      "id": "F-040",
+      "title": "Web Collapsible Config Panel",
+      "description": "将 Web 管理台连接设置区域（.config-panel）改为可折叠面板，默认展开，用户可点击标题栏折叠以节省屏幕空间。在 public/styles.css 和 public/index.html 中实现无 JS 依赖的 details/summary 折叠方案。无后端变更。",
+      "priority": 40,
+      "estimated_complexity": "low",
+      "dependencies": ["F-024"],
+      "acceptance_criteria": [
+        "Given 页面初次加载，When 渲染配置区，Then 连接设置面板默认展开显示",
+        "Given 面板展开状态，When 用户点击面板标题，Then 面板内容折叠收起，标题仍可见",
+        "Given 面板折叠状态，When 用户再次点击标题，Then 面板内容重新展开"
+      ],
+      "status": "pending",
+      "session_granularity": "feature",
+      "sub_features": []
+    },
+    {
+      "id": "F-041",
+      "title": "Web Message Timestamp Display",
+      "description": "为 Web 管理台聊天消息添加发送时间戳显示。在 public/styles.css 和 public/js/main.js 中为每条消息附加本地时间标签（HH:MM 格式），以小字体显示在消息角落，提升对话可追溯性。无后端变更。",
+      "priority": 41,
+      "estimated_complexity": "low",
+      "dependencies": ["F-027"],
+      "acceptance_criteria": [
+        "Given 用户发送消息，When 消息渲染到聊天区，Then 消息右下角显示发送时间（HH:MM 格式）",
+        "Given AI 回复消息，When 消息渲染到聊天区，Then 消息右下角显示接收时间",
+        "Given 时间戳文字，When 渲染，Then 以小号字体和 --muted 颜色显示，不干扰消息主体阅读"
+      ],
+      "status": "pending",
+      "session_granularity": "feature",
+      "sub_features": []
+    },
+    {
+      "id": "F-042",
+      "title": "Web Exec History Dropdown",
+      "description": "为 Web 管理台系统命令输入框添加历史命令下拉选择。在 public/styles.css 和 public/js/main.js 中实现最近 10 条命令的本地存储与下拉 UI，用户可快速重用历史命令。无后端变更。",
+      "priority": 42,
+      "estimated_complexity": "low",
+      "dependencies": ["F-029"],
+      "acceptance_criteria": [
+        "Given 用户成功执行命令，When 命令完成，Then 该命令存入本地历史（最多 10 条，超出时移除最旧）",
+        "Given 命令输入框有焦点，When 用户按向上方向键，Then 依次填入历史命令",
+        "Given 命令历史存在，When 用户点击输入框旁的历史图标，Then 显示历史命令下拉列表可选择"
       ],
       "status": "pending",
       "session_granularity": "feature",

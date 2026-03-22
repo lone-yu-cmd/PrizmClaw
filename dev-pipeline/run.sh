@@ -183,6 +183,7 @@ spawn_and_wait_session() {
         local final_lines=$(wc -l < "$session_log" 2>/dev/null | tr -d ' ')
         log_info "Session log: $final_lines lines, $((final_size / 1024))KB"
     fi
+    log_info "exit_code=$exit_code"
 
     # ── Determine session outcome from observable signals ──────────────
     # No dependency on session-status.json — uses exit code, git commits,
@@ -271,39 +272,6 @@ sys.exit(1)
         log_warn "Could not resolve feature slug for $feature_id — session summary and artifact validation will be skipped"
         feature_slug=""
     }
-
-    if [[ -n "$feature_slug" ]]; then
-        local project_root_for_summary
-        project_root_for_summary="$(cd "$SCRIPT_DIR/.." && pwd)"
-        local summary_path="$project_root_for_summary/.prizmkit/specs/${feature_slug}/session-summary.json"
-        mkdir -p "$(dirname "$summary_path")"
-        local session_start_time
-        session_start_time=$(python3 -c "
-import json, sys, os
-p = os.path.join(sys.argv[1], 'current-session.json')
-if os.path.isfile(p):
-    with open(p) as f: print(json.load(f).get('started_at', ''))
-else: print('')
-" "$STATE_DIR" 2>/dev/null) || session_start_time=""
-        local exec_tier
-        exec_tier=$(python3 -c "
-import json, sys, os
-p = sys.argv[1]
-if os.path.isfile(p):
-    with open(p) as f: print(json.load(f).get('exec_tier', ''))
-else: print('')
-" "$session_dir/session-status.json" 2>/dev/null) || exec_tier=""
-        cat > "$summary_path" <<SUMMARY
-{
-  "feature_id": "$feature_id",
-  "session_id": "$session_id",
-  "status": "$session_status",
-  "started_at": "$session_start_time",
-  "completed_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "tier": "$exec_tier"
-}
-SUMMARY
-    fi
 
     # Validate key artifacts exist after successful session
     if [[ "$session_status" == "success" && -n "$feature_slug" ]]; then

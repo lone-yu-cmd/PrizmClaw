@@ -83,3 +83,7 @@ Use the full workflow (/prizmkit-specify -> /prizmkit-plan -> /prizmkit-analyze 
 - DECISION: `.status.connected` and `.status.error` are CSS modifier classes — base `.status` keeps layout/sizing; modifiers override only border/background/color. Error palette (#fef3f2, #f9d3d0, var(--danger)) reuses `.message.error` values for visual system consistency.
 - DECISION: `setStatus(text, state)` manages class swap via `classList.remove('connected', 'error')` then conditional `classList.add(state)` — null/undefined state = neutral (no class). 'running' and 'accepted' SSE stages use neutral; only 'connected'/'online' and onerror get color states.
 - INTERFACE: `setStatus(text, state?)` in `public/js/main.js` — state is `'connected' | 'error' | undefined`; manages CSS class on `#status` element
+
+### F-027: Web Chat Message Fade-In Animation
+- DECISION: `.message` uses `animation: fade-in 0.25s ease-out both` — `both` fill-mode is critical: ensures opacity:0 before animation starts and opacity:1 after ends, preventing flash-of-transparent or flash-of-animated-end states. Do not use `forwards` alone (pre-start flash) or omit fill-mode (post-end reset).
+- DECISION: `@keyframes fade-in` combines opacity 0→1 with `translateY(4px)→0` for subtle depth — pure opacity-only fade looks flat; small Y offset adds natural rise-in feel without distracting movement. 0.25s ease-out is the project standard for message appear animations.

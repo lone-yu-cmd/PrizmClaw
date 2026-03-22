@@ -200,12 +200,24 @@ textarea:focus {
   background: #fff;
 }
 
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .message {
   padding: 10px;
   border-radius: 10px;
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
+  animation: fade-in 0.25s ease-out both;
 }
 
 .message.user {

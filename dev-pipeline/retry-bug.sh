@@ -328,6 +328,7 @@ if [[ -f "$SESSION_LOG" ]]; then
     FINAL_SIZE=$(wc -c < "$SESSION_LOG" 2>/dev/null | tr -d ' ')
     log_info "Session log: $FINAL_LINES lines, $((FINAL_SIZE / 1024))KB"
 fi
+log_info "exit_code=$EXIT_CODE"
 
 # ── Determine session outcome from observable signals ──────────────
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
