@@ -3,8 +3,15 @@
   "feature_id": "F-018",
   "feature_slug": "018-web-telegram-bidirectional-sync",
   "exec_tier": 2,
-  "status": "success",
-  "completed_phases": [0, 1, 2, 3, 4, 5],
+  "status": "commit_missing",
+  "completed_phases": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
   "current_phase": 5,
   "checkpoint_reached": "CP-2",
   "tasks_completed": 5,
