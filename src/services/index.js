@@ -56,3 +56,7 @@ export { aliasStore } from './alias-store.js';
 // F-014: Notification and Scheduled Tasks
 export { scheduledTaskService } from './scheduled-task-service.js';
 export { fileWatcherService } from './file-watcher-service.js';
+
+// F-018: Web-Telegram Bidirectional Sync
+export { createSessionBindService } from './session-bind.js';
+export { createMessageRouter } from './message-router.js';

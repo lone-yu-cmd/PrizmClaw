@@ -1,9 +1,22 @@
 import express from 'express';
+import { config } from '../config.js';
 import { createApiRouter } from '../routes/api-routes.js';
 import { realtimeHub } from '../services/realtime-hub.js';
+import { sessionStore } from '../services/session-store.js';
+import { createSessionBindService } from '../services/session-bind.js';
+import { createMessageRouter } from '../services/message-router.js';
+import { executeAiCli } from '../services/ai-cli-service.js';
 
 export function createHttpServer({ logger }) {
   const app = express();
+
+  // Initialize F-018 services
+  const sessionBind = createSessionBindService({ bindingsPath: config.sessionBindingsPath });
+  const messageRouter = createMessageRouter({
+    aiCliExecutor: executeAiCli,
+    sessionStore,
+    realtimeHub
+  });
 
   app.use(express.json({ limit: '2mb' }));
 
@@ -11,7 +24,7 @@ export function createHttpServer({ logger }) {
     res.json({ ok: true });
   });
 
-  app.use('/api', createApiRouter({ realtimeHub }));
+  app.use('/api', createApiRouter({ realtimeHub, sessionBind, messageRouter, sessionStore }));
   app.use(express.static('public'));
 
   app.use((error, _req, res, _next) => {

@@ -63,7 +63,9 @@ const schema = z.object({
   AI_CLI_BACKENDS: z.string().optional().default(''),
   AI_CLI_DEFAULT_BACKEND: z.string().optional().default(''),
   AI_CLI_BACKEND_VALIDATION: z.string().optional().default('true'),
-  AI_CLI_BACKEND_FALLBACK: z.string().optional().default('true')
+  AI_CLI_BACKEND_FALLBACK: z.string().optional().default('true'),
+  // F-018: Web-Telegram Bidirectional Sync
+  SESSION_BINDINGS_PATH: z.string().optional().default('data/session-bindings.json')
 });
 
 const parsed = schema.parse(process.env);
@@ -210,6 +212,8 @@ export const config = Object.freeze({
   aiCliDefaultBackend: parsed.AI_CLI_DEFAULT_BACKEND,
   aiCliBackendValidation: parseBoolean(parsed.AI_CLI_BACKEND_VALIDATION),
   aiCliBackendFallback: parseBoolean(parsed.AI_CLI_BACKEND_FALLBACK),
+  // F-018: Web-Telegram Bidirectional Sync
+  sessionBindingsPath: parsed.SESSION_BINDINGS_PATH,
   pipelineInfra: Object.freeze({
     ...pipelineInfra,
     daemonLogPaths

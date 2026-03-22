@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { buildSessionContext, chatWithSession, resetSession } from '../services/chat-service.js';
+import { buildSessionContext, resetSession } from '../services/chat-service.js';
 import { captureScreenshot } from '../services/screenshot-service.js';
 import { executeSystemCommand } from '../services/system-exec-service.js';
 
@@ -8,13 +8,70 @@ function writeSseEvent(res, event, payload) {
   res.write(`data: ${JSON.stringify(payload)}\n\n`);
 }
 
-export function createApiRouter({ realtimeHub }) {
+export function createApiRouter({ realtimeHub, sessionBind, messageRouter, sessionStore }) {
   const router = Router();
 
+  // F-018: Session binding endpoints
+  router.post('/bind', (req, res, next) => {
+    try {
+      const { webSessionId, telegramChatId } = req.body ?? {};
+
+      if (!webSessionId || !telegramChatId) {
+        return res.status(400).json({ ok: false, error: 'webSessionId and telegramChatId are required' });
+      }
+
+      sessionBind.bindSession(webSessionId, telegramChatId);
+
+      res.json({ ok: true });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post('/unbind', (req, res, next) => {
+    try {
+      const { webSessionId } = req.body ?? {};
+
+      if (!webSessionId) {
+        return res.status(400).json({ ok: false, error: 'webSessionId is required' });
+      }
+
+      sessionBind.unbindSession(webSessionId);
+
+      res.json({ ok: true });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.get('/bindings', (req, res, next) => {
+    try {
+      const { webSessionId } = req.query;
+
+      if (webSessionId) {
+        const telegramChatId = sessionBind.getBoundChatId(webSessionId);
+        res.json({ ok: true, telegramChatId });
+      } else {
+        const allBindings = sessionBind.getAllBindings();
+        res.json({ ok: true, bindings: allBindings });
+      }
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // SSE events endpoint - support Telegram-bound sessions
   router.get('/events', (req, res, next) => {
     try {
-      const { channel = 'web', sessionId } = req.query;
-      const session = buildSessionContext(channel, sessionId);
+      const { channel = 'web', sessionId, telegramChatId } = req.query;
+
+      let sessionKey;
+      if (telegramChatId) {
+        sessionKey = `telegram:${telegramChatId}`;
+      } else {
+        const session = buildSessionContext(channel, sessionId);
+        sessionKey = session.sessionKey;
+      }
 
       res.setHeader('Content-Type', 'text/event-stream');
       res.setHeader('Cache-Control', 'no-cache');
@@ -23,11 +80,22 @@ export function createApiRouter({ realtimeHub }) {
 
       writeSseEvent(res, 'connected', {
         ok: true,
-        channel: session.channel,
-        sessionId: session.sessionId
+        channel,
+        sessionId,
+        sessionKey
       });
 
-      const unsubscribe = realtimeHub.subscribe(session.sessionKey, (event) => {
+      // F-018: Replay message history for offline clients (T4.2)
+      const existingMessages = sessionStore.get(sessionKey);
+      for (const msg of existingMessages) {
+        writeSseEvent(res, msg.role === 'user' ? 'user_message' : 'assistant_message', {
+          role: msg.role,
+          content: msg.content,
+          replay: true
+        });
+      }
+
+      const unsubscribe = realtimeHub.subscribe(sessionKey, (event) => {
         writeSseEvent(res, event.type, event.payload);
       });
 
@@ -44,29 +112,37 @@ export function createApiRouter({ realtimeHub }) {
     }
   });
 
+  // F-018: Modified /api/chat to use message-router and support Telegram binding
   router.post('/chat', async (req, res, next) => {
     try {
-      const { channel = 'web', sessionId, message } = req.body ?? {};
-      const session = buildSessionContext(channel, sessionId);
+      const { channel = 'web', sessionId, message, telegramChatId } = req.body ?? {};
 
-      const reply = await chatWithSession({
+      let effectiveTelegramChatId = telegramChatId;
+
+      // If no telegramChatId provided but session is bound, use the bound chat ID
+      if (!effectiveTelegramChatId) {
+        effectiveTelegramChatId = sessionBind.getBoundChatId(sessionId);
+      }
+
+      const result = await messageRouter.processMessage({
         channel,
         sessionId,
         message,
-        realtimeHooks: {
+        telegramChatId: effectiveTelegramChatId,
+        hooks: {
           onStatus: (payload) => {
-            realtimeHub.publish(session.sessionKey, { type: 'status', payload });
+            // Status events are already published by message-router
           },
-          onAssistantChunk: (payload) => {
-            realtimeHub.publish(session.sessionKey, { type: 'assistant_chunk', payload });
+          onAssistantChunk: (data) => {
+            // Chunk events are already published by message-router
           },
-          onAssistantDone: (payload) => {
-            realtimeHub.publish(session.sessionKey, { type: 'assistant_done', payload });
+          onAssistantDone: (data) => {
+            // Done events are already published by message-router
           }
         }
       });
 
-      res.json({ ok: true, reply });
+      res.json({ ok: true, reply: result.reply });
     } catch (error) {
       next(error);
     }
@@ -74,8 +150,27 @@ export function createApiRouter({ realtimeHub }) {
 
   router.post('/chat/reset', async (req, res, next) => {
     try {
-      const { channel = 'web', sessionId } = req.body ?? {};
-      resetSession({ channel, sessionId });
+      const { channel = 'web', sessionId, telegramChatId } = req.body ?? {};
+
+      let sessionKey;
+      let effectiveTelegramChatId;
+
+      if (telegramChatId) {
+        sessionKey = `telegram:${telegramChatId}`;
+      } else if (channel === 'web' && sessionId) {
+        effectiveTelegramChatId = sessionBind.getBoundChatId(sessionId);
+        if (effectiveTelegramChatId) {
+          sessionKey = `telegram:${effectiveTelegramChatId}`;
+        } else {
+          resetSession({ channel, sessionId });
+          return res.json({ ok: true });
+        }
+      } else {
+        resetSession({ channel, sessionId });
+        return res.json({ ok: true });
+      }
+
+      sessionStore.clear(sessionKey);
       res.json({ ok: true });
     } catch (error) {
       next(error);
