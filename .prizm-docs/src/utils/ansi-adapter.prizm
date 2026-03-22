@@ -1,0 +1,16 @@
+MODULE: src/utils/ansi-adapter
+FILES: ansi-adapter.js
+RESPONSIBILITY: Strip ANSI escape codes and collapse carriage-return progress lines for Telegram display
+KEY_FILES:
+- ansi-adapter.js: 3 exported functions, ~100 lines. Pure string transformation, no I/O.
+DEPENDENCIES:
+- uses: none (no external dependencies)
+- imported-by: src/bot/telegram.js (onAssistantChunk hook)
+TRAPS:
+- ANSI_REGEX must cover OSC sequences (ESC ] ... BEL), CSI sequences (ESC [ ... final), and simple two-char sequences — incomplete regex misses hyperlinks and window-title codes
+- collapseCarriageReturns splits on \n first, then collapses \r within each line — do NOT split on \r globally or \r\n lines will be mangled
+- processChunk applies stripAnsi THEN collapseCarriageReturns — order matters; reversing creates garbled output on ANSI-colored progress bars
+- Returns '' for null/undefined inputs — callers should not rely on passthrough of falsy values
+CHANGELOG:
+- 2026-03-22 | add: initial module for F-020 ANSI stripping and progress-line collapsing
+UPDATED: 2026-03-22

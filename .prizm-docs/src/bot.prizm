@@ -1,10 +1,32 @@
 MODULE: src/bot
-FILES: telegram.js, commands/index.js, commands/parser.js, commands/formatter.js, commands/help.js, commands/intent-router.js, commands/registry.js, commands/validator.js, commands/handlers/ (20 files)
-RESPONSIBILITY: Telegram bot interface with command routing
+FILES: 8 (+31 command handlers in commands/handlers/)
+RESPONSIBILITY: Telegram bot — message handling, command routing, file delivery, streaming output
 INTERFACES:
-- start(): Promise<void> | Start bot
-- handleCommand(command: string, ctx: Context): void | Route commands to handlers
+- createTelegramBot(): Promise<Telegraf> — initialize bot with all command handlers and services
+- bot._f018.subscribeCrossChannel(chatId): void — subscribe realtimeHub for cross-channel push
+KEY_FILES:
+- telegram.js: Main bot setup, text handler, file handling, stream publisher (~1040 lines)
+- commands/index.js: Command registry and routing
+- commands/help.js: Help text generation
+- commands/handlers/output.js: F-020 /output [N] command — view recent AI CLI output history
 DEPENDENCIES:
 - uses: telegraf: Telegram bot framework
-- imports: src/services: Chat service, session management
+- imports: src/services/ai-cli-service.js: executeAiCli, interruptAiCli
+- imports: src/services/message-router.js: F-018 unified message routing
+- imports: src/services/session-bind.js: F-018 session binding for cross-channel
+- imports: src/services/realtime-hub.js: F-018 event subscription for cross-channel push
+- imports: src/services/session-store.js: session state
+- imports: src/services/chat-service.js: legacy (still imported for /reset command)
+- imports: src/utils/ansi-adapter.js: F-020 processChunk — strips ANSI before Telegram display
+- imports: src/utils/output-segmenter.js: F-020 segmentOutput — logical boundary splitting
+- imports: src/bot/commands/handlers/output.js: F-020 /output command + outputHistoryService singleton
+TRAPS:
+- Telegram bot text handler uses messageRouter.processMessage() (F-018) — no longer calls executeAiCli directly
+- Cross-channel push only subscribes for bindings that exist at bot startup; dynamic bindings via API need manual subscribeCrossChannel() call
+- Heartbeat progress messages disabled after F-018 migration to messageRouter (messageRouter lacks onHeartbeat hook)
+- bot._f018 is an internal namespace — not a stable public API
+- onAssistantChunk wraps chunk with ansiProcessChunk() (F-020) before pushing to streamPublisher — raw ANSI bytes from stdout are never forwarded to Telegram
+- segmentOutput() replaces splitMessage() in render() inside createEditableStreamPublisher — ONLY in streaming path; cross-channel push (subscribeCrossChannel) still uses splitMessage()
+- STREAM_MIN_CHARS (220) and STREAM_FLUSH_INTERVAL_MS (1200) are preserved unchanged — segmentation only changes where cuts happen, not how often
+- outputHistoryService singleton exported from output.js — telegram.js imports it; tests must inject mock via handlerCtx to avoid mutating shared singleton state
 UPDATED: 2026-03-22

@@ -44,6 +44,14 @@ Use the full workflow (/prizmkit-specify -> /prizmkit-plan -> /prizmkit-analyze 
 - INTERFACE: `createHttpServer({logger, sessionBindingsPath?})` — optional `sessionBindingsPath` for test isolation
 - KNOWN GAP: Runtime-created bindings via POST /api/bind do not auto-subscribe realtimeHub for cross-channel push. Only startup-loaded bindings get subscribed. Wire `bot._f018.subscribeCrossChannel(chatId)` from bind handler to fix.
 
+### F-020: Enhanced Terminal Output Streaming
+- DECISION: ANSI stripping happens in `onAssistantChunk` hook via `ansiProcessChunk()` — raw ANSI bytes from AI CLI stdout are never forwarded to Telegram. Do not strip in the final `replyText` path (already clean from streaming).
+- DECISION: Smart segmentation (`segmentOutput`) replaces `splitMessage` ONLY in the streaming render path — the cross-channel push path (`subscribeCrossChannel`) intentionally still uses `splitMessage` (out of scope, different code path).
+- DECISION: Output history stores raw `routerResult.reply` (pre-split, pre-file-marker extraction) under key `telegram:{chatId}` — ensures full output is preserved for /output retrieval.
+- DECISION: `outputHistoryService` singleton lives in `output.js` and is re-exported to `telegram.js` — tests inject mock via `handlerCtx.outputHistoryService` to avoid mutating shared state across test runs.
+- INTERFACE: `processChunk(text)` from `src/utils/ansi-adapter.js` — wraps each raw stdout chunk: strips ANSI then collapses `\r` progress lines. Import as named `ansiProcessChunk` alias.
+- INTERFACE: `segmentOutput(text, maxChunkSize=3800)` from `src/utils/output-segmenter.js` — replaces `splitMessage` inside `render()` closure of `createEditableStreamPublisher`.
+
 ### F-017: Runtime Config Manager
 - DECISION: Safe-to-modify keys whitelist: LOG_LEVEL, REQUEST_TIMEOUT_MS, AI_CLI_HEARTBEAT_MS, MAX_PROMPT_CHARS, MAX_HISTORY_TURNS, SYSTEM_MONITOR_INTERVAL_MS, SESSION_TIMEOUT_MS, TASK_DEBOUNCE_MS — all others are read-only via /config
 - DECISION: Hot-reload via `process.env[key] = newValue` — modifying process.env directly makes changes immediately visible to all modules that re-read config at call time (not frozen objects)

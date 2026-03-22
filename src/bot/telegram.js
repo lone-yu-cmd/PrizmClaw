@@ -56,6 +56,10 @@ import { watchMeta, handleWatch } from './commands/handlers/watch.js';
 import { cliMeta, handleCli } from './commands/handlers/cli.js';
 // F-017: Runtime Config Manager command handler
 import { configMeta, handleConfig } from './commands/handlers/config.js';
+// F-020: Enhanced Terminal Output Streaming
+import { outputMeta, handleOutput, outputHistoryService } from './commands/handlers/output.js';
+import { processChunk as ansiProcessChunk } from '../utils/ansi-adapter.js';
+import { segmentOutput } from '../utils/output-segmenter.js';
 import { generateHelp } from './commands/help.js';
 import { sessionStore } from '../services/session-store.js';
 import { sessionContextService } from '../services/session-context-service.js';
@@ -405,7 +409,7 @@ function createEditableStreamPublisher(ctx) {
 
     await ensureActiveMessage();
 
-    const segments = splitMessage(fullText);
+    const segments = segmentOutput(fullText);
     const targetLastIndex = Math.max(segments.length - 1, 0);
 
     while (activeSegmentIndex < targetLastIndex) {
@@ -509,6 +513,8 @@ function registerPipelineCommands() {
   registerCommand(cliMeta, handleCli);
   // F-017: Runtime Config Manager command
   registerCommand(configMeta, handleConfig);
+  // F-020: Enhanced Terminal Output Streaming
+  registerCommand(outputMeta, handleOutput);
 }
 
 export async function createTelegramBot() {
@@ -1007,7 +1013,9 @@ export async function createTelegramBot() {
             }
           },
           onAssistantChunk: (data) => {
-            streamPublisher.push(data.text);
+            // F-020: Strip ANSI codes and collapse \r progress lines before streaming to Telegram
+            const cleanText = ansiProcessChunk(data.text);
+            streamPublisher.push(cleanText);
           },
           onAssistantDone: (data) => {
             // Done event handled below after processMessage resolves
@@ -1032,6 +1040,11 @@ export async function createTelegramBot() {
       if (streamed.outputLength === 0) {
         await replyLargeText(ctx, finalText);
       }
+
+      // F-020: Record full output in history (pre-split, pre-file-marker extraction)
+      // Use sessionKey format consistent with message router
+      const sessionKey = `telegram:${sessionId}`;
+      outputHistoryService.addOutput(sessionKey, ctx.message.text, replyText);
 
       if (fileRefs.length > 0) {
         const fileSendResults = await replyFiles(ctx, fileRefs);

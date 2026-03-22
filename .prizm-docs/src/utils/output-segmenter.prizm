@@ -1,0 +1,17 @@
+MODULE: src/utils/output-segmenter
+FILES: output-segmenter.js
+RESPONSIBILITY: Smart text segmentation at logical boundaries (code blocks, paragraphs) for Telegram messages
+KEY_FILES:
+- output-segmenter.js: 1 exported function + 4 private helpers, ~130 lines. Pure string transformation.
+DEPENDENCIES:
+- uses: none (no external dependencies)
+- imported-by: src/bot/telegram.js (createEditableStreamPublisher render() function)
+TRAPS:
+- Code block detection counts ``` occurrences — odd count means inside a block. This counts inline triple-backticks too; strings with malformed fences will misdetect.
+- Splits at paragraph (\n\n) first, then newline (\n), then space — never hard-cuts at arbitrary byte boundary unless forced (no logical boundary found).
+- Default maxChunkSize is 3800, NOT 4096 — Telegram limit is 4096 but 3800 gives safety margin for metadata overhead.
+- findCodeBlockEnd searches for closing ``` AFTER the opening fence — if closing fence is missing (incomplete stream), it returns maxChunkSize as fallback (hard cut).
+- Replaces splitMessage() in the render() function inside createEditableStreamPublisher — NOT in the cross-channel push path (subscribeCrossChannel still uses splitMessage).
+CHANGELOG:
+- 2026-03-22 | add: initial module for F-020 smart output segmentation
+UPDATED: 2026-03-22

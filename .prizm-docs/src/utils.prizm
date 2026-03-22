@@ -1,9 +1,15 @@
 MODULE: src/utils
-FILES: file-utils.js, heartbeat-manager.js, logger.js, markdown-v2-formatter.js
-RESPONSIBILITY: Utility functions and helpers
+FILES: file-utils.js, heartbeat-manager.js, logger.js, markdown-v2-formatter.js, ansi-adapter.js, output-segmenter.js
+RESPONSIBILITY: Utility functions — logging, file ops, Telegram formatting, ANSI processing, smart segmentation
 INTERFACES:
 - logger: createLogger(module) -> Logger
 - file-utils: readJson, writeJson, mkdirp
+- markdown-v2-formatter: escapeMarkdownV2(text), convertToMarkdownV2(text)
+- ansi-adapter: stripAnsi(text), collapseCarriageReturns(text), processChunk(text) -> F-020
+- output-segmenter: segmentOutput(text, maxChunkSize?) -> string[] -> F-020
 DEPENDENCIES:
 - uses: pino: Logging
+SUBDIRS:
+- src/utils/ansi-adapter.prizm -> L2 detail for ANSI adapter
+- src/utils/output-segmenter.prizm -> L2 detail for output segmenter
 UPDATED: 2026-03-22

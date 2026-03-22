@@ -1,12 +1,44 @@
 MODULE: src/services
-FILES: index.js, ai-cli-service.js, alert-manager-service.js, alias-store.js, audit-log-service.js, backend-registry.js, chat-queue.js, chat-service.js, command-executor-service.js, commit-service.js, config-service.js, file-service.js, file-watcher-service.js, git-service.js, log-pager.js, output-pager-service.js, pipeline-control-service.js, pipeline-controller.js, plan-ingestion-service.js, realtime-hub.js, scheduled-task-service.js, screenshot-service.js, session-context-service.js, session-store.js, status-aggregator.js, system-exec-service.js, system-monitor-service.js, telegram-pusher.js
-RESPONSIBILITY: Core business logic and state management
+FILES: 30
+RESPONSIBILITY: Core service layer — AI CLI execution, session management, messaging, pipeline control, monitoring
 INTERFACES:
-- ai-cli-service: executeAICLI(message, chatId)
-- session-store: get(chatId), set(chatId, data)
-- realtime-hub: broadcast(event, data)
-- chat-service: processMessage(message, session)
+- executeAiCli(options): Promise<AiCliExecutionResult> — unified AI CLI executor with process tracking
+- interruptAiCli(sessionId): {ok, pid?, error?} — interrupt running AI task
+- createMessageRouter({aiCliExecutor, sessionStore, realtimeHub}): MessageRouter — F-018 unified message processor
+- processMessage({channel, sessionId, message, telegramChatId?, userId?, hooks?}): Promise<{reply}> — route message through AI CLI
+- createSessionBindService({bindingsPath}): SessionBindingService — F-018 factory with deferred init
+- SessionBindingService.bindSession(webId, chatId): {ok} — bind web session to Telegram chat
+- SessionBindingService.getBoundChatId(webId): string|null — lookup binding
+- SessionBindingService.getBoundWebSessions(chatId): string[] — reverse lookup
+- SessionBindingService.ensureReady(): Promise<void> — wait for deferred init
+- sessionStore.append(key, role, content) — append message to session
+- sessionStore.toPrompt(key, channel): string — build prompt with context
+- realtimeHub.subscribe(key, listener): unsubscribe — SSE event pub/sub
+- realtimeHub.publish(key, event) — broadcast event to subscribers
+- chatWithSession({channel, sessionId, message, realtimeHooks}): Promise<reply> — legacy Web chat (deprecated by F-018)
+- createOutputHistoryService(maxEntries?): {addOutput, getHistory, clearHistory} — F-020 per-session output ring buffer
 DEPENDENCIES:
-- uses: pino: Logging
-- uses: zod: Validation
+- uses: node:child_process: spawn for AI CLI process
+- uses: zod: config validation
+- uses: node:fs/promises: session persistence, bindings file
+- imports: src/config.js: runtime configuration
+- imports: src/security/guard.js: sanitizeInput
+KEY_FILES:
+- ai-cli-service.js: AI CLI executor with heartbeat, timeout, metrics (564 lines)
+- message-router.js: F-018 unified message processor (128 lines)
+- session-bind.js: F-018 session binding with persistence (~220 lines)
+- session-store.js: in-memory session state (427 lines)
+- realtime-hub.js: SSE event pub/sub (35 lines)
+- chat-service.js: legacy chat via codebuddy adapter (80 lines, deprecated)
+- config-service.js: F-017 runtime config manager — hot-reload via process.env, safe key whitelist, sensitive masking (337 lines)
+- output-history-service.js: F-020 per-session output ring buffer factory (~80 lines)
+SUBDIRS:
+- src/services/output-history-service.prizm -> L2 detail for output history
+TRAPS:
+- SessionBindingService uses deferred init — always call ensureReady() before sync methods in async contexts
+- SessionBindingService persistence is fire-and-forget — tests must call flush() to verify file writes
+- messageRouter does not expose heartbeat hooks — Telegram heartbeat progress disabled after F-018 migration
+- Runtime bindings created via POST /api/bind do NOT auto-subscribe realtimeHub for cross-channel push (F-018 gap)
+- config-service originalEnvValues captured at module init; if env vars set after import, use setConfig first (which lazy-captures original) before reset | FIX: ensure env vars are set before module import in tests, or setConfig will lazy-capture the pre-modification value
+- output-history-service singleton lives in output.js — tests must inject mock via handlerCtx.outputHistoryService to avoid mutating shared singleton
 UPDATED: 2026-03-22

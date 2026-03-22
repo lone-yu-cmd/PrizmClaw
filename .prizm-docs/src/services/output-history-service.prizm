@@ -1,0 +1,18 @@
+MODULE: src/services/output-history-service
+FILES: output-history-service.js
+RESPONSIBILITY: In-memory ring buffer storing per-session AI CLI command output history for /output command retrieval
+KEY_FILES:
+- output-history-service.js: factory function, ~80 lines. No I/O, no external deps.
+DEPENDENCIES:
+- uses: none (no external dependencies)
+- imported-by: src/bot/commands/handlers/output.js (singleton instance)
+- imported-by: src/bot/telegram.js (via output.js re-export)
+TRAPS:
+- Ring buffer implemented with Array.push() + Array.shift() — not a true circular buffer. Performance is O(n) for eviction; acceptable for maxEntries <= 10.
+- outputHistoryService singleton is created inside output.js — telegram.js imports and uses this singleton. Tests must inject a mock via handlerCtx.outputHistoryService or they will mutate the shared singleton.
+- Session key format is telegram:{chatId} — must match the key used in telegram.js addOutput() call. If session key format changes in F-018, this must be updated.
+- getHistory() returns a slice of the internal array — returned objects are the same references. Callers must not mutate entries.
+- getHistory(sessionKey, 0) returns [] — count=0 is treated as "no entries requested".
+CHANGELOG:
+- 2026-03-22 | add: initial module for F-020 output history ring buffer
+UPDATED: 2026-03-22
