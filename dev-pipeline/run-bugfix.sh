@@ -164,26 +164,51 @@ spawn_and_wait_session() {
         log_info "Session log: $final_lines lines, $((final_size / 1024))KB"
     fi
 
-    # Check session outcome
-    local session_status_file="$session_dir/session-status.json"
+    # ── Determine session outcome from observable signals ──────────────
     local session_status
+    local project_root
+    project_root="$(cd "$SCRIPT_DIR/.." && pwd)"
 
     if [[ $exit_code -eq 124 ]]; then
         log_warn "Session timed out after ${SESSION_TIMEOUT}s"
         session_status="timed_out"
-    elif [[ -f "$session_status_file" ]]; then
-        session_status=$(python3 "$SCRIPTS_DIR/check-session-status.py" \
-            --status-file "$session_status_file" 2>/dev/null) || session_status="crashed"
-    else
-        log_warn "Session ended without status file — treating as crashed"
+    elif [[ $exit_code -ne 0 ]]; then
+        log_warn "Session exited with code $exit_code"
         session_status="crashed"
+    else
+        # Exit code 0 — check if the session actually produced commits
+        local session_start_iso=""
+        session_start_iso=$(python3 -c "
+import json, sys, os
+p = os.path.join(sys.argv[1], 'current-session.json')
+if os.path.isfile(p):
+    with open(p) as f: print(json.load(f).get('started_at', ''))
+else: print('')
+" "$STATE_DIR" 2>/dev/null) || session_start_iso=""
+
+        local has_commits=""
+        if [[ -n "$session_start_iso" ]] && git -C "$project_root" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+            has_commits=$(git -C "$project_root" log --since="$session_start_iso" --oneline --grep="$bug_id" 2>/dev/null | head -1)
+        fi
+
+        if [[ -n "$has_commits" ]]; then
+            session_status="success"
+        else
+            local uncommitted=""
+            uncommitted=$(git -C "$project_root" status --porcelain 2>/dev/null | head -1 || true)
+            if [[ -n "$uncommitted" ]]; then
+                log_warn "Session exited cleanly but produced no commits (uncommitted changes found)"
+                session_status="commit_missing"
+            else
+                log_warn "Session exited cleanly but produced no commits and no changes"
+                session_status="crashed"
+            fi
+        fi
     fi
 
+    # ── Post-success validation ──────────────────────────────────────────
     if [[ "$session_status" == "success" ]]; then
-        local project_root
-        project_root="$(cd "$SCRIPT_DIR/.." && pwd)"
         if git -C "$project_root" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-            # Auto-commit any remaining dirty files produced during the session
             local dirty_files=""
             dirty_files=$(git -C "$project_root" status --porcelain 2>/dev/null || true)
             if [[ -n "$dirty_files" ]]; then
@@ -192,10 +217,9 @@ spawn_and_wait_session() {
                 git -C "$project_root" commit -m "chore($bug_id): include remaining session artifacts" 2>/dev/null || true
             fi
 
-            # Re-check: if still dirty after auto-commit, flag as failed
             dirty_files=$(git -C "$project_root" status --porcelain 2>/dev/null || true)
             if [[ -n "$dirty_files" ]]; then
-                log_error "Session reported success but git working tree is not clean."
+                log_error "Git working tree still not clean after auto-commit."
                 echo "$dirty_files" | sed 's/^/  - /'
                 session_status="failed"
             fi

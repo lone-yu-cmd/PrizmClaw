@@ -24,37 +24,16 @@ git status
 - If "nothing to commit, working tree clean": inform user and stop
 - If there are changes: proceed
 
-#### Step 2: Diff Analysis
-```bash
-git diff HEAD
-```
-Analyze:
-- Type: feat, fix, refactor, docs, test, chore, perf, style, ci, build
-- Scope: affected module name
-- Description: imperative mood summary
+#### Step 2: Condense Commit
+By consulting the primary agent or based on the existing context, condense this commit message.
 
 #### Step 3: Update CHANGELOG.md
 If CHANGELOG.md exists in the project root, append an entry following Keep a Changelog format under the `[Unreleased]` section. Match the existing style in the file.
 
 #### Step 4: Git Commit
-
-4a. Safety check before staging:
 ```bash
-git diff --name-only
-git ls-files --others --exclude-standard
+git add .
 ```
-Review the output for sensitive files. If any file matches these patterns, **STOP and warn the user**:
-- `.env`, `.env.*`
-- `*.key`, `*.pem`, `*.p12`
-- `credentials.*`, `*secret*`
-- `*.sqlite`, `*.db` (database files)
-
-4b. Stage and commit:
-```bash
-git add <specific-files>
-git diff --cached --name-only
-```
-Stage files explicitly by name rather than using `git add -A`, which can accidentally include sensitive files or large binaries that appeared between the safety check and staging. Review staged file list one final time, then:
 ```bash
 git commit -m "<type>(<scope>): <description>"
 ```
@@ -71,18 +50,11 @@ Then verify working tree is clean:
 git status
 ```
 - If "nothing to commit, working tree clean": commit verified successfully, proceed
-- **Ignore `dev-pipeline/state/` files** — these are pipeline runtime artifacts written by the pipeline runner process, not part of your changes. They will always appear dirty during pipeline sessions.
-- If there are other uncommitted changes remaining (excluding `dev-pipeline/state/`): **STOP** and report what files were missed. Stage the missed files explicitly by name and create a new commit (do NOT amend the previous commit — amending risks destroying unrelated changes from prior commits)
 
 #### Step 6: Optional Push
 Ask user: "Push to remote?"
 - Yes: `git push`
 - No: Stop
-
-### Error Handling
-- If git diff is empty but untracked files exist: run `git add -N .` first (respects .gitignore)
-- If CHANGELOG.md script fails: update manually or ask user
-- If sensitive files are detected during Step 4a safety check: warn user and do NOT stage them automatically
 
 ## Example
 

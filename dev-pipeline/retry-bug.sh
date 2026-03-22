@@ -328,21 +328,50 @@ fi
 
 SESSION_STATUS_FILE="$SESSION_DIR/session-status.json"
 
+# ── Determine session outcome from observable signals ──────────────
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
 if [[ $EXIT_CODE -eq 124 ]]; then
     log_warn "Session timed out after ${SESSION_TIMEOUT}s"
     SESSION_STATUS="timed_out"
-elif [[ -f "$SESSION_STATUS_FILE" ]]; then
-    SESSION_STATUS=$(python3 "$SCRIPTS_DIR/check-session-status.py" \
-        --status-file "$SESSION_STATUS_FILE" 2>/dev/null) || SESSION_STATUS="crashed"
-else
-    log_warn "Session ended without status file"
+elif [[ $EXIT_CODE -ne 0 ]]; then
+    log_warn "Session exited with code $EXIT_CODE"
     SESSION_STATUS="crashed"
+else
+    # Exit code 0 — check if the session produced commits
+    SESSION_START_ISO=$(python3 -c "
+import os, sys
+from datetime import datetime, timezone
+p = sys.argv[1]
+if os.path.isdir(p):
+    ts = os.path.getctime(p)
+    print(datetime.fromtimestamp(ts, tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'))
+else:
+    print('')
+" "$SESSION_DIR" 2>/dev/null) || SESSION_START_ISO=""
+
+    HAS_COMMITS=""
+    if [[ -n "$SESSION_START_ISO" ]] && git -C "$PROJECT_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        HAS_COMMITS=$(git -C "$PROJECT_ROOT" log --since="$SESSION_START_ISO" --oneline --grep="$BUG_ID" 2>/dev/null | head -1)
+    fi
+
+    if [[ -n "$HAS_COMMITS" ]]; then
+        SESSION_STATUS="success"
+    else
+        UNCOMMITTED=$(git -C "$PROJECT_ROOT" status --porcelain 2>/dev/null | head -1 || true)
+        if [[ -n "$UNCOMMITTED" ]]; then
+            log_warn "Session exited cleanly but produced no commits (uncommitted changes found)"
+            SESSION_STATUS="commit_missing"
+        else
+            log_warn "Session exited cleanly but produced no commits and no changes"
+            SESSION_STATUS="crashed"
+        fi
+    fi
 fi
 
+# ── Post-success validation ──────────────────────────────────────────
 if [[ "$SESSION_STATUS" == "success" ]]; then
-    PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
     if git -C "$PROJECT_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-        # Auto-commit any remaining dirty files produced during the session
         DIRTY_FILES=$(git -C "$PROJECT_ROOT" status --porcelain 2>/dev/null || true)
         if [[ -n "$DIRTY_FILES" ]]; then
             log_info "Auto-committing remaining session artifacts..."
@@ -350,11 +379,9 @@ if [[ "$SESSION_STATUS" == "success" ]]; then
             git -C "$PROJECT_ROOT" commit -m "chore($BUG_ID): include remaining session artifacts" 2>/dev/null || true
         fi
 
-        # Re-check: if still dirty after auto-commit, flag as failed
         DIRTY_FILES=$(git -C "$PROJECT_ROOT" status --porcelain 2>/dev/null || true)
         if [[ -n "$DIRTY_FILES" ]]; then
-        if [[ -n "$DIRTY_FILES" ]]; then
-            log_error "Session reported success but git working tree is not clean."
+            log_error "Git working tree still not clean after auto-commit."
             echo "$DIRTY_FILES" | sed 's/^/  - /'
             SESSION_STATUS="failed"
         fi

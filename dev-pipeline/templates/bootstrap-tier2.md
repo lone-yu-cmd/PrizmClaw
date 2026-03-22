@@ -11,7 +11,7 @@
 
 You are the **session orchestrator**. Implement Feature {{FEATURE_ID}}: "{{FEATURE_TITLE}}".
 
-**CRITICAL**: You MUST NOT exit until ALL work is complete and session-status.json is written. When you spawn subagents, wait for each to finish (run_in_background=false).
+**CRITICAL**: You MUST NOT exit until ALL work is complete and committed. When you spawn subagents, wait for each to finish (run_in_background=false).
 
 **Tier 2 — Dual Agent**: You handle context + planning directly. Then spawn Dev and Reviewer subagents. Spawn Dev and Reviewer agents via the Agent tool.
 
@@ -40,8 +40,7 @@ You are running in headless mode with a FINITE context window. Exceeding it will
 3. **Stay focused** — Do NOT explore code unrelated to this feature. No curiosity-driven reads.
 4. **One task at a time** — In Phase 3 (implement), complete and test one task before starting the next.
 5. **Minimize tool output** — When running commands, use `| head -20` or `| tail -20` to limit output. Never dump entire test suites or logs.
-6. **Write session-status.json early** — Write a preliminary status file at the START of Phase 3, not just at the end.
-7. **Incremental commits when possible** — If a feature has multiple independent tasks, commit after each completed task rather than one big commit at the end.
+6. **Incremental commits when possible** — If a feature has multiple independent tasks, commit after each completed task rather than one big commit at the end.
 
 ---
 
@@ -121,18 +120,6 @@ If either missing, write them yourself:
 
 ### Phase 3: Implement — Dev Subagent
 
-**Before spawning Dev**, write a preliminary session-status.json to `{{SESSION_STATUS_PATH}}`:
-```json
-{
-  "status": "partial",
-  "current_phase": 3,
-  "feature_id": "{{FEATURE_ID}}",
-  "session_id": "{{SESSION_ID}}",
-  "started_at": "<current ISO timestamp>"
-}
-```
-This ensures the pipeline sees a "partial" status even if the session crashes mid-implementation.
-
 Spawn Dev subagent (Agent tool, subagent_type="prizm-dev-team-dev", run_in_background=false).
 
 Prompt:
@@ -160,7 +147,7 @@ grep -q "## Implementation Log" .prizmkit/specs/{{FEATURE_SLUG}}/context-snapsho
 ```
 If GATE:MISSING — send message to Dev (re-spawn if needed): "Write the '## Implementation Log' section to context-snapshot.md before I can proceed to review. Include: files changed/created, key decisions, deviations from plan, notable discoveries."
 
-### Phase 4: Review — Reviewer Subagent
+### Phase 4: Review + Test — Reviewer Subagent
 
 Spawn Reviewer subagent (Agent tool, subagent_type="prizm-dev-team-reviewer", run_in_background=false).
 
@@ -172,7 +159,7 @@ Prompt:
 >    - Section 4: File Manifest (original file structure)
 >    - '## Implementation Log': what Dev changed, key decisions, discoveries
 > 2. Run prizmkit-code-review: spec compliance (against spec.md), code quality, correctness. Read ONLY files listed in Implementation Log.
-> 3. Write and execute integration tests covering all user stories from spec.md. Use `TEST_CMD=<TEST_CMD>` — do NOT try alternative test commands.
+> 3. Run the full test suite using `TEST_CMD=<TEST_CMD>`. Write and execute integration tests covering all user stories.
 > 4. Append '## Review Notes' to context-snapshot.md: issues found (with severity), test results, final verdict.
 > Report verdict: PASS, PASS_WITH_WARNINGS, or NEEDS_FIXES."
 
@@ -189,9 +176,9 @@ If GATE:MISSING — send message to Reviewer (re-spawn if needed): "Write the '#
 
 **CP-2**: Tests pass, verdict is not NEEDS_FIXES.
 
-### Phase 4.5: Architecture Sync & Memory Sedimentation (mandatory before commit)
+### Phase 5: Architecture Sync & Commit
 
-Run `/prizmkit-retrospective` — maintains `.prizm-docs/` (architecture index) and platform memory files:
+**5a.** Run `/prizmkit-retrospective` — maintains `.prizm-docs/` (architecture index) and platform memory files:
 1. **Structural sync**: Use `git diff --cached --name-status` to locate changed modules, update KEY_FILES/INTERFACES/DEPENDENCIES/file counts in affected `.prizm-docs/` files
 2. **Architecture knowledge** (feature sessions only): Extract TRAPS/RULES from completed work into `.prizm-docs/`
 3. **Memory sedimentation** (feature sessions only): Sediment DECISIONS and interface conventions to platform memory file (`CLAUDE.md` for Claude Code, BOTH `CODEBUDDY.md` AND `memory/MEMORY.md` for CodeBuddy)
@@ -199,49 +186,11 @@ Run `/prizmkit-retrospective` — maintains `.prizm-docs/` (architecture index) 
 
 Doc maintenance pass condition (pipeline-enforced): `.prizm-docs/` changed in the final commit.
 
-### Phase 5: Session Status + Commit
-
-**5a. Write preliminary session-status.json** (safety net — ensures pipeline sees a status file even if session terminates during commit):
-
-Write to: `{{SESSION_STATUS_PATH}}`
-
-```json
-{
-  "session_id": "{{SESSION_ID}}",
-  "feature_id": "{{FEATURE_ID}}",
-  "feature_slug": "{{FEATURE_SLUG}}",
-  "exec_tier": 2,
-  "status": "partial",
-  "completed_phases": [0, 1, 2, 3, 4],
-  "current_phase": 5,
-  "checkpoint_reached": "CP-2",
-  "tasks_completed": 0,
-  "tasks_total": 0,
-  "errors": [],
-  "can_resume": false,
-  "resume_from_phase": null,
-  "docs_maintained": true,
-  "retrospective_done": true,
-  "artifacts": {
-    "context_snapshot_path": ".prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md",
-    "plan_path": ".prizmkit/specs/{{FEATURE_SLUG}}/plan.md"
-  },
-  "git_commit": "",
-  "timestamp": "<current ISO timestamp>"
-}
-```
-
 **5b. Commit** — Run `/prizmkit-committer` → `feat({{FEATURE_ID}}): {{FEATURE_TITLE}}`, do NOT push
 - MANDATORY: commit must be done via `/prizmkit-committer` skill. Do NOT run manual `git add`/`git commit` as a substitute.
 - Do NOT run `update-feature-status.py` here — the pipeline runner handles feature-list.json updates automatically after session exit.
 
-**5c. Update session-status.json to success** — After commit succeeds, update `{{SESSION_STATUS_PATH}}`:
-- Set `"status": "success"`
-- Set `"completed_phases": [0, 1, 2, 3, 4, 5]`
-- Set `"git_commit": "<actual commit hash from git log -1 --format=%H>"`
-- Set `"timestamp": "<current ISO timestamp>"`
-
-**5d. Final Clean Check** — Verify repository is clean:
+**5c. Final Clean Check** — Verify repository is clean:
 
 ```bash
 git status --short
@@ -264,17 +213,15 @@ git commit -m "chore({{FEATURE_ID}}): include session artifacts"
 | Context Snapshot | `.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md` |
 | Dev Agent Def | {{DEV_SUBAGENT_PATH}} |
 | Reviewer Agent Def | {{REVIEWER_SUBAGENT_PATH}} |
-| Session Status Output | {{SESSION_STATUS_PATH}} |
 | Project Root | {{PROJECT_ROOT}} |
 
 ## Reminders
 
-- Tier 2: orchestrator builds context+plan, Dev implements, Reviewer reviews — use direct Agent spawn for agents
+- Tier 2: orchestrator builds context+plan, Dev implements, Reviewer reviews+tests — use direct Agent spawn for agents
 - Build context-snapshot.md FIRST; all subagents read it instead of re-reading source files
 - context-snapshot.md is append-only: orchestrator writes Sections 1-4, Dev appends Implementation Log, Reviewer appends Review Notes
 - Gate checks enforce Implementation Log and Review Notes are written before proceeding
 - Do NOT use `run_in_background=true` when spawning subagents
-- Session-status.json is written BEFORE commit (as partial), then updated to success AFTER commit — this prevents pipeline from treating a terminated session as crashed
 - `/prizmkit-committer` is mandatory, and must not be replaced with manual git commit commands
 - Before exiting, commit your feature code via `/prizmkit-committer` — the pipeline runner auto-commits any remaining files after session exit
 - When staging leftover files in the final clean check, always use explicit file names — NEVER use `git add -A`

@@ -184,24 +184,21 @@ spawn_and_wait_session() {
         log_info "Session log: $final_lines lines, $((final_size / 1024))KB"
     fi
 
-    # Check session outcome
-    local session_status_file="$session_dir/session-status.json"
+    # ── Determine session outcome from observable signals ──────────────
+    # No dependency on session-status.json — uses exit code, git commits,
+    # and working tree cleanliness as the single source of truth.
     local session_status
+    local project_root
+    project_root="$(cd "$SCRIPT_DIR/.." && pwd)"
 
     if [[ $exit_code -eq 124 ]]; then
         log_warn "Session timed out after ${SESSION_TIMEOUT}s"
         session_status="timed_out"
-    elif [[ -f "$session_status_file" ]]; then
-        session_status=$(python3 "$SCRIPTS_DIR/check-session-status.py" \
-            --status-file "$session_status_file" 2>/dev/null) || session_status="crashed"
+    elif [[ $exit_code -ne 0 ]]; then
+        log_warn "Session exited with code $exit_code"
+        session_status="crashed"
     else
-        # No session-status.json found. Before treating as crashed, check if the
-        # session produced any git commits. If commits exist, the session likely
-        # completed its work but terminated before writing session-status.json
-        # (e.g., context window exhausted). Treat as commit_missing to preserve
-        # artifacts instead of wiping everything via the crashed cleanup path.
-        local project_root_check
-        project_root_check="$(cd "$SCRIPT_DIR/.." && pwd)"
+        # Exit code 0 — check if the session actually produced commits
         local session_start_iso=""
         session_start_iso=$(python3 -c "
 import json, sys, os
@@ -211,28 +208,32 @@ if os.path.isfile(p):
 else: print('')
 " "$STATE_DIR" 2>/dev/null) || session_start_iso=""
 
-        local recent_feature_commits=""
-        if [[ -n "$session_start_iso" ]] && git -C "$project_root_check" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-            recent_feature_commits=$(git -C "$project_root_check" log --since="$session_start_iso" --oneline --grep="$feature_id" 2>/dev/null | head -5)
+        local has_commits=""
+        if [[ -n "$session_start_iso" ]] && git -C "$project_root" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+            has_commits=$(git -C "$project_root" log --since="$session_start_iso" --oneline --grep="$feature_id" 2>/dev/null | head -1)
         fi
 
-        if [[ -n "$recent_feature_commits" ]]; then
-            log_warn "Session ended without status file, but found commits from this session:"
-            echo "$recent_feature_commits" | sed 's/^/  - /'
-            log_warn "Treating as commit_missing (artifacts preserved for retry)"
-            session_status="commit_missing"
+        if [[ -n "$has_commits" ]]; then
+            session_status="success"
         else
-            log_warn "Session ended without status file — treating as crashed"
-            session_status="crashed"
+            # No commits found — check if there are uncommitted changes (session
+            # did work but didn't commit, e.g. context window exhausted)
+            local uncommitted=""
+            uncommitted=$(git -C "$project_root" status --porcelain 2>/dev/null | head -1 || true)
+            if [[ -n "$uncommitted" ]]; then
+                log_warn "Session exited cleanly but produced no commits (uncommitted changes found)"
+                session_status="commit_missing"
+            else
+                log_warn "Session exited cleanly but produced no commits and no changes"
+                session_status="crashed"
+            fi
         fi
     fi
 
+    # ── Post-success validation ──────────────────────────────────────────
     if [[ "$session_status" == "success" ]]; then
-        local project_root
-        project_root="$(cd "$SCRIPT_DIR/.." && pwd)"
         if git -C "$project_root" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
             # Auto-commit any remaining dirty files produced during the session
-            # (pipeline state, runtime data, files the AI session missed)
             local dirty_files=""
             dirty_files=$(git -C "$project_root" status --porcelain 2>/dev/null || true)
             if [[ -n "$dirty_files" ]]; then
@@ -244,7 +245,7 @@ else: print('')
             # Re-check: if still dirty after auto-commit, flag as commit_missing
             dirty_files=$(git -C "$project_root" status --porcelain 2>/dev/null || true)
             if [[ -n "$dirty_files" ]]; then
-                log_warn "Session reported success but git working tree is not clean."
+                log_warn "Git working tree still not clean after auto-commit."
                 echo "$dirty_files" | sed 's/^/  - /'
                 session_status="commit_missing"
             else
@@ -264,20 +265,6 @@ else: print('')
                 fi
             fi
         fi
-    fi
-
-    # Persist final pipeline-resolved status back to session-status.json
-    # only for post-check statuses introduced by the pipeline itself.
-    if [[ -f "$session_status_file" && ( "$session_status" == "commit_missing" || "$session_status" == "docs_missing" ) ]]; then
-        python3 -c "
-import json, sys
-p, st = sys.argv[1], sys.argv[2]
-with open(p, 'r', encoding='utf-8') as f:
-    data = json.load(f)
-data['status'] = st
-with open(p, 'w', encoding='utf-8') as f:
-    json.dump(data, f, indent=2, ensure_ascii=False)
-" "$session_status_file" "$session_status" >/dev/null 2>&1 || true
     fi
 
     log_info "Session result: $session_status"

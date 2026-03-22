@@ -11,7 +11,7 @@
 
 You are the **session orchestrator**. Implement Feature {{FEATURE_ID}}: "{{FEATURE_TITLE}}".
 
-**CRITICAL**: You MUST NOT exit until ALL work is complete and session-status.json is written.
+**CRITICAL**: You MUST NOT exit until ALL work is complete and committed.
 
 **Tier 1 — Single Agent**: You handle everything directly. No subagents, no TeamCreate.
 
@@ -40,8 +40,7 @@ You are running in headless mode with a FINITE context window. Exceeding it will
 3. **Stay focused** — Do NOT explore code unrelated to this feature. No curiosity-driven reads.
 4. **One task at a time** — In Phase 3 (implement), complete and test one task before starting the next.
 5. **Minimize tool output** — When running commands, use `| head -20` or `| tail -20` to limit output. Never dump entire test suites or logs.
-6. **Write session-status.json early** — Write a preliminary status file at the START of Phase 3, not just at the end.
-7. **Incremental commits when possible** — If a feature has multiple independent tasks, commit after each completed task rather than one big commit at the end.
+6. **Incremental commits when possible** — If a feature has multiple independent tasks, commit after each completed task rather than one big commit at the end.
 
 ---
 
@@ -98,19 +97,7 @@ If plan.md missing, write it directly:
 
 **CP-1**: plan.md exists with Tasks section.
 
-### Phase 3: Implement
-
-**Before starting implementation**, write a preliminary session-status.json to `{{SESSION_STATUS_PATH}}`:
-```json
-{
-  "status": "partial",
-  "current_phase": 3,
-  "feature_id": "{{FEATURE_ID}}",
-  "session_id": "{{SESSION_ID}}",
-  "started_at": "<current ISO timestamp>"
-}
-```
-This ensures the pipeline sees a "partial" status even if the session crashes mid-implementation.
+### Phase 3: Implement + Test
 
 For each task in plan.md Tasks section:
 1. Read the relevant section from `context-snapshot.md` (no need to re-read individual files)
@@ -118,25 +105,23 @@ For each task in plan.md Tasks section:
 3. Run tests after each task
 3. Mark task `[x]` in plan.md Tasks section immediately
 
-After all tasks complete, append to `context-snapshot.md`:
+After all tasks complete:
+1. Run the full test suite to ensure nothing is broken
+2. Verify each acceptance criterion from Section 1 of context-snapshot.md is met — check mentally, do NOT re-read files you already wrote
+3. If any criterion is not met, fix it now (max 2 fix rounds)
+
+**CP-2**: All acceptance criteria met, all tests pass.
+
+After verification, append to `context-snapshot.md`:
 ```
 ## Implementation Log
 Files changed/created: [list]
 Key decisions: [list]
 ```
 
-### Phase 4: Code Review (mandatory)
+### Phase 4: Architecture Sync & Commit
 
-1. Re-read acceptance criteria from Section 1 of context-snapshot.md
-2. Run `/prizmkit-code-review` — verify all acceptance criteria, check code quality and correctness
-3. Run the full test suite
-4. If review uncovers issues, fix them (max 2 fix rounds)
-
-**CP-2**: All acceptance criteria met, tests pass, code review passed.
-
-### Phase 4.5: Architecture Sync & Memory Sedimentation (mandatory before commit)
-
-Run `/prizmkit-retrospective` — maintains `.prizm-docs/` (architecture index) and platform memory files:
+**4a.** Run `/prizmkit-retrospective` — maintains `.prizm-docs/` (architecture index) and platform memory files:
 1. **Structural sync**: Use `git diff --cached --name-status` to locate changed modules, update KEY_FILES/INTERFACES/DEPENDENCIES/file counts in affected `.prizm-docs/` files
 2. **Architecture knowledge** (feature sessions only): Extract TRAPS/RULES from completed work into `.prizm-docs/`
 3. **Memory sedimentation** (feature sessions only): Sediment DECISIONS and interface conventions to platform memory file (`CLAUDE.md` for Claude Code, BOTH `CODEBUDDY.md` AND `memory/MEMORY.md` for CodeBuddy)
@@ -144,49 +129,11 @@ Run `/prizmkit-retrospective` — maintains `.prizm-docs/` (architecture index) 
 
 Doc maintenance pass condition (pipeline-enforced): `.prizm-docs/` changed in the final commit.
 
-### Phase 5: Session Status + Commit
-
-**5a. Write preliminary session-status.json** (safety net — ensures pipeline sees a status file even if session terminates during commit):
-
-Write to: `{{SESSION_STATUS_PATH}}`
-
-```json
-{
-  "session_id": "{{SESSION_ID}}",
-  "feature_id": "{{FEATURE_ID}}",
-  "feature_slug": "{{FEATURE_SLUG}}",
-  "exec_tier": 1,
-  "status": "partial",
-  "completed_phases": [0, 1, 2, 3, 4],
-  "current_phase": 5,
-  "checkpoint_reached": "CP-2",
-  "tasks_completed": 0,
-  "tasks_total": 0,
-  "errors": [],
-  "can_resume": false,
-  "resume_from_phase": null,
-  "docs_maintained": true,
-  "retrospective_done": true,
-  "artifacts": {
-    "context_snapshot_path": ".prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md",
-    "plan_path": ".prizmkit/specs/{{FEATURE_SLUG}}/plan.md"
-  },
-  "git_commit": "",
-  "timestamp": "<current ISO timestamp>"
-}
-```
-
-**5b. Commit** — Run `/prizmkit-committer` → `feat({{FEATURE_ID}}): {{FEATURE_TITLE}}`, do NOT push
+**4b. Commit** — Run `/prizmkit-committer` → `feat({{FEATURE_ID}}): {{FEATURE_TITLE}}`, do NOT push
 - MANDATORY: commit must be done via `/prizmkit-committer` skill. Do NOT run manual `git add`/`git commit` as a substitute.
 - Do NOT run `update-feature-status.py` here — the pipeline runner handles feature-list.json updates automatically after session exit.
 
-**5c. Update session-status.json to success** — After commit succeeds, update `{{SESSION_STATUS_PATH}}`:
-- Set `"status": "success"`
-- Set `"completed_phases": [0, 1, 2, 3, 4, 5]`
-- Set `"git_commit": "<actual commit hash from git log -1 --format=%H>"`
-- Set `"timestamp": "<current ISO timestamp>"`
-
-**5d. Final Clean Check** — Verify repository is clean:
+**4c. Final Clean Check** — Verify repository is clean:
 
 ```bash
 git status --short
@@ -207,15 +154,13 @@ git commit -m "chore({{FEATURE_ID}}): include session artifacts"
 |----------|------|
 | Feature Artifacts Dir | `.prizmkit/specs/{{FEATURE_SLUG}}/` |
 | Context Snapshot | `.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md` |
-| Session Status Output | {{SESSION_STATUS_PATH}} |
 | Project Root | {{PROJECT_ROOT}} |
 
 ## Reminders
 
-- Tier 1: you handle everything directly — invoke skills yourself (no subagents needed for simple tasks)
-- MANDATORY skills: `/prizmkit-code-review`, `/prizmkit-retrospective`, `/prizmkit-committer` — never skip these
+- Tier 1: you handle everything directly — no subagents needed
+- MANDATORY skills: `/prizmkit-retrospective`, `/prizmkit-committer` — never skip these
 - Build context-snapshot.md FIRST; use it throughout instead of re-reading files
-- Session-status.json is written BEFORE commit (as partial), then updated to success AFTER commit — this prevents pipeline from treating a terminated session as crashed
 - `/prizmkit-committer` is mandatory — do NOT skip the commit phase, and do NOT replace it with manual git commit commands
 - Before exiting, commit your feature code via `/prizmkit-committer` — the pipeline runner auto-commits any remaining files after session exit
 - When staging leftover files in the final clean check, always use explicit file names — NEVER use `git add -A`

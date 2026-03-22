@@ -11,7 +11,7 @@
 
 You are the **session orchestrator**. Implement Feature {{FEATURE_ID}}: "{{FEATURE_TITLE}}".
 
-**CRITICAL**: You MUST NOT exit until ALL work is complete and session-status.json is written. When you spawn subagents, wait for each to finish (run_in_background=false). Do NOT spawn agents in background and exit — that kills the session.
+**CRITICAL**: You MUST NOT exit until ALL work is complete and committed. When you spawn subagents, wait for each to finish (run_in_background=false). Do NOT spawn agents in background and exit — that kills the session.
 
 **Tier 3 — Full Team**: For complex features, use the full pipeline (Phase 0–6) with Dev + Reviewer agents spawned via the Agent tool.
 
@@ -61,8 +61,6 @@ tests/                — Validation + unit tests
 ### Version Isolation
 
 LLM context is frozen at prompt time. Modifying a skill source file during this session will NOT change the behavior of that skill within this session. The real risk is structural inconsistency.
-
-**When you modify any file in `dev-pipeline/scripts/`, `dev-pipeline/templates/`, or `core/skills/` that this pipeline actively uses**: set `reload_needed: true` in `session-status.json`. The pipeline runner will warn the operator after session completion.
 {{END_IF_MODE_SELF_EVOLVE}}
 
 ## ⚠️ Context Budget Rules (CRITICAL — read before any phase)
@@ -74,8 +72,7 @@ You are running in headless mode with a FINITE context window. Exceeding it will
 3. **Stay focused** — Do NOT explore code unrelated to this feature. No curiosity-driven reads.
 4. **One task at a time** — In Phase 4 (implement), complete and test one task before starting the next.
 5. **Minimize tool output** — When running commands, use `| head -20` or `| tail -20` to limit output. Never dump entire test suites or logs.
-6. **Write session-status.json early** — Write a preliminary status file at the START of Phase 4, not just at the end.
-7. **Incremental commits when possible** — If a feature has multiple independent tasks, commit after each completed task rather than one big commit at the end.
+6. **Incremental commits when possible** — If a feature has multiple independent tasks, commit after each completed task rather than one big commit at the end.
 
 ---
 
@@ -222,18 +219,6 @@ Wait for Reviewer to return.
 
 ### Phase 4: Implement — Dev Agent
 
-**Before spawning Dev**, write a preliminary session-status.json to `{{SESSION_STATUS_PATH}}`:
-```json
-{
-  "status": "partial",
-  "current_phase": 4,
-  "feature_id": "{{FEATURE_ID}}",
-  "session_id": "{{SESSION_ID}}",
-  "started_at": "<current ISO timestamp>"
-}
-```
-This ensures the pipeline sees a "partial" status even if the session crashes mid-implementation.
-
 Before spawning Dev, check plan.md Tasks section:
 ```bash
 grep -c '^\- \[ \]' .prizmkit/specs/{{FEATURE_SLUG}}/plan.md 2>/dev/null || echo 0
@@ -291,7 +276,7 @@ Wait for Dev to return. **If Dev times out before all tasks are `[x]`**:
 
 All tasks `[x]`, tests pass.
 
-### Phase 5: Review — Reviewer Agent
+### Phase 5: Review + Test — Reviewer Agent
 
 Spawn Reviewer agent (Agent tool, subagent_type="prizm-dev-team-reviewer", run_in_background=false).
 
@@ -315,7 +300,7 @@ Prompt:
 >    - Section 4: File Manifest (original file structure)
 >    - '## Implementation Log': what Dev changed, key decisions, discoveries
 > 2. Run prizmkit-code-review: spec compliance (against spec.md), code quality, correctness. Read ONLY files listed in Implementation Log.
-> 3. Write and execute integration tests covering all user stories from spec.md. Use `TEST_CMD=<TEST_CMD>` — do NOT try alternative test commands.
+> 3. Run the full test suite using `TEST_CMD=<TEST_CMD>`. Write and execute integration tests covering all user stories from spec.md.
 > 4. Append '## Review Notes' to context-snapshot.md: issues found (with severity), test results, final verdict.
 > Report verdict: PASS, PASS_WITH_WARNINGS, or NEEDS_FIXES."
 
@@ -353,86 +338,34 @@ bash {{VALIDATOR_SCRIPTS_DIR}}/validate-framework.sh
 
 - If ALL steps pass → proceed with commit below.
 - If any step fails → fix the issue and re-run. Maximum 2 fix-and-retry rounds.
-- After 2 failed rounds → mark session as `framework_validation_failed`, write session-status.json, and exit.
-
-**reload_needed check**: Review the Implementation Log in context-snapshot.md. If ANY of these paths were modified:
-- `dev-pipeline/scripts/*.py` or `dev-pipeline/scripts/*.sh`
-- `dev-pipeline/templates/*.md`
-- `core/skills/` (any skill used by the pipeline)
-
-Then set `"reload_needed": true` in session-status.json.
+- After 2 failed rounds → exit and let the pipeline runner handle the failure.
 {{END_IF_MODE_SELF_EVOLVE}}
 
 **For bug fixes**: run `/prizmkit-retrospective` for structural sync only (skip knowledge injection unless a new TRAPS was discovered). Use `fix(<scope>):` commit prefix.
 
-**7a.** Check if feature already committed:
+**6a.** Check if feature already committed:
 ```bash
 git log --oneline | grep "{{FEATURE_ID}}" | head -3
 ```
-- If a commit for `{{FEATURE_ID}}` already exists → **skip 7c** (do NOT run /prizmkit-committer, do NOT run git reset, do NOT stage or unstage anything). Proceed directly to Step 3.
-- If no existing commit → proceed normally with 7a–7c.
+- If a commit for `{{FEATURE_ID}}` already exists → **skip 6c** (do NOT run /prizmkit-committer, do NOT run git reset, do NOT stage or unstage anything). Proceed directly to Final Clean Check.
+- If no existing commit → proceed normally with 6a–6c.
 
-**7b.** Run `/prizmkit-retrospective` (**before commit**, maintains `.prizm-docs/` architecture index and platform memory files):
+**6b.** Run `/prizmkit-retrospective` (**before commit**, maintains `.prizm-docs/` architecture index and platform memory files):
 - **Structural sync**: update KEY_FILES/INTERFACES/DEPENDENCIES/file counts for changed modules
 - **Architecture knowledge** (feature sessions only): extract TRAPS, RULES from completed work into `.prizm-docs/`
 - **Memory sedimentation** (feature sessions only): sediment DECISIONS and interface conventions to platform memory file (`CLAUDE.md` for Claude Code, BOTH `CODEBUDDY.md` AND `memory/MEMORY.md` for CodeBuddy)
 - Stage all doc changes: `git add .prizm-docs/`
 - **For bug-fix sessions**: structural sync only, skip knowledge injection and memory sedimentation unless a genuinely new pitfall was discovered
 
-**7b-safety.** Write preliminary session-status.json (safety net — ensures pipeline sees a status file even if session terminates during commit):
+**6c.** Run `/prizmkit-committer` → `feat({{FEATURE_ID}}): {{FEATURE_TITLE}}`, do NOT push
 
-Write to: `{{SESSION_STATUS_PATH}}`
+**6d.** MANDATORY: commit must be done via `/prizmkit-committer` skill. Do NOT run manual `git add`/`git commit` as a substitute.
 
-```json
-{
-  "session_id": "{{SESSION_ID}}",
-  "feature_id": "{{FEATURE_ID}}",
-  "feature_slug": "{{FEATURE_SLUG}}",
-  "exec_tier": 3,
-  "status": "partial",
-  "completed_phases": [0, 1, 2, 3, 4, 5],
-  "current_phase": 6,
-  "checkpoint_reached": "CP-3",
-  "tasks_completed": 0,
-  "tasks_total": 0,
-  "errors": [],
-  "can_resume": false,
-  "resume_from_phase": null,
-  "docs_maintained": true,
-  "retrospective_done": true,
-  "artifacts": {
-    "context_snapshot_path": ".prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md",
-    "spec_path": ".prizmkit/specs/{{FEATURE_SLUG}}/spec.md",
-    "plan_path": ".prizmkit/specs/{{FEATURE_SLUG}}/plan.md"
-  },
-  "git_commit": "",
-  "timestamp": "<current ISO timestamp>"
-}
-```
+**6e.** Do NOT run `update-feature-status.py` here — the pipeline runner handles feature-list.json updates automatically after session exit.
 
-**7c.** Run `/prizmkit-committer` → `feat({{FEATURE_ID}}): {{FEATURE_TITLE}}`, do NOT push
+### Final Clean Check (before exit)
 
-**7d.** MANDATORY: commit must be done via `/prizmkit-committer` skill. Do NOT run manual `git add`/`git commit` as a substitute.
-
-**7e.** Do NOT run `update-feature-status.py` here — the pipeline runner handles feature-list.json updates automatically after session exit.
-
----
-
-## Step 3: Commit & Finalize Session Status
-
-**3a. Commit** — The commit was handled in Phase 6 (7c) above via `/prizmkit-committer`.
-
-**3b. Update session-status.json to success** — After commit succeeds, update `{{SESSION_STATUS_PATH}}`:
-
-Update the file to reflect final success:
-- Set `"status": "success"`
-- Set `"completed_phases": [0, 1, 2, 3, 4, 5, 6]`
-- Set `"git_commit": "<actual commit hash from git log -1 --format=%H>"`
-- Set `"timestamp": "<current ISO timestamp>"`
-
-### Step 3.1: Final Clean Check (before exit)
-
-After updating `session-status.json`, verify repository is clean:
+Verify repository is clean:
 
 ```bash
 git status --short
@@ -456,17 +389,15 @@ git commit -m "chore({{FEATURE_ID}}): include session artifacts"
 | Team Config | `{{TEAM_CONFIG_PATH}}` |
 | Dev Agent Def | {{DEV_SUBAGENT_PATH}} |
 | Reviewer Agent Def | {{REVIEWER_SUBAGENT_PATH}} |
-| Session Status Output | {{SESSION_STATUS_PATH}} |
 | Project Root | {{PROJECT_ROOT}} |
 | Feature List Path | {{FEATURE_LIST_PATH}} |
 
 ## Reminders
 
-- Tier 3: full team — Dev (implementation) → Reviewer (review) — spawn agents directly via Agent tool
+- Tier 3: full team — Dev (implementation) → Reviewer (review + test) — spawn agents directly via Agent tool
 - context-snapshot.md is append-only: orchestrator writes Sections 1-4, Dev appends Implementation Log, Reviewer appends Review Notes
 - Gate checks enforce Implementation Log and Review Notes are written before proceeding
 - Do NOT use `run_in_background=true` when spawning agents
-- ALWAYS write preliminary session-status.json BEFORE commit (as partial), then update to success AFTER commit — this prevents pipeline from treating a terminated session as crashed
 - Commit phase must use `/prizmkit-committer`; do NOT replace with manual git commit commands
 - Before exiting, commit your feature code via `/prizmkit-committer` — the pipeline runner auto-commits any remaining files after session exit
 - When staging leftover files in the final clean check, always use explicit file names — NEVER use `git add -A`

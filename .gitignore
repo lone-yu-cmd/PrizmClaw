@@ -4,6 +4,3 @@ node_modules
 
 *.png
 
-
-# PrizmKit
-.prizmkit/
