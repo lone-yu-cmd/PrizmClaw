@@ -41,6 +41,7 @@ You are running in headless mode with a FINITE context window. Exceeding it will
 4. **One task at a time** — In Phase 3 (implement), complete and test one task before starting the next.
 5. **Minimize tool output** — When running commands, use `| head -20` or `| tail -20` to limit output. Never dump entire test suites or logs.
 6. **Incremental commits when possible** — If a feature has multiple independent tasks, commit after each completed task rather than one big commit at the end.
+7. **Capture test output once** — When running the test suite, always use `$TEST_CMD 2>&1 | tee /tmp/test-out.txt | tail -20`. Then grep `/tmp/test-out.txt` for details. Never re-run the suite just to apply a different filter.
 
 ---
 
@@ -99,11 +100,22 @@ If plan.md missing, write it directly:
 
 ### Phase 3: Implement + Test
 
+**Before starting**: detect the test command and record baseline:
+```bash
+# Try in order, use first that exits 0
+node --test tests/**/*.test.js 2>&1 | tail -3   # Node built-in
+npm test 2>&1 | tail -3                          # npm fallback
+```
+Record the working command as `TEST_CMD`. Then record baseline failures (if any):
+```bash
+$TEST_CMD 2>&1 | tee /tmp/test-baseline.txt | tail -20
+```
+
 For each task in plan.md Tasks section:
 1. Read the relevant section from `context-snapshot.md` (no need to re-read individual files)
 2. Write/edit the code
-3. Run tests after each task
-3. Mark task `[x]` in plan.md Tasks section immediately
+3. Run tests after each task: `$TEST_CMD 2>&1 | tee /tmp/test-out.txt | tail -20` — then grep `/tmp/test-out.txt` for failure details; never re-run just to apply a different filter
+4. Mark task `[x]` in plan.md Tasks section immediately
 
 After all tasks complete:
 1. Run the full test suite to ensure nothing is broken

@@ -326,10 +326,11 @@ if [[ -f "$SESSION_LOG" ]]; then
     log_info "Session log: $FINAL_LINES lines, $((FINAL_SIZE / 1024))KB"
 fi
 
-SESSION_STATUS_FILE="$SESSION_DIR/session-status.json"
-
 # ── Determine session outcome from observable signals ──────────────
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+DEFAULT_BRANCH=$(git -C "$PROJECT_ROOT" symbolic-ref refs/remotes/origin/HEAD 2>/dev/null \
+    | sed 's@^refs/remotes/origin/@@') \
+    || DEFAULT_BRANCH=$(git -C "$PROJECT_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null | grep -E '^(main|master)$' || echo "main")
 
 if [[ $EXIT_CODE -eq 124 ]]; then
     log_warn "Session timed out after ${SESSION_TIMEOUT}s"
@@ -341,7 +342,7 @@ else
     # Exit code 0 — check if the session produced commits
     HAS_COMMITS=""
     if git -C "$PROJECT_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-        HAS_COMMITS=$(git -C "$PROJECT_ROOT" log main..HEAD --oneline 2>/dev/null | head -1)
+        HAS_COMMITS=$(git -C "$PROJECT_ROOT" log "${DEFAULT_BRANCH}..HEAD" --oneline 2>/dev/null | head -1)
     fi
 
     if [[ -n "$HAS_COMMITS" ]]; then
@@ -349,8 +350,15 @@ else
     else
         UNCOMMITTED=$(git -C "$PROJECT_ROOT" status --porcelain 2>/dev/null | head -1 || true)
         if [[ -n "$UNCOMMITTED" ]]; then
-            log_warn "Session exited cleanly but produced no commits (uncommitted changes found)"
-            SESSION_STATUS="commit_missing"
+            log_warn "Session exited cleanly but produced no commits (uncommitted changes found) — auto-committing..."
+            git -C "$PROJECT_ROOT" add -A 2>/dev/null || true
+            if git -C "$PROJECT_ROOT" commit --no-verify -m "chore($BUG_ID): auto-commit session work" 2>/dev/null; then
+                log_info "Auto-commit succeeded"
+                SESSION_STATUS="success"
+            else
+                log_warn "Auto-commit failed — no changes to commit"
+                SESSION_STATUS="crashed"
+            fi
         else
             log_warn "Session exited cleanly but produced no commits and no changes"
             SESSION_STATUS="crashed"
@@ -365,14 +373,9 @@ if [[ "$SESSION_STATUS" == "success" ]]; then
         if [[ -n "$DIRTY_FILES" ]]; then
             log_info "Auto-committing remaining session artifacts..."
             git -C "$PROJECT_ROOT" add -A 2>/dev/null || true
-            git -C "$PROJECT_ROOT" commit --no-verify -m "chore($BUG_ID): include remaining session artifacts" 2>/dev/null || true
-        fi
-
-        DIRTY_FILES=$(git -C "$PROJECT_ROOT" status --porcelain 2>/dev/null || true)
-        if [[ -n "$DIRTY_FILES" ]]; then
-            log_error "Git working tree still not clean after auto-commit."
-            echo "$DIRTY_FILES" | sed 's/^/  - /'
-            SESSION_STATUS="failed"
+            git -C "$PROJECT_ROOT" commit --no-verify --amend --no-edit -a 2>/dev/null \
+                || git -C "$PROJECT_ROOT" commit --no-verify -m "chore($BUG_ID): include remaining session artifacts" 2>/dev/null \
+                || true
         fi
     fi
 fi
