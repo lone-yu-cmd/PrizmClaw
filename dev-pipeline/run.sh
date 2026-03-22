@@ -28,7 +28,7 @@ set -euo pipefail
 #   LOG_RETENTION_DAYS    Delete logs older than N days (default: 14)
 #   LOG_MAX_TOTAL_MB      Keep total logs under N MB via oldest-first cleanup (default: 1024)
 #   PIPELINE_MODE         Override mode for all features: lite|standard|full|self-evolve (used by daemon)
-#   DEV_BRANCH            Custom dev branch name (default: auto-generated dev/pipeline-{run_id})
+#   DEV_BRANCH            Custom dev branch name (default: auto-generated dev/{feature_id}-YYYYMMDDHHmm)
 #   AUTO_PUSH             Auto-push to remote after successful feature (default: 0). Set to 1 to enable.
 # ============================================================
 
@@ -744,7 +744,7 @@ sys.exit(1)
     _source_branch=$(git -C "$_proj_root" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
     _ORIGINAL_BRANCH="$_source_branch"
 
-    local _branch_name="${DEV_BRANCH:-dev/${feature_id}-$(date +%s)}"
+    local _branch_name="${DEV_BRANCH:-dev/${feature_id}-$(date +%Y%m%d%H%M)}"
     if branch_create "$_proj_root" "$_branch_name" "$_source_branch"; then
         _DEV_BRANCH_NAME="$_branch_name"
     else
@@ -895,22 +895,12 @@ main() {
     echo -e "${BOLD}════════════════════════════════════════════════════${NC}"
     echo ""
 
-    # Branch lifecycle: create dev branch for this pipeline run
+    # Branch lifecycle: each feature gets its own dev branch (created per-iteration below)
     local _proj_root
     _proj_root="$(cd "$SCRIPT_DIR/.." && pwd)"
     local _source_branch
     _source_branch=$(git -C "$_proj_root" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
     _ORIGINAL_BRANCH="$_source_branch"
-
-    local run_id_for_branch
-    run_id_for_branch=$(jq -r '.run_id' "$STATE_DIR/pipeline.json" 2>/dev/null || echo "$$")
-    local _branch_name="${DEV_BRANCH:-dev/pipeline-${run_id_for_branch}}"
-    if branch_create "$_proj_root" "$_branch_name" "$_source_branch"; then
-        _DEV_BRANCH_NAME="$_branch_name"
-        log_info "Dev branch: $_branch_name"
-    else
-        log_warn "Failed to create dev branch; running on current branch: $_source_branch"
-    fi
 
     # Main processing loop
     local session_count=0
@@ -952,16 +942,6 @@ for f in data.get('stuck_features', []):
             log_success "  Total sessions: $session_count"
             log_success "════════════════════════════════════════════════════"
             rm -f "$STATE_DIR/current-session.json"
-
-            # Merge dev branch back to original
-            if [[ -n "$_DEV_BRANCH_NAME" ]]; then
-                if branch_merge "$_proj_root" "$_DEV_BRANCH_NAME" "$_ORIGINAL_BRANCH" "$AUTO_PUSH"; then
-                    _DEV_BRANCH_NAME=""
-                else
-                    log_warn "Auto-merge failed — dev branch preserved: $_DEV_BRANCH_NAME"
-                    log_warn "Merge manually: git checkout $_ORIGINAL_BRANCH && git rebase $_DEV_BRANCH_NAME"
-                fi
-            fi
             break
         fi
 
@@ -988,6 +968,16 @@ for f in data.get('stuck_features', []):
             log_info "Resuming from Phase $resume_phase"
         fi
         echo -e "${BOLD}────────────────────────────────────────────────────${NC}"
+
+        # Create per-feature dev branch
+        local _feature_branch="${DEV_BRANCH:-dev/${feature_id}-$(date +%Y%m%d%H%M)}"
+        if branch_create "$_proj_root" "$_feature_branch" "$_ORIGINAL_BRANCH"; then
+            _DEV_BRANCH_NAME="$_feature_branch"
+            log_info "Dev branch: $_feature_branch"
+        else
+            log_warn "Failed to create dev branch; running on current branch: $_ORIGINAL_BRANCH"
+            _DEV_BRANCH_NAME=""
+        fi
 
         # Generate session ID and bootstrap prompt
         local session_id run_id
@@ -1070,6 +1060,22 @@ os.replace(tmp, target)
             "$feature_id" "$feature_list" "$session_id" \
             "$bootstrap_prompt" "$session_dir" "$MAX_RETRIES" "$feature_model"
         local session_status="$_SPAWN_RESULT"
+
+        # Merge per-feature dev branch back to original on success
+        if [[ "$session_status" == "success" && -n "$_DEV_BRANCH_NAME" ]]; then
+            if branch_merge "$_proj_root" "$_DEV_BRANCH_NAME" "$_ORIGINAL_BRANCH" "$AUTO_PUSH"; then
+                _DEV_BRANCH_NAME=""
+            else
+                log_warn "Auto-merge failed — dev branch preserved: $_DEV_BRANCH_NAME"
+                log_warn "Merge manually: git checkout $_ORIGINAL_BRANCH && git rebase $_DEV_BRANCH_NAME"
+                _DEV_BRANCH_NAME=""
+            fi
+        elif [[ -n "$_DEV_BRANCH_NAME" ]]; then
+            # Session failed — return to original branch, preserve dev branch for inspection
+            git -C "$_proj_root" checkout "$_ORIGINAL_BRANCH" 2>/dev/null || true
+            log_warn "Session failed — dev branch preserved for inspection: $_DEV_BRANCH_NAME"
+            _DEV_BRANCH_NAME=""
+        fi
 
         session_count=$((session_count + 1))
 

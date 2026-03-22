@@ -591,7 +591,7 @@
         "Given 头部处于 sticky 状态，When 用户向上滚动至顶部，Then 头部恢复正常文档流位置",
         "Given 头部固定时，When 渲染头部下边框，Then 显示分隔线以区分头部与内容区"
       ],
-      "status": "pending",
+      "status": "completed",
       "session_granularity": "feature",
       "sub_features": []
     },
