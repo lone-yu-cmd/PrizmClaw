@@ -519,7 +519,7 @@
         "Profile 持久化存储，Bot 重启后自动加载所有配置档案",
         "默认 profile（CODEBUDDY_BIN）不可被删除，可被覆盖参数"
       ],
-      "status": "in_progress",
+      "status": "completed",
       "session_granularity": "feature",
       "sub_features": []
     },

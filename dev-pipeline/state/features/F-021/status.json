@@ -1,11 +1,13 @@
 {
   "feature_id": "F-021",
-  "status": "in_progress",
+  "status": "completed",
   "retry_count": 0,
   "max_retries": 3,
-  "sessions": [],
-  "last_session_id": null,
+  "sessions": [
+    "F-021-20260323011046"
+  ],
+  "last_session_id": "F-021-20260323011046",
   "resume_from_phase": null,
   "created_at": "2026-03-22T01:34:53Z",
-  "updated_at": "2026-03-22T17:10:46Z"
+  "updated_at": "2026-03-22T17:25:25Z"
 }
