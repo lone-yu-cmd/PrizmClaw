@@ -1,0 +1,38 @@
+{
+  "updated_at": "2026-03-22T15:16:45Z",
+  "message_count": 47,
+  "current_tool": "Bash",
+  "current_tool_input_summary": "Verify commit and working tree status",
+  "current_phase": "commit",
+  "detected_phases": [
+    "implement",
+    "retrospective",
+    "commit"
+  ],
+  "tool_calls": [
+    {
+      "name": "Bash",
+      "count": 21
+    },
+    {
+      "name": "Edit",
+      "count": 5
+    },
+    {
+      "name": "Read",
+      "count": 3
+    },
+    {
+      "name": "Write",
+      "count": 2
+    },
+    {
+      "name": "Skill",
+      "count": 2
+    }
+  ],
+  "total_tool_calls": 33,
+  "last_text_snippet": "Commit verified. Working tree has only `logs/audit.log` (runtime log, not feature-related) and `dev-pipeline/state/featu",
+  "is_active": true,
+  "errors": []
+}
