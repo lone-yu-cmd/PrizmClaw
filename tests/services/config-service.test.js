@@ -26,6 +26,8 @@ describe('F-017 Config Service', () => {
     process.env.CODEBUDDY_BIN = 'codebuddy';
     process.env.WEB_HOST = '0.0.0.0';
     process.env.WEB_PORT = '8787';
+    process.env.ENABLE_TELEGRAM = 'true';
+    process.env.USER_PERMISSIONS = '';
   });
 
   afterEach(() => {

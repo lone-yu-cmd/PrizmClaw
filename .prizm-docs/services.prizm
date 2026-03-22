@@ -29,9 +29,11 @@ KEY_FILES:
 - session-store.js: in-memory session state (427 lines)
 - realtime-hub.js: SSE event pub/sub (35 lines)
 - chat-service.js: legacy chat via codebuddy adapter (80 lines, deprecated)
+- config-service.js: F-017 runtime config manager — hot-reload via process.env, safe key whitelist, sensitive masking (337 lines)
 TRAPS:
 - SessionBindingService uses deferred init — always call ensureReady() before sync methods in async contexts
 - SessionBindingService persistence is fire-and-forget — tests must call flush() to verify file writes
 - messageRouter does not expose heartbeat hooks — Telegram heartbeat progress disabled after F-018 migration
 - Runtime bindings created via POST /api/bind do NOT auto-subscribe realtimeHub for cross-channel push (F-018 gap)
+- config-service originalEnvValues captured at module init; if env vars set after import, use setConfig first (which lazy-captures original) before reset | FIX: ensure env vars are set before module import in tests, or setConfig will lazy-capture the pre-modification value
 UPDATED: 2026-03-22

@@ -1,0 +1,22 @@
+{
+  "updated_at": "2026-03-22T13:20:37Z",
+  "message_count": 4,
+  "current_tool": "Bash",
+  "current_tool_input_summary": "List src directory structure",
+  "current_phase": null,
+  "detected_phases": [],
+  "tool_calls": [
+    {
+      "name": "Bash",
+      "count": 2
+    },
+    {
+      "name": "Read",
+      "count": 1
+    }
+  ],
+  "total_tool_calls": 3,
+  "last_text_snippet": "I'll start by reading the project context and building the context snapshot for F-020.",
+  "is_active": true,
+  "errors": []
+}

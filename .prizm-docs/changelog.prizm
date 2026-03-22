@@ -4,3 +4,4 @@
 - 2026-03-22 | src/http | add: http.prizm L1 doc with sessionBindingsPath test isolation
 - 2026-03-22 | src/routes | add: routes.prizm L1 doc with F-018 bind/unbind/events endpoints
 - 2026-03-22 | root.prizm | update: added messageRouter and ensureReady() rules
+- 2026-03-22 | src/services | update: add config-service.js to KEY_FILES, add F-017 originalEnvValues lazy-capture TRAP

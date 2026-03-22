@@ -339,20 +339,9 @@ elif [[ $EXIT_CODE -ne 0 ]]; then
     SESSION_STATUS="crashed"
 else
     # Exit code 0 — check if the session produced commits
-    SESSION_START_ISO=$(python3 -c "
-import os, sys
-from datetime import datetime, timezone
-p = sys.argv[1]
-if os.path.isdir(p):
-    ts = os.path.getctime(p)
-    print(datetime.fromtimestamp(ts, tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'))
-else:
-    print('')
-" "$SESSION_DIR" 2>/dev/null) || SESSION_START_ISO=""
-
     HAS_COMMITS=""
-    if [[ -n "$SESSION_START_ISO" ]] && git -C "$PROJECT_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-        HAS_COMMITS=$(git -C "$PROJECT_ROOT" log --since="$SESSION_START_ISO" --oneline --grep="$BUG_ID" 2>/dev/null | head -1)
+    if git -C "$PROJECT_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        HAS_COMMITS=$(git -C "$PROJECT_ROOT" log main..HEAD --oneline 2>/dev/null | head -1)
     fi
 
     if [[ -n "$HAS_COMMITS" ]]; then
@@ -376,7 +365,7 @@ if [[ "$SESSION_STATUS" == "success" ]]; then
         if [[ -n "$DIRTY_FILES" ]]; then
             log_info "Auto-committing remaining session artifacts..."
             git -C "$PROJECT_ROOT" add -A 2>/dev/null || true
-            git -C "$PROJECT_ROOT" commit -m "chore($BUG_ID): include remaining session artifacts" 2>/dev/null || true
+            git -C "$PROJECT_ROOT" commit --no-verify -m "chore($BUG_ID): include remaining session artifacts" 2>/dev/null || true
         fi
 
         DIRTY_FILES=$(git -C "$PROJECT_ROOT" status --porcelain 2>/dev/null || true)

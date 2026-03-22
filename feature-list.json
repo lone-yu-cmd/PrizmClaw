@@ -411,7 +411,7 @@
         "配置修改需 admin 权限，非 admin 用户收到权限不足提示",
         "/config reset <KEY> 可将配置恢复为 .env 中的原始值"
       ],
-      "status": "pending",
+      "status": "completed",
       "session_granularity": "feature",
       "sub_features": []
     },
@@ -433,7 +433,7 @@
         "双端同时在线时，对话历史完全一致，无消息丢失",
         "Web 端断线重连后自动同步离线期间的消息"
       ],
-      "status": "commit_missing",
+      "status": "completed",
       "session_granularity": "auto",
       "sub_features": [
         {

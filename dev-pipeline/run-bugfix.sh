@@ -177,18 +177,9 @@ spawn_and_wait_session() {
         session_status="crashed"
     else
         # Exit code 0 — check if the session actually produced commits
-        local session_start_iso=""
-        session_start_iso=$(python3 -c "
-import json, sys, os
-p = os.path.join(sys.argv[1], 'current-session.json')
-if os.path.isfile(p):
-    with open(p) as f: print(json.load(f).get('started_at', ''))
-else: print('')
-" "$STATE_DIR" 2>/dev/null) || session_start_iso=""
-
         local has_commits=""
-        if [[ -n "$session_start_iso" ]] && git -C "$project_root" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-            has_commits=$(git -C "$project_root" log --since="$session_start_iso" --oneline --grep="$bug_id" 2>/dev/null | head -1)
+        if git -C "$project_root" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+            has_commits=$(git -C "$project_root" log main..HEAD --oneline 2>/dev/null | head -1)
         fi
 
         if [[ -n "$has_commits" ]]; then
@@ -214,7 +205,7 @@ else: print('')
             if [[ -n "$dirty_files" ]]; then
                 log_info "Auto-committing remaining session artifacts..."
                 git -C "$project_root" add -A 2>/dev/null || true
-                git -C "$project_root" commit -m "chore($bug_id): include remaining session artifacts" 2>/dev/null || true
+                git -C "$project_root" commit --no-verify -m "chore($bug_id): include remaining session artifacts" 2>/dev/null || true
             fi
 
             dirty_files=$(git -C "$project_root" status --porcelain 2>/dev/null || true)

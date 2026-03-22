@@ -1,0 +1,42 @@
+{
+  "updated_at": "2026-03-22T10:55:42Z",
+  "message_count": 90,
+  "current_tool": "TodoWrite",
+  "current_tool_input_summary": "Verify working tree",
+  "current_phase": "commit",
+  "detected_phases": [
+    "implement",
+    "retrospective",
+    "commit"
+  ],
+  "tool_calls": [
+    {
+      "name": "Bash",
+      "count": 34
+    },
+    {
+      "name": "Read",
+      "count": 15
+    },
+    {
+      "name": "Edit",
+      "count": 5
+    },
+    {
+      "name": "TodoWrite",
+      "count": 3
+    },
+    {
+      "name": "Write",
+      "count": 2
+    },
+    {
+      "name": "Skill",
+      "count": 2
+    }
+  ],
+  "total_tool_calls": 61,
+  "last_text_snippet": "F-017 is complete. Here's a summary of what was done:\n\n**Feature Status: COMPLETE** \u2014 all work committed to `dev/F-017-1",
+  "is_active": true,
+  "errors": []
+}

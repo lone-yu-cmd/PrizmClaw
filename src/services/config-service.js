@@ -146,6 +146,11 @@ export async function setConfig(key, value) {
       };
     }
 
+    // Capture the original value before first modification if not already stored
+    if (!originalEnvValues.has(normalizedKey) && process.env[normalizedKey] !== undefined) {
+      originalEnvValues.set(normalizedKey, process.env[normalizedKey]);
+    }
+
     // Store the new value
     runtimeConfig.set(normalizedKey, validationResult.normalizedValue);
 
