@@ -31,7 +31,7 @@ Generate a comprehensive technical implementation plan from a feature specificat
    - **Refactor mode**: Read `refactor-analysis.md` for refactoring goals, scope boundary, and baseline tests
    - **Bugfix mode**: Read bug description / `fix-plan.md` for reproduction steps and expected fix
 2. Load project context (use first available source):
-   - If `.prizmkit/specs/###-feature-name/context-snapshot.md` exists → read it for all context (Section 3 'Prizm Context' for docs, Section 4 'Existing Source Files' for code). The context-snapshot consolidates dozens of individual files into one read, saving significant tokens.
+   - If `.prizmkit/specs/###-feature-name/context-snapshot.md` exists → read it for all context (Section 3 'Prizm Context' for docs, Section 4 'File Manifest' for code structure and interfaces). The context-snapshot consolidates project context into one read, saving significant tokens.
    - Otherwise → read `.prizm-docs/root.prizm` and relevant `.prizm-docs/` L1/L2 docs for affected modules
 3. Resolve any remaining `[NEEDS CLARIFICATION]` by proposing solutions
 4. Research technical approach based on project's tech stack

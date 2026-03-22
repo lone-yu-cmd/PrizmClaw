@@ -98,7 +98,7 @@ Extract TRAPS and module-level RULES from development work and inject into `.pri
 **2a.** Gather context — read the **actual code that was changed** plus any available artifacts:
 
 - `git diff HEAD` — the real source of truth for what happened
-- `.prizmkit/specs/###-feature-name/agents/*.md` — **preferred source** for pre-categorized FINDINGS and INTERFACES_DISCOVERED from all agents. If agent docs exist, prefer them over re-extracting from git diff.
+- `.prizmkit/specs/###-feature-name/context-snapshot.md` — read the '## Implementation Log' section (Dev's changes, decisions, discoveries) and '## Review Notes' section (Reviewer's findings). These are the **preferred source** for pre-categorized decisions and findings. If these sections exist, prefer them over re-extracting from git diff.
 - `.prizmkit/specs/###-feature-name/plan.md` — if feature work, read planned vs actual
 - `.prizmkit/bugfix/<id>/fix-report.md` — if bugfix, read what was discovered
 - The relevant `.prizm-docs/` L1/L2 docs for affected modules
@@ -150,7 +150,8 @@ Sediment DECISIONS and interface conventions to platform memory files. This is w
 - `codebuddy` → targets: BOTH `CODEBUDDY.md` in project root AND `memory/MEMORY.md` (dual-write required)
 
 **2b-2.** Collect sedimentation candidates:
-- From `agents/*.md`: DECISIONS and INTERFACES_DISCOVERED entries
+- From context-snapshot.md '## Implementation Log': DECISIONS and notable discoveries
+- From context-snapshot.md '## Review Notes': quality patterns, architectural observations
 - From git diff analysis: any project-level conventions established
 - Filter: only entries that answer "Would a new session benefit from knowing this decision/convention?"
 
@@ -167,7 +168,7 @@ Sediment DECISIONS and interface conventions to platform memory files. This is w
 
 **2b-5.** For CodeBuddy platform: write identical content to BOTH `CODEBUDDY.md` AND `memory/MEMORY.md` (dual-write, both must be updated).
 
-**2b-6.** If no `agents/` directory exists in the feature directory, still attempt to extract DECISIONS from git diff and plan.md. Skip only if no meaningful decisions were made.
+**2b-6.** If no Implementation Log or Review Notes sections exist in context-snapshot.md, still attempt to extract DECISIONS from git diff and plan.md. Skip only if no meaningful decisions were made.
 
 ---
 

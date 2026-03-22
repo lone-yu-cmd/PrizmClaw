@@ -56,28 +56,6 @@ You are running in headless mode with a FINITE context window. Exceeding it will
 
 ## Execution
 
-### Phase 0.5: Agent Knowledge Setup
-
-Create the agent knowledge directory and initialize your own knowledge doc:
-```bash
-mkdir -p .prizmkit/specs/{{FEATURE_SLUG}}/agents
-```
-
-Write `.prizmkit/specs/{{FEATURE_SLUG}}/agents/orchestrator.md`:
-```markdown
-# Orchestrator
-
-## FINDINGS
-
-## DECISIONS
-
-## INTERFACES_DISCOVERED
-
-## CONTEXT_BUILT
-```
-
-After each phase, append notable DECISIONS/FINDINGS to your `agents/orchestrator.md`.
-
 {{IF_INIT_NEEDED}}
 ### Phase 0: Project Bootstrap
 - Run `/prizmkit-init` (invoke the prizmkit-init skill)

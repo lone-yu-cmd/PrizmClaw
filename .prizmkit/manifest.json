@@ -1,7 +1,7 @@
 {
-  "version": "1.0.79",
+  "version": "1.0.84",
   "installedAt": "2026-03-21T17:22:37.068Z",
-  "updatedAt": "2026-03-21T17:22:37.068Z",
+  "updatedAt": "2026-03-22T06:17:35.681Z",
   "platform": "claude",
   "suite": "core",
   "options": {
@@ -66,7 +66,6 @@
       "scripts/update-feature-status.py",
       "scripts/utils.py",
       "scripts/validate-feature-models.py",
-      "templates/agent-knowledge-template.md",
       "templates/bootstrap-prompt.md",
       "templates/bootstrap-tier1.md",
       "templates/bootstrap-tier2.md",

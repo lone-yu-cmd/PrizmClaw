@@ -1,5 +1,5 @@
 {
-  "ai_cli": "claude-internal",
+  "ai_cli": "claude",
   "platform": "claude",
   "adoption_mode": "passive",
   "speckit_hooks_enabled": true,

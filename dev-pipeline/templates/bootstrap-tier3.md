@@ -82,16 +82,12 @@ You are running in headless mode with a FINITE context window. Exceeding it will
 ## PrizmKit Directory Convention
 
 ```
-.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md  ← orchestrator writes, all subagents read
+.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md  ← orchestrator writes Sections 1-4; Dev appends Implementation Log; Reviewer appends Review Notes
 .prizmkit/specs/{{FEATURE_SLUG}}/spec.md
 .prizmkit/specs/{{FEATURE_SLUG}}/plan.md              ← includes Tasks section
 ```
 
-**`context-snapshot.md`** is the shared knowledge base. Orchestrator writes it once; Dev and Reviewer read it instead of re-scanning source files. This eliminates redundant I/O across all agents.
-
-### Agent Files
-- Dev Agent: `{{DEV_SUBAGENT_PATH}}`
-- Reviewer Agent: `{{REVIEWER_SUBAGENT_PATH}}`
+**`context-snapshot.md`** is the shared knowledge base. Orchestrator writes Sections 1-4; Dev appends Implementation Log; Reviewer appends Review Notes. This eliminates redundant I/O across all agents.
 
 ---
 
@@ -99,35 +95,12 @@ You are running in headless mode with a FINITE context window. Exceeding it will
 
 If any agent times out:
 1. `ls .prizmkit/specs/{{FEATURE_SLUG}}/` — check what exists
-2. If `context-snapshot.md` exists: open recovery prompt with `"Read .prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md for full context. Also read .prizmkit/specs/{{FEATURE_SLUG}}/agents/*.md for knowledge from previous agents. Do NOT re-read individual source files."` + only remaining steps + `model: "lite"`
+2. If `context-snapshot.md` exists: open recovery prompt with `"Read .prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md for project context and any Implementation Log/Review Notes from previous agents. Run git diff HEAD to see actual code changes already made. Do NOT re-read individual source files unless the File Manifest directs you to."` + only remaining steps + `model: "lite"`
 3. Max 2 retries per phase. After 2 failures, orchestrator completes the work directly and appends a Recovery Note to context-snapshot.md.
 
 ---
 
 ## Execution
-
-### Phase 0.5: Agent Knowledge Setup
-
-Create the agent knowledge directory and initialize your own knowledge doc:
-```bash
-mkdir -p .prizmkit/specs/{{FEATURE_SLUG}}/agents
-```
-
-Write `.prizmkit/specs/{{FEATURE_SLUG}}/agents/orchestrator.md`:
-```markdown
-# Orchestrator
-
-## FINDINGS
-
-## DECISIONS
-
-## INTERFACES_DISCOVERED
-
-## CONTEXT_BUILT
-```
-
-After each phase, append notable DECISIONS/FINDINGS to your `agents/orchestrator.md`.
-When spawning multiple Dev agents, each writes its own `agents/dev-{N}.md` (e.g., `dev-1.md`, `dev-2.md`).
 
 {{IF_INIT_NEEDED}}
 ### Phase 0: Project Bootstrap
@@ -200,11 +173,23 @@ If `EXISTING_CODE` is non-empty: your spec/plan/tasks must reflect this existing
    - **Section 1 — Feature Brief**: feature description + acceptance criteria (copy from above)
    - **Section 2 — Project Structure**: relevant `ls src/` output
    - **Section 3 — Prizm Context**: full content of root.prizm and relevant L1/L2 docs
-   - **Section 4 — Existing Source Files**: **full verbatim content** of each related file in fenced code blocks (with `### path/to/file` heading and line count). Include ALL files needed for implementation and review — downstream subagents read this section instead of re-reading individual source files
+   - **Section 4 — File Manifest**: For each file relevant to this feature, list: file path, why it's needed (modify/reference/test), key interface signatures (function names + params + return types). Do NOT include full file content — agents read files on-demand. Format:
+     ### Files to Modify
+     | File | Why Needed | Key Interfaces |
+     |------|-----------|----------------|
+     | `src/config.js` | Add runtime config layer | `config` (Zod object), `configSchema` |
+
+     ### Files for Reference
+     | File | Why Needed | Key Interfaces |
+     |------|-----------|----------------|
+     | `src/security/permission-guard.js` | Permission check integration | `checkCommandPermission(userId, cmd)` |
+
+     ### Known TRAPS (from .prizm-docs/)
+     - <trap entries extracted from L1/L2 docs>
    - **Section 5 — Existing Tests**: full content of related test files as code blocks
 4. Confirm: `ls .prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md`
 
-**After Step A, do NOT re-read any original source files** — use context-snapshot.md for all subsequent work.
+**After Step A**: Use context-snapshot.md Section 4 File Manifest to guide targeted file reads. Do NOT scan directories or read unrelated files.
 
 **Step B — Planning Artifacts** (generate only missing files):
 
@@ -225,10 +210,9 @@ Spawn Reviewer agent (Agent tool, subagent_type="prizm-dev-team-reviewer", run_i
 
 Prompt:
 > "Read {{REVIEWER_SUBAGENT_PATH}}. For feature {{FEATURE_ID}} (slug: {{FEATURE_SLUG}}):
-> 1. Read `.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md` FIRST — all source files and project context are there. Do NOT re-read individual source files.
+> 1. Read `.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md` FIRST — Section 3 has project context, Section 4 has file manifest.
 > 2. Run prizmkit-analyze: cross-check `spec.md` and `plan.md` (including Tasks section) for consistency.
-> 3. Before flagging CRITICAL or HIGH issues, verify each against Section 4 of the snapshot. Do NOT report based on incomplete information.
-> 4. **Agent Knowledge Doc**: Maintain `.prizmkit/specs/{{FEATURE_SLUG}}/agents/reviewer.md`. Write FINDINGS/DECISIONS after analysis (e.g., consistency issues found, ambiguities identified).
+> 3. Before flagging CRITICAL or HIGH issues, read the relevant source files listed in the File Manifest to verify.
 > Report: CRITICAL, HIGH, MEDIUM issues found (or 'No issues found')."
 
 Wait for Reviewer to return.
@@ -273,28 +257,36 @@ Append the following to the Dev agent prompt:
 Prompt:
 > "Read {{DEV_SUBAGENT_PATH}}. Implement feature {{FEATURE_ID}} (slug: {{FEATURE_SLUG}}) using TDD.
 > **IMPORTANT**: Read `.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md` FIRST.
-> This file contains ALL source code and context. Do NOT re-read individual source files.
-> 1. Read `.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md` — all source files and context are there.
+> 1. Read `.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md` — Section 3 has Prizm Context (TRAPS/RULES), Section 4 has File Manifest with paths and interfaces. Read source files on-demand as directed by the manifest.
 > 2. Read `plan.md` (including Tasks section) from `.prizmkit/specs/{{FEATURE_SLUG}}/`.
 > 3. Implement task-by-task. Mark each `[x]` in plan.md Tasks section **immediately** after completion (do NOT batch).
 > 4. Use `TEST_CMD=<TEST_CMD>` to run tests — do NOT explore alternative test commands.
-> 5. **Agent Knowledge Doc**: Maintain `.prizmkit/specs/{{FEATURE_SLUG}}/agents/dev-1.md`. After each task, append FINDINGS/DECISIONS/INTERFACES_DISCOVERED if you discovered anything notable. If context-snapshot.md was MISSING, read `agents/*.md` from other agents first, then scan source files and write CONTEXT_BUILT entries.
-> 6. After ALL tasks done, append 'Implementation Log' to context-snapshot.md: files changed/created, key decisions, deviations from plan.
-> 7. Do NOT execute any git commands (no git add/commit/reset/push).
-> 8. If `<TEST_CMD>` shows failures, check against BASELINE_FAILURES=`<BASELINE_FAILURES>`. Failures present in the baseline are pre-existing — list them explicitly in your COMPLETION_SIGNAL.
-> Do NOT exit until all tasks are [x] and the Implementation Log is written."
+> 5. After ALL tasks done, append '## Implementation Log' to context-snapshot.md with:
+>    - Files changed/created (with paths)
+>    - Key implementation decisions and rationale
+>    - Deviations from plan.md (if any)
+>    - Notable discoveries (unexpected behavior, hidden dependencies, new TRAPS)
+> 6. Do NOT execute any git commands (no git add/commit/reset/push).
+> 7. If `<TEST_CMD>` shows failures, check against BASELINE_FAILURES=`<BASELINE_FAILURES>`. Failures present in the baseline are pre-existing — list them explicitly in your COMPLETION_SIGNAL.
+> Do NOT exit until all tasks are [x] and the '## Implementation Log' section is written in context-snapshot.md."
+
+**Gate Check — Implementation Log**:
+After Dev agent returns, verify the Implementation Log was written:
+```bash
+grep -q "## Implementation Log" .prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md && echo "GATE:PASS" || echo "GATE:MISSING"
+```
+If GATE:MISSING — send message to Dev (re-spawn if needed): "Write the '## Implementation Log' section to context-snapshot.md before I can proceed to review. Include: files changed/created, key decisions, deviations from plan, notable discoveries."
 
 Wait for Dev to return. **If Dev times out before all tasks are `[x]`**:
 1. Check progress: `grep -c '^\- \[ \]' .prizmkit/specs/{{FEATURE_SLUG}}/plan.md`
 2. If any tasks remain: re-spawn Dev with this recovery prompt:
    > "Read {{DEV_SUBAGENT_PATH}}. You are resuming implementation of feature {{FEATURE_ID}} (slug: {{FEATURE_SLUG}}).
-   > 1. Read `.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md` — Section 4 has original source, 'Implementation Log' (if present) has what was already done. Do NOT re-read individual source files.
-   > 2. Read `.prizmkit/specs/{{FEATURE_SLUG}}/agents/*.md` — knowledge from previous agents (context, decisions, interfaces).
+   > 1. Read `.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md` — Section 4 has File Manifest, 'Implementation Log' (if present) shows what was already done.
+   > 2. Run `git diff HEAD` to see actual code changes already made.
    > 3. Read plan.md Tasks section — complete ONLY the remaining `[ ]` tasks. Do NOT redo completed `[x]` tasks.
    > 4. Use `TEST_CMD=<TEST_CMD>` to run tests.
-   > 5. Maintain `.prizmkit/specs/{{FEATURE_SLUG}}/agents/dev-1.md` — append FINDINGS/DECISIONS as you work.
-   > 6. Append progress to 'Implementation Log' in context-snapshot.md.
-   > 7. Do NOT execute any git commands."
+   > 5. Append progress to '## Implementation Log' in context-snapshot.md.
+   > 6. Do NOT execute any git commands."
 3. Max 2 recovery retries. After 2 failures, orchestrator implements remaining tasks directly.
 
 All tasks `[x]`, tests pass.
@@ -318,25 +310,31 @@ Append the following to the Reviewer agent prompt:
 Prompt:
 > "Read {{REVIEWER_SUBAGENT_PATH}}. For feature {{FEATURE_ID}} (slug: {{FEATURE_SLUG}}):
 > **IMPORTANT**: Read `.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md` FIRST.
-> This file contains ALL source code and context. Do NOT re-read individual source files.
-> 1. Read `.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md` — Section 4 has original source files, 'Implementation Log' section lists exactly what Dev changed. Do NOT re-read source files that are NOT mentioned in the Implementation Log.
-> 2. Read `.prizmkit/specs/{{FEATURE_SLUG}}/agents/dev-*.md` (if exists) — understand Dev's implementation decisions, trade-offs, and discovered interfaces.
-> 3. Run prizmkit-code-review: spec compliance (against spec.md), code quality, correctness. Read ONLY files listed in Implementation Log.
-> 4. Write and execute integration tests covering all user stories from spec.md. Use `TEST_CMD=<TEST_CMD>` — do NOT try alternative test commands.
-> 5. Append 'Review Notes' to context-snapshot.md: issues (severity), test results, final verdict.
-> 6. **Agent Knowledge Doc**: Maintain `.prizmkit/specs/{{FEATURE_SLUG}}/agents/reviewer.md`. Write FINDINGS/DECISIONS after review (e.g., quality patterns, architectural observations).
+> 1. Read `.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md`:
+>    - Section 3: Prizm Context (RULES, PATTERNS to check against)
+>    - Section 4: File Manifest (original file structure)
+>    - '## Implementation Log': what Dev changed, key decisions, discoveries
+> 2. Run prizmkit-code-review: spec compliance (against spec.md), code quality, correctness. Read ONLY files listed in Implementation Log.
+> 3. Write and execute integration tests covering all user stories from spec.md. Use `TEST_CMD=<TEST_CMD>` — do NOT try alternative test commands.
+> 4. Append '## Review Notes' to context-snapshot.md: issues found (with severity), test results, final verdict.
 > Report verdict: PASS, PASS_WITH_WARNINGS, or NEEDS_FIXES."
 
 Wait for Reviewer to return.
+
+**Gate Check — Review Notes**:
+After Reviewer agent returns, verify the Review Notes were written:
+```bash
+grep -q "## Review Notes" .prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md && echo "GATE:PASS" || echo "GATE:MISSING"
+```
+If GATE:MISSING — send message to Reviewer (re-spawn if needed): "Write the '## Review Notes' section to context-snapshot.md. Include: issues found (severity), test results, final verdict."
+
 - If NEEDS_FIXES: spawn Dev to fix with this prompt:
   > "Read {{DEV_SUBAGENT_PATH}}. Fix NEEDS_FIXES issues for feature {{FEATURE_ID}} (slug: {{FEATURE_SLUG}}).
-  > 1. Read `.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md` — 'Review Notes' section lists the exact issues to fix. Do NOT re-read source files not mentioned there.
-  > 2. Read `.prizmkit/specs/{{FEATURE_SLUG}}/agents/reviewer.md` (if exists) — understand reviewer's findings and rationale.
-  > 3. Fix ONLY the issues listed in 'Review Notes'. Do NOT refactor unrelated code.
-  > 4. Use `TEST_CMD=<TEST_CMD>` to verify fixes.
-  > 5. Append fix summary to 'Implementation Log' in context-snapshot.md.
-  > 6. Update `.prizmkit/specs/{{FEATURE_SLUG}}/agents/dev-1.md` with any new FINDINGS/DECISIONS from the fix.
-  > 7. Do NOT execute any git commands."
+  > 1. Read `.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md` — '## Review Notes' section lists the exact issues to fix.
+  > 2. Fix ONLY the issues listed in 'Review Notes'. Do NOT refactor unrelated code.
+  > 3. Use `TEST_CMD=<TEST_CMD>` to verify fixes.
+  > 4. Append fix summary to '## Implementation Log' in context-snapshot.md.
+  > 5. Do NOT execute any git commands."
   Then re-run Review (max 3 rounds).
 
 **CP-3**: Integration tests pass, verdict is not NEEDS_FIXES.
@@ -465,7 +463,8 @@ Re-check `git status --short` and ensure it is empty before exiting.
 ## Reminders
 
 - Tier 3: full team — Dev (implementation) → Reviewer (review) — spawn agents directly via Agent tool
-- context-snapshot.md is the team knowledge base: orchestrator writes it once, all agents read it
+- context-snapshot.md is append-only: orchestrator writes Sections 1-4, Dev appends Implementation Log, Reviewer appends Review Notes
+- Gate checks enforce Implementation Log and Review Notes are written before proceeding
 - Do NOT use `run_in_background=true` when spawning agents
 - ALWAYS write preliminary session-status.json BEFORE commit (as partial), then update to success AFTER commit — this prevents pipeline from treating a terminated session as crashed
 - Commit phase must use `/prizmkit-committer`; do NOT replace with manual git commit commands

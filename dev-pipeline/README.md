@@ -955,7 +955,6 @@ dev-pipeline/
 |   +-- bootstrap-tier3.md           # Tier 3 prompt template (full team, full/self-evolve)
 |   +-- bootstrap-prompt.md          # Legacy monolithic template (fallback)
 |   +-- bugfix-bootstrap-prompt.md   # Bug-fix session prompt template
-|   +-- agent-knowledge-template.md  # Template for agent knowledge docs
 |   +-- feature-list-schema.json     # JSON schema for feature-list.json
 |   +-- bug-fix-list-schema.json     # JSON schema for bug-fix-list.json
 |   +-- session-status-schema.json   # JSON schema for session-status.json

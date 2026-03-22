@@ -2,14 +2,14 @@
 
 ## Session Context
 
-- **Feature ID**: {{FEATURE_ID}} | **Session**: {{SESSION_ID}} | **Run**: {{RUN_ID}}
-- **Complexity**: {{COMPLEXITY}} | **Retry**: {{RETRY_COUNT}} / {{MAX_RETRIES}}
-- **Previous Status**: {{PREV_SESSION_STATUS}} | **Resume From**: {{RESUME_PHASE}}
-- **Init**: {{INIT_DONE}} | Artifacts: spec={{HAS_SPEC}} plan={{HAS_PLAN}}
+- **Feature ID**: F-018 | **Session**: F-018-20260322142319 | **Run**: run-20260322-013453
+- **Complexity**: high | **Retry**: 0 / 3
+- **Previous Status**: N/A (first run) | **Resume From**: null
+- **Init**: true | Artifacts: spec=false plan=false
 
 ## Your Mission
 
-You are the **session orchestrator**. Implement Feature {{FEATURE_ID}}: "{{FEATURE_TITLE}}".
+You are the **session orchestrator**. Implement Feature F-018: "Web-Telegram Bidirectional Sync".
 
 **CRITICAL**: You MUST NOT exit until ALL work is complete and session-status.json is written. When you spawn subagents, wait for each to finish (run_in_background=false).
 
@@ -17,19 +17,35 @@ You are the **session orchestrator**. Implement Feature {{FEATURE_ID}}: "{{FEATU
 
 ### Feature Description
 
-{{FEATURE_DESCRIPTION}}
+Web 页面与 Telegram 共享同一会话，消息双向实时同步。当前 Web 端使用独立的 chat-service.js + codebuddy adapter，Telegram 端使用 ai-cli-service.js，两套系统完全隔离。
+
+统一架构：将 Web 端和 Telegram 端的消息路由统一到同一个 session store 和 AI CLI 执行引擎（ai-cli-service.js）；废弃或重构 chat-service.js + codebuddy adapter，使 Web 端也通过 ai-cli-service 执行；统一 session key 映射策略，让 Web 和 Telegram 可以关联到同一个会话。
+
+实时同步：Telegram 端收到的消息和回复实时通过 SSE 推送到 Web 页面；Web 端发送的消息同步转发到 Telegram 对话并在 Bot 中执行；双端同时在线时，两边都能看到完整的对话流。
+
+会话绑定：提供会话绑定机制（如 Web 页面输入 Telegram chat ID 或扫码绑定），确保 Web 连接到正确的 Telegram 会话。
 
 ### Acceptance Criteria
 
-{{ACCEPTANCE_CRITERIA}}
+- Web 端和 Telegram 端使用同一个 AI CLI 执行引擎，废弃独立的 codebuddy adapter
+- Web 端发送消息后，Telegram 端和 Web 端同时收到 AI 回复
+- Telegram 端对话内容实时推送到已绑定的 Web 页面
+- Web 页面支持输入 Telegram chat ID 绑定到指定会话
+- 双端同时在线时，对话历史完全一致，无消息丢失
+- Web 端断线重连后自动同步离线期间的消息
 
 ### Dependencies (Already Completed)
 
-{{COMPLETED_DEPENDENCIES}}
+- F-011 - AI CLI Proxy (completed)
+- F-013 - Session and Context Manager (completed)
 
 ### App Global Context
 
-{{GLOBAL_CONTEXT}}
+- **design_system**: Telegram command UX with structured message templates
+- **framework**: Express.js (auto-detected)
+- **language**: TypeScript
+- **tech_stack**: Node.js + Express + Telegraf + JSON state files + Shell/Python dev-pipeline
+- **testing_strategy**: Jest (unit + integration)
 
 ## ⚠️ Context Budget Rules (CRITICAL — read before any phase)
 
@@ -48,8 +64,8 @@ You are running in headless mode with a FINITE context window. Exceeding it will
 ## PrizmKit Directory Convention
 
 ```
-.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md  ← orchestrator writes Sections 1-4; Dev appends Implementation Log; Reviewer appends Review Notes
-.prizmkit/specs/{{FEATURE_SLUG}}/plan.md              ← includes Tasks section
+.prizmkit/specs/018-web-telegram-bidirectional-sync/context-snapshot.md  ← orchestrator writes Sections 1-4; Dev appends Implementation Log; Reviewer appends Review Notes
+.prizmkit/specs/018-web-telegram-bidirectional-sync/plan.md              ← includes Tasks section
 ```
 
 **`context-snapshot.md`** is the shared knowledge base. Orchestrator writes Sections 1-4; Dev appends Implementation Log; Reviewer appends Review Notes. Append-only after initial creation.
@@ -59,39 +75,27 @@ You are running in headless mode with a FINITE context window. Exceeding it will
 ## Subagent Timeout Recovery
 
 If any agent times out:
-1. `ls .prizmkit/specs/{{FEATURE_SLUG}}/` — check what exists
-2. If `context-snapshot.md` exists: open recovery prompt with `"Read .prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md for project context and any Implementation Log/Review Notes from previous agents. Run git diff HEAD to see actual code changes already made. Do NOT re-read individual source files unless the File Manifest directs you to."` + only remaining steps + `model: "lite"`
+1. `ls .prizmkit/specs/018-web-telegram-bidirectional-sync/` — check what exists
+2. If `context-snapshot.md` exists: open recovery prompt with `"Read .prizmkit/specs/018-web-telegram-bidirectional-sync/context-snapshot.md for project context and any Implementation Log/Review Notes from previous agents. Run git diff HEAD to see actual code changes already made. Do NOT re-read individual source files unless the File Manifest directs you to."` + only remaining steps + `model: "lite"`
 3. Max 2 retries per phase. After 2 failures, orchestrator completes the work directly and appends a Recovery Note to context-snapshot.md.
 
 ---
 
 ## Execution
 
-{{IF_INIT_NEEDED}}
-### Phase 0: Project Bootstrap
-- Run `/prizmkit-init` (invoke the prizmkit-init skill)
-- Run `python3 {{INIT_SCRIPT_PATH}} --project-root {{PROJECT_ROOT}} --feature-id {{FEATURE_ID}} --feature-slug {{FEATURE_SLUG}}`
-- **CP-0**: Verify `.prizm-docs/root.prizm`, `.prizmkit/config.json` exist
-{{END_IF_INIT_NEEDED}}
-{{IF_INIT_DONE}}
 ### Phase 0: SKIP (already initialized)
-{{END_IF_INIT_DONE}}
 
-{{IF_RESUME}}
-### Resume from Phase {{RESUME_PHASE}}
-Check `.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md` — if exists, skip Phase 1 and proceed to Phase {{RESUME_PHASE}}.
-{{END_IF_RESUME}}
 
 ### Phase 1: Build Context Snapshot (you, the orchestrator)
 
 ```bash
-ls .prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md 2>/dev/null && echo "EXISTS" || echo "MISSING"
+ls .prizmkit/specs/018-web-telegram-bidirectional-sync/context-snapshot.md 2>/dev/null && echo "EXISTS" || echo "MISSING"
 ```
 
 If MISSING — build it now:
 1. Read `.prizm-docs/root.prizm` and relevant L1/L2 prizm docs
 2. Scan `src/` for files related to this feature; read each one
-3. Write `.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md`:
+3. Write `.prizmkit/specs/018-web-telegram-bidirectional-sync/context-snapshot.md`:
    - **Section 1 — Feature Brief**: feature description + acceptance criteria (copy from above)
    - **Section 2 — Project Structure**: relevant `ls src/` output
    - **Section 3 — Prizm Context**: full content of root.prizm and relevant L1/L2 docs
@@ -112,7 +116,7 @@ If MISSING — build it now:
 ### Phase 2: Plan & Tasks (you, the orchestrator)
 
 ```bash
-ls .prizmkit/specs/{{FEATURE_SLUG}}/plan.md 2>/dev/null
+ls .prizmkit/specs/018-web-telegram-bidirectional-sync/plan.md 2>/dev/null
 ```
 
 If either missing, write them yourself:
@@ -121,13 +125,13 @@ If either missing, write them yourself:
 
 ### Phase 3: Implement — Dev Subagent
 
-**Before spawning Dev**, write a preliminary session-status.json to `{{SESSION_STATUS_PATH}}`:
+**Before spawning Dev**, write a preliminary session-status.json to `/Users/loneyu/SelfProjects/PrizmClaw/dev-pipeline/state/features/F-018/sessions/F-018-20260322142319/session-status.json`:
 ```json
 {
   "status": "partial",
   "current_phase": 3,
-  "feature_id": "{{FEATURE_ID}}",
-  "session_id": "{{SESSION_ID}}",
+  "feature_id": "F-018",
+  "session_id": "F-018-20260322142319",
   "started_at": "<current ISO timestamp>"
 }
 ```
@@ -136,10 +140,10 @@ This ensures the pipeline sees a "partial" status even if the session crashes mi
 Spawn Dev subagent (Agent tool, subagent_type="prizm-dev-team-dev", run_in_background=false).
 
 Prompt:
-> "Read {{DEV_SUBAGENT_PATH}}. Implement feature {{FEATURE_ID}} (slug: {{FEATURE_SLUG}}) using TDD.
-> **IMPORTANT**: Read `.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md` FIRST.
-> 1. Read `.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md` — Section 3 has Prizm Context (TRAPS/RULES), Section 4 has File Manifest with paths and interfaces. Read source files on-demand as directed by the manifest.
-> 2. Read `plan.md` (including Tasks section) from `.prizmkit/specs/{{FEATURE_SLUG}}/`.
+> "Read /Users/loneyu/SelfProjects/PrizmClaw/.claude/agents/prizm-dev-team-dev.md. Implement feature F-018 (slug: 018-web-telegram-bidirectional-sync) using TDD.
+> **IMPORTANT**: Read `.prizmkit/specs/018-web-telegram-bidirectional-sync/context-snapshot.md` FIRST.
+> 1. Read `.prizmkit/specs/018-web-telegram-bidirectional-sync/context-snapshot.md` — Section 3 has Prizm Context (TRAPS/RULES), Section 4 has File Manifest with paths and interfaces. Read source files on-demand as directed by the manifest.
+> 2. Read `plan.md` (including Tasks section) from `.prizmkit/specs/018-web-telegram-bidirectional-sync/`.
 > 3. Implement task-by-task. Mark each `[x]` in plan.md Tasks section **immediately** after completion (do NOT batch).
 > 4. Use `TEST_CMD=<TEST_CMD>` to run tests — do NOT explore alternative test commands.
 > 5. After ALL tasks done, append '## Implementation Log' to context-snapshot.md with:
@@ -156,7 +160,7 @@ Wait for Dev to return. All tasks must be `[x]`, tests pass.
 **Gate Check — Implementation Log**:
 After Dev agent returns, verify the Implementation Log was written:
 ```bash
-grep -q "## Implementation Log" .prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md && echo "GATE:PASS" || echo "GATE:MISSING"
+grep -q "## Implementation Log" .prizmkit/specs/018-web-telegram-bidirectional-sync/context-snapshot.md && echo "GATE:PASS" || echo "GATE:MISSING"
 ```
 If GATE:MISSING — send message to Dev (re-spawn if needed): "Write the '## Implementation Log' section to context-snapshot.md before I can proceed to review. Include: files changed/created, key decisions, deviations from plan, notable discoveries."
 
@@ -165,9 +169,9 @@ If GATE:MISSING — send message to Dev (re-spawn if needed): "Write the '## Imp
 Spawn Reviewer subagent (Agent tool, subagent_type="prizm-dev-team-reviewer", run_in_background=false).
 
 Prompt:
-> "Read {{REVIEWER_SUBAGENT_PATH}}. For feature {{FEATURE_ID}} (slug: {{FEATURE_SLUG}}):
-> **IMPORTANT**: Read `.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md` FIRST.
-> 1. Read `.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md`:
+> "Read /Users/loneyu/SelfProjects/PrizmClaw/.claude/agents/prizm-dev-team-reviewer.md. For feature F-018 (slug: 018-web-telegram-bidirectional-sync):
+> **IMPORTANT**: Read `.prizmkit/specs/018-web-telegram-bidirectional-sync/context-snapshot.md` FIRST.
+> 1. Read `.prizmkit/specs/018-web-telegram-bidirectional-sync/context-snapshot.md`:
 >    - Section 3: Prizm Context (RULES, PATTERNS to check against)
 >    - Section 4: File Manifest (original file structure)
 >    - '## Implementation Log': what Dev changed, key decisions, discoveries
@@ -181,7 +185,7 @@ Wait for Reviewer to return.
 **Gate Check — Review Notes**:
 After Reviewer agent returns, verify the Review Notes were written:
 ```bash
-grep -q "## Review Notes" .prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md && echo "GATE:PASS" || echo "GATE:MISSING"
+grep -q "## Review Notes" .prizmkit/specs/018-web-telegram-bidirectional-sync/context-snapshot.md && echo "GATE:PASS" || echo "GATE:MISSING"
 ```
 If GATE:MISSING — send message to Reviewer (re-spawn if needed): "Write the '## Review Notes' section to context-snapshot.md. Include: issues found (severity), test results, final verdict."
 
@@ -203,13 +207,13 @@ Doc maintenance pass condition (pipeline-enforced): `.prizm-docs/` changed in th
 
 **5a. Write preliminary session-status.json** (safety net — ensures pipeline sees a status file even if session terminates during commit):
 
-Write to: `{{SESSION_STATUS_PATH}}`
+Write to: `/Users/loneyu/SelfProjects/PrizmClaw/dev-pipeline/state/features/F-018/sessions/F-018-20260322142319/session-status.json`
 
 ```json
 {
-  "session_id": "{{SESSION_ID}}",
-  "feature_id": "{{FEATURE_ID}}",
-  "feature_slug": "{{FEATURE_SLUG}}",
+  "session_id": "F-018-20260322142319",
+  "feature_id": "F-018",
+  "feature_slug": "018-web-telegram-bidirectional-sync",
   "exec_tier": 2,
   "status": "partial",
   "completed_phases": [0, 1, 2, 3, 4],
@@ -223,19 +227,19 @@ Write to: `{{SESSION_STATUS_PATH}}`
   "docs_maintained": true,
   "retrospective_done": true,
   "artifacts": {
-    "context_snapshot_path": ".prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md",
-    "plan_path": ".prizmkit/specs/{{FEATURE_SLUG}}/plan.md"
+    "context_snapshot_path": ".prizmkit/specs/018-web-telegram-bidirectional-sync/context-snapshot.md",
+    "plan_path": ".prizmkit/specs/018-web-telegram-bidirectional-sync/plan.md"
   },
   "git_commit": "",
   "timestamp": "<current ISO timestamp>"
 }
 ```
 
-**5b. Commit** — Run `/prizmkit-committer` → `feat({{FEATURE_ID}}): {{FEATURE_TITLE}}`, do NOT push
+**5b. Commit** — Run `/prizmkit-committer` → `feat(F-018): Web-Telegram Bidirectional Sync`, do NOT push
 - MANDATORY: commit must be done via `/prizmkit-committer` skill. Do NOT run manual `git add`/`git commit` as a substitute.
 - Do NOT run `update-feature-status.py` here — the pipeline runner handles feature-list.json updates automatically after session exit.
 
-**5c. Update session-status.json to success** — After commit succeeds, update `{{SESSION_STATUS_PATH}}`:
+**5c. Update session-status.json to success** — After commit succeeds, update `/Users/loneyu/SelfProjects/PrizmClaw/dev-pipeline/state/features/F-018/sessions/F-018-20260322142319/session-status.json`:
 - Set `"status": "success"`
 - Set `"completed_phases": [0, 1, 2, 3, 4, 5]`
 - Set `"git_commit": "<actual commit hash from git log -1 --format=%H>"`
@@ -251,7 +255,7 @@ If any files remain, stage them **explicitly by name** (do NOT use `git add -A`)
 
 ```bash
 git add <specific-file-1> <specific-file-2>
-git commit -m "chore({{FEATURE_ID}}): include session artifacts"
+git commit -m "chore(F-018): include session artifacts"
 ```
 
 Re-check `git status --short` and ensure it is empty before exiting.
@@ -260,12 +264,12 @@ Re-check `git status --short` and ensure it is empty before exiting.
 
 | Resource | Path |
 |----------|------|
-| Feature Artifacts Dir | `.prizmkit/specs/{{FEATURE_SLUG}}/` |
-| Context Snapshot | `.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md` |
-| Dev Agent Def | {{DEV_SUBAGENT_PATH}} |
-| Reviewer Agent Def | {{REVIEWER_SUBAGENT_PATH}} |
-| Session Status Output | {{SESSION_STATUS_PATH}} |
-| Project Root | {{PROJECT_ROOT}} |
+| Feature Artifacts Dir | `.prizmkit/specs/018-web-telegram-bidirectional-sync/` |
+| Context Snapshot | `.prizmkit/specs/018-web-telegram-bidirectional-sync/context-snapshot.md` |
+| Dev Agent Def | /Users/loneyu/SelfProjects/PrizmClaw/.claude/agents/prizm-dev-team-dev.md |
+| Reviewer Agent Def | /Users/loneyu/SelfProjects/PrizmClaw/.claude/agents/prizm-dev-team-reviewer.md |
+| Session Status Output | /Users/loneyu/SelfProjects/PrizmClaw/dev-pipeline/state/features/F-018/sessions/F-018-20260322142319/session-status.json |
+| Project Root | /Users/loneyu/SelfProjects/PrizmClaw |
 
 ## Reminders
 

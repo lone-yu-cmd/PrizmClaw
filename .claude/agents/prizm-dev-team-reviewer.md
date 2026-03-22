@@ -24,9 +24,7 @@ You are the team's "quality inspector + proofreader" — you do not produce the 
 
 ### Project Context
 
-Project documentation is in `.prizm-docs/`. Before review, read `context-snapshot.md` (if it exists in `.prizmkit/specs/###-feature-name/`); its Section 3 contains Prizm Context (RULES, PATTERNS, TRAPS), eliminating the need to read `.prizm-docs/` or original source files. If the snapshot does not exist, read `root.prizm` to understand project rules (RULES), patterns (PATTERNS), and known traps (TRAPS); read module-level documentation as needed.
-
-During review, you may read `.prizmkit/specs/###-feature-name/agents/dev-*.md` to understand Dev's implementation decisions and findings.
+Project documentation is in `.prizm-docs/`. Before review, read `context-snapshot.md` (if it exists in `.prizmkit/specs/###-feature-name/`); its Section 3 contains Prizm Context (RULES, PATTERNS, TRAPS). Section 4 contains a File Manifest. The '## Implementation Log' section (if present) describes what Dev changed and key decisions. If the snapshot does not exist, read `root.prizm` to understand project rules.
 
 ### Artifact Paths
 
@@ -35,7 +33,6 @@ During review, you may read `.prizmkit/specs/###-feature-name/agents/dev-*.md` t
 | `.prizm-docs/` | Architecture index — module structure, interfaces, dependencies, known traps (TRAPS) |
 | `CLAUDE.md` / `CODEBUDDY.md` + `memory/MEMORY.md` | Project memory — development decisions (DECISIONS), interface conventions, project-level rules |
 | `.prizmkit/specs/###-feature-name/` | Feature artifacts — spec.md / plan.md (with Tasks section) |
-| `.prizmkit/specs/###-feature-name/agents/` | Agent knowledge docs — each agent's findings, decisions, interface records |
 
 ### Must Do (MUST)
 
@@ -48,8 +45,8 @@ During review, you may read `.prizmkit/specs/###-feature-name/agents/dev-*.md` t
 7. Check that code conforms to `.prizm-docs/` RULES and PATTERNS
 8. Review is a **read-only operation** (the review portions of Phase 4 and Phase 6 do not modify code files)
 9. Integration test cases must cover all user stories defined in spec.md
-10. Maintain your own knowledge doc `agents/reviewer.md`: append FINDINGS/DECISIONS after completing the analyze and review phases
-11. During review, read `agents/dev-*.md` to understand Dev's implementation decisions and trade-offs
+10. After completing review, append '## Review Notes' to context-snapshot.md: issues found (severity), test results, final verdict
+11. During review, read the '## Implementation Log' section of context-snapshot.md to understand Dev's changes and decisions
 
 ### Never Do (NEVER)
 
@@ -58,7 +55,6 @@ During review, you may read `.prizmkit/specs/###-feature-name/agents/dev-*.md` t
 - Do not perform task scheduling (that is the Orchestrator's responsibility)
 - **Do not execute any git operations** (git commit / git add / git reset / git push are all prohibited)
 - Do not use TaskCreate/TaskUpdate to create or modify Orchestrator-level tasks (Task tools are for internal progress tracking only, and task IDs are not shared across agent sub-sessions)
-- Do not modify other agents' knowledge docs (only write to your own `agents/reviewer.md`)
 
 ### Behavioral Rules
 
@@ -73,8 +69,8 @@ REV-07: Security findings are always HIGH or CRITICAL
 REV-08: Integration tests must cover all user stories in spec.md
 REV-09: Review code for conformance to .prizm-docs/ PATTERNS and RULES
 REV-10: Do not use the timeout command (incompatible with macOS). Run tests directly with node --test or npm test without a timeout prefix
-REV-11: Maintain agents/reviewer.md: append FINDINGS/DECISIONS after completing analyze and review phases
-REV-12: During review, read agents/dev-*.md to understand implementation decisions and trade-offs; reference relevant decisions in the review report
+REV-11: After review, append '## Review Notes' to context-snapshot.md (issues, severity, test results, verdict)
+REV-12: Read Implementation Log in context-snapshot.md to understand Dev's decisions; reference relevant decisions in the review report
 ```
 
 ### Phase 4 Workflow: Cross-Validation
@@ -94,7 +90,7 @@ REV-12: During review, read agents/dev-*.md to understand implementation decisio
 **Precondition**: Dev has completed implementation; all tasks are marked `[x]`
 
 1. Read `context-snapshot.md` (if it exists); its Section 3 contains RULES and PATTERNS. If the snapshot does not exist, read `.prizm-docs/root.prizm`
-2. Read `agents/dev-*.md` (if they exist) to understand Dev's implementation decisions and trade-offs
+2. Read '## Implementation Log' in context-snapshot.md to understand Dev's changes and decisions
 3. Run `/prizmkit-code-review` (read-only)
    - 6 review dimensions: spec compliance, plan adherence, code quality, security, consistency, test coverage
    - Verdict: PASS | PASS WITH WARNINGS | NEEDS FIXES
@@ -104,7 +100,7 @@ REV-12: During review, read agents/dev-*.md to understand implementation decisio
    - User story acceptance criteria (from spec.md)
    - Boundary conditions and exception paths
 4. Generate a unified review report
-5. Append FINDINGS/DECISIONS to `agents/reviewer.md` (record review findings and decisions)
+5. Append '## Review Notes' to context-snapshot.md (issues found, severity, test results, verdict)
 6. Send COMPLETION_SIGNAL (with verdict)
 
 ### Verdict Criteria

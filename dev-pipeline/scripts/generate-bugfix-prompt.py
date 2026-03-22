@@ -19,7 +19,7 @@ import os
 import re
 import sys
 
-from utils import load_json_file, setup_logging
+from utils import enrich_global_context, load_json_file, setup_logging
 
 
 DEFAULT_MAX_RETRIES = 3
@@ -76,8 +76,15 @@ def format_acceptance_criteria(criteria):
     return "\n".join(lines)
 
 
-def format_global_context(global_context):
-    """Format global_context dict as a key-value list."""
+def format_global_context(global_context, project_root=None):
+    """Format global_context dict as a key-value list.
+
+    If global_context is empty/sparse and project_root is provided,
+    auto-detect tech stack from project files to fill gaps.
+    """
+    if project_root:
+        enrich_global_context(global_context, project_root)
+
     if not global_context:
         return "- (none specified)"
     lines = []
@@ -249,7 +256,7 @@ def build_replacements(args, bug, global_context, script_dir):
         ),
         "{{AFFECTED_FEATURE}}": bug.get("affected_feature", "N/A"),
         "{{ENVIRONMENT}}": format_environment(bug.get("environment")),
-        "{{GLOBAL_CONTEXT}}": format_global_context(global_context),
+        "{{GLOBAL_CONTEXT}}": format_global_context(global_context, project_root),
         "{{TEAM_CONFIG_PATH}}": team_config_path,
         "{{DEV_SUBAGENT_PATH}}": dev_subagent,
         "{{REVIEWER_SUBAGENT_PATH}}": reviewer_subagent,
