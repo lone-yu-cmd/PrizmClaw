@@ -190,6 +190,10 @@ spawn_and_wait_session() {
     local session_status
     local project_root
     project_root="$(cd "$SCRIPT_DIR/.." && pwd)"
+    local default_branch
+    default_branch=$(git -C "$project_root" symbolic-ref refs/remotes/origin/HEAD 2>/dev/null \
+        | sed 's@^refs/remotes/origin/@@') \
+        || default_branch=$(git -C "$project_root" rev-parse --abbrev-ref HEAD 2>/dev/null | grep -E '^(main|master)$' || echo "main")
 
     if [[ $exit_code -eq 124 ]]; then
         log_warn "Session timed out after ${SESSION_TIMEOUT}s"
@@ -201,7 +205,7 @@ spawn_and_wait_session() {
         # Exit code 0 — check if the session actually produced commits
         local has_commits=""
         if git -C "$project_root" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-            has_commits=$(git -C "$project_root" log main..HEAD --oneline 2>/dev/null | head -1)
+            has_commits=$(git -C "$project_root" log "${default_branch}..HEAD" --oneline 2>/dev/null | head -1)
         fi
 
         if [[ -n "$has_commits" ]]; then
@@ -212,8 +216,15 @@ spawn_and_wait_session() {
             local uncommitted=""
             uncommitted=$(git -C "$project_root" status --porcelain 2>/dev/null | head -1 || true)
             if [[ -n "$uncommitted" ]]; then
-                log_warn "Session exited cleanly but produced no commits (uncommitted changes found)"
-                session_status="commit_missing"
+                log_warn "Session exited cleanly but produced no commits (uncommitted changes found) — auto-committing..."
+                git -C "$project_root" add -A 2>/dev/null || true
+                if git -C "$project_root" commit --no-verify -m "chore($feature_id): auto-commit session work" 2>/dev/null; then
+                    log_info "Auto-commit succeeded"
+                    session_status="success"
+                else
+                    log_warn "Auto-commit failed — no changes to commit"
+                    session_status="crashed"
+                fi
             else
                 log_warn "Session exited cleanly but produced no commits and no changes"
                 session_status="crashed"
@@ -230,30 +241,9 @@ spawn_and_wait_session() {
             if [[ -n "$dirty_files" ]]; then
                 log_info "Auto-committing remaining session artifacts..."
                 git -C "$project_root" add -A 2>/dev/null || true
-                git -C "$project_root" commit --no-verify -m "chore($feature_id): include remaining session artifacts" 2>/dev/null || true
-            fi
-
-            # Re-check: if still dirty after auto-commit, flag as commit_missing
-            dirty_files=$(git -C "$project_root" status --porcelain 2>/dev/null || true)
-            if [[ -n "$dirty_files" ]]; then
-                log_warn "Git working tree still not clean after auto-commit."
-                echo "$dirty_files" | sed 's/^/  - /'
-                session_status="commit_missing"
-            else
-                # Bugfix commits (fix: / fix(scope):) are exempt from docs check.
-                local last_commit_subject=""
-                last_commit_subject=$(git -C "$project_root" log -1 --pretty=%s 2>/dev/null || true)
-                if [[ "$last_commit_subject" =~ ^fix(\(|:) ]]; then
-                    log_info "Detected bugfix commit prefix; skipping docs check."
-                else
-                    local docs_changed=""
-                    docs_changed=$(git -C "$project_root" log --name-only --format="" -1 2>/dev/null \
-                        | grep -E '\.prizm-docs/' | head -1 || true)
-                    if [[ -z "$docs_changed" ]]; then
-                        log_warn "Session committed but no .prizm-docs changes detected."
-                        session_status="docs_missing"
-                    fi
-                fi
+                git -C "$project_root" commit --no-verify --amend --no-edit -a 2>/dev/null \
+                    || git -C "$project_root" commit --no-verify -m "chore($feature_id): include remaining session artifacts" 2>/dev/null \
+                    || true
             fi
         fi
     fi

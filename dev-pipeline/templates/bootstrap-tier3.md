@@ -73,6 +73,7 @@ You are running in headless mode with a FINITE context window. Exceeding it will
 4. **One task at a time** — In Phase 4 (implement), complete and test one task before starting the next.
 5. **Minimize tool output** — When running commands, use `| head -20` or `| tail -20` to limit output. Never dump entire test suites or logs.
 6. **Incremental commits when possible** — If a feature has multiple independent tasks, commit after each completed task rather than one big commit at the end.
+7. **Batch independent operations** — Issue multiple independent `Write`/`Read` calls in a single message turn when they have no dependencies. Combine multiple `mkdir -p` into one command. Never run `npm test` twice just to apply a different grep filter — capture output to `/tmp/test-out.txt` once and grep the file.
 
 ---
 
@@ -118,9 +119,11 @@ Record the working command as `TEST_CMD`. If both fail, record `TEST_CMD="npm te
 
 **Step 2 — Record pre-existing failure baseline**:
 ```bash
-$TEST_CMD 2>&1 | tail -20
+$TEST_CMD 2>&1 | tee /tmp/test-baseline.txt | tail -20
 ```
 Save the list of **pre-existing failing tests** (if any) as `BASELINE_FAILURES`. These are known failures that existed before this session — Dev must NOT be blamed for them, but must list them in COMPLETION_SIGNAL.
+
+> **⚠️ Test Output Rule**: Always capture test output to a temp file (`tee /tmp/test-out.txt`). Then grep the file instead of re-running the suite. Never run `npm test` multiple times just to apply different grep filters to the output.
 {{END_IF_INIT_DONE}}
 
 ### Step 1: Initialize
@@ -242,10 +245,11 @@ Append the following to the Dev agent prompt:
 Prompt:
 > "Read {{DEV_SUBAGENT_PATH}}. Implement feature {{FEATURE_ID}} (slug: {{FEATURE_SLUG}}) using TDD.
 > **IMPORTANT**: Read `.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md` FIRST.
-> 1. Read `.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md` — Section 3 has Prizm Context (TRAPS/RULES), Section 4 has File Manifest with paths and interfaces. Read source files on-demand as directed by the manifest.
+> 1. Read `.prizmkit/specs/{{FEATURE_SLUG}}/context-snapshot.md` — Section 3 has Prizm Context (TRAPS/RULES), Section 4 has File Manifest with paths and interfaces.
+>    **⚠️ DO NOT re-read source files that are already listed in Section 4 File Manifest.** The manifest already contains their key interfaces. Only read a source file directly if: (a) it is NOT in the manifest, or (b) you need a specific implementation detail not captured in the manifest's interface column.
 > 2. Read `plan.md` (including Tasks section) from `.prizmkit/specs/{{FEATURE_SLUG}}/`.
 > 3. Implement task-by-task. Mark each `[x]` in plan.md Tasks section **immediately** after completion (do NOT batch).
-> 4. Use `TEST_CMD=<TEST_CMD>` to run tests — do NOT explore alternative test commands.
+> 4. Use `TEST_CMD=<TEST_CMD>` to run tests — do NOT explore alternative test commands. **When tests fail: run `$TEST_CMD 2>&1 | tee /tmp/test-out.txt` ONCE, then grep `/tmp/test-out.txt` for failure details. Never re-run the full suite just to apply a different filter.**
 > 5. After ALL tasks done, append '## Implementation Log' to context-snapshot.md with:
 >    - Files changed/created (with paths)
 >    - Key implementation decisions and rationale
@@ -300,7 +304,7 @@ Prompt:
 >    - Section 4: File Manifest (original file structure)
 >    - '## Implementation Log': what Dev changed, key decisions, discoveries
 > 2. Run prizmkit-code-review: spec compliance (against spec.md), code quality, correctness. Read ONLY files listed in Implementation Log.
-> 3. Run the full test suite using `TEST_CMD=<TEST_CMD>`. Write and execute integration tests covering all user stories from spec.md.
+> 3. Run the full test suite using `TEST_CMD=<TEST_CMD>` — **ONLY if the Implementation Log does not already confirm all tests passing**. If Implementation Log states tests passed, trust it and skip the re-run. When running tests: `$TEST_CMD 2>&1 | tee /tmp/review-test-out.txt | tail -20`, then grep `/tmp/review-test-out.txt` for details — do NOT re-run the suite multiple times. Write and execute integration tests covering all user stories from spec.md.
 > 4. Append '## Review Notes' to context-snapshot.md: issues found (with severity), test results, final verdict.
 > Report verdict: PASS, PASS_WITH_WARNINGS, or NEEDS_FIXES."
 

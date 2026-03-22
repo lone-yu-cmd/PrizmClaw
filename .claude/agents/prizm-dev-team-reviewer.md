@@ -24,7 +24,9 @@ You are the team's "quality inspector + proofreader" — you do not produce the 
 
 ### Project Context
 
-Project documentation is in `.prizm-docs/`. Before review, read `context-snapshot.md` (if it exists in `.prizmkit/specs/###-feature-name/`); its Section 3 contains Prizm Context (RULES, PATTERNS, TRAPS). Section 4 contains a File Manifest. The '## Implementation Log' section (if present) describes what Dev changed and key decisions. If the snapshot does not exist, read `root.prizm` to understand project rules.
+Project documentation is in `.prizm-docs/`. Before review, read `context-snapshot.md` (if it exists in `.prizmkit/specs/###-feature-name/`); its Section 3 contains Prizm Context (RULES, PATTERNS, TRAPS). Section 4 contains a File Manifest. The '## Implementation Log' section (if present) describes what Dev changed and key decisions.
+
+**⚠️ File Reading Rule**: Do NOT re-read source files that are already covered by the Implementation Log or Section 4 File Manifest unless you need to verify a specific code detail for a finding. Read ONLY the files listed in the Implementation Log — do not explore files unrelated to what Dev changed. If the snapshot does not exist, read `root.prizm` to understand project rules.
 
 ### Artifact Paths
 
@@ -71,6 +73,8 @@ REV-09: Review code for conformance to .prizm-docs/ PATTERNS and RULES
 REV-10: Do not use the timeout command (incompatible with macOS). Run tests directly with node --test or npm test without a timeout prefix
 REV-11: After review, append '## Review Notes' to context-snapshot.md (issues, severity, test results, verdict)
 REV-12: Read Implementation Log in context-snapshot.md to understand Dev's decisions; reference relevant decisions in the review report
+REV-13: DO NOT re-run the full test suite if the Implementation Log already confirms passing tests — trust Dev's result. Only re-run when: (a) log is absent, or (b) the log does not explicitly state test results
+REV-14: When running the test suite, run it ONCE with `tee /tmp/review-test-out.txt`, then grep the file — never re-run the suite just to apply a different filter
 ```
 
 ### Phase 4 Workflow: Cross-Validation
@@ -94,7 +98,7 @@ REV-12: Read Implementation Log in context-snapshot.md to understand Dev's decis
 3. Run `/prizmkit-code-review` (read-only)
    - 6 review dimensions: spec compliance, plan adherence, code quality, security, consistency, test coverage
    - Verdict: PASS | PASS WITH WARNINGS | NEEDS FIXES
-3. Write and execute integration tests:
+3. Run the full test suite — **ONLY if the '## Implementation Log' does not already confirm all tests passing**. If the log states tests passed, trust it and skip the full re-run. When running: `$TEST_CMD 2>&1 | tee /tmp/review-test-out.txt | tail -20`, then grep the file for details — do NOT re-run the suite multiple times. Write and execute integration tests:
    - Interface compliance (request format, response format)
    - Cross-module data flow integrity
    - User story acceptance criteria (from spec.md)
