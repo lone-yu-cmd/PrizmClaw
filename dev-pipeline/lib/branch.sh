@@ -81,9 +81,10 @@ branch_return() {
 # Merges dev_branch into original_branch, then optionally pushes.
 # Steps:
 #   1. Checkout original_branch
-#   2. Merge dev_branch (fast-forward when possible)
-#   3. Push to remote if auto_push == "1"
-#   4. Delete dev_branch (local only, it's been merged)
+#   2. Rebase dev_branch onto original_branch (handles diverged main)
+#   3. Fast-forward merge original_branch to rebased dev tip
+#   4. Push to remote if auto_push == "1"
+#   5. Delete dev_branch (local only, it's been merged)
 #
 # Returns 0 on success, 1 on failure.
 branch_merge() {
@@ -100,15 +101,28 @@ branch_merge() {
         git -C "$project_root" add -A 2>/dev/null || true
         git -C "$project_root" commit --no-verify -m "chore: include pipeline state artifacts" 2>/dev/null || true
     fi
+
+    # Step 2: Rebase dev branch onto original to make it fast-forwardable.
+    # This handles the case where original_branch has diverged
+    # (e.g. commits were made on main while the pipeline was running).
+    # "git rebase A B" is equivalent to: git checkout B && git rebase A
+    log_info "Merging $dev_branch into $original_branch..."
+    if ! git -C "$project_root" rebase "$original_branch" "$dev_branch" 2>&1; then
+        log_error "Rebase of $dev_branch onto $original_branch failed — resolve manually:"
+        log_error "  git rebase --abort  # then resolve conflicts and retry"
+        git -C "$project_root" rebase --abort 2>/dev/null || true
+        git -C "$project_root" checkout "$dev_branch" 2>/dev/null || true
+        return 1
+    fi
+    # After the rebase we are on dev_branch — checkout original for the fast-forward
     if ! git -C "$project_root" checkout "$original_branch" 2>/dev/null; then
         log_error "Failed to checkout $original_branch for merge"
         return 1
     fi
 
-    # Step 2: Merge dev branch (fast-forward only — avoids interactive merge commit editor)
-    log_info "Merging $dev_branch into $original_branch..."
+    # Step 3: Fast-forward original_branch to the rebased dev tip
     if ! git -C "$project_root" merge --ff-only "$dev_branch" 2>&1; then
-        log_error "Merge failed (non-fast-forward) — resolve manually:"
+        log_error "Merge failed after rebase — this should not happen, resolve manually:"
         log_error "  git checkout $original_branch && git rebase $dev_branch"
         git -C "$project_root" checkout "$dev_branch" 2>/dev/null || true
         return 1
@@ -116,7 +130,7 @@ branch_merge() {
 
     log_success "Merged $dev_branch into $original_branch"
 
-    # Step 3: Push if AUTO_PUSH enabled
+    # Step 4: Push if AUTO_PUSH enabled
     if [[ "$auto_push" == "1" ]]; then
         log_info "Pushing $original_branch to remote..."
         if git -C "$project_root" push 2>/dev/null; then
@@ -126,7 +140,7 @@ branch_merge() {
         fi
     fi
 
-    # Step 4: Delete merged dev branch
+    # Step 5: Delete merged dev branch
     git -C "$project_root" branch -d "$dev_branch" 2>/dev/null && \
         log_info "Deleted merged branch: $dev_branch" || true
 

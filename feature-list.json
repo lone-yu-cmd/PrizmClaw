@@ -573,7 +573,7 @@
         "Given 页面在不同分辨率下渲染，When 查看 panel，Then 阴影在各断点下均正确显示",
         "Given 深色背景与浅色面板，When 查看卡片阴影，Then 阴影颜色与整体配色协调"
       ],
-      "status": "pending",
+      "status": "completed",
       "session_granularity": "feature",
       "sub_features": []
     },
