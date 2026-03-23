@@ -224,8 +224,8 @@ Detect user intent from their message, then follow the corresponding workflow:
 
 4. **For per-feature session logs** (when user asks about a specific feature):
    ```bash
-   # Find current/recent session
-   cat dev-pipeline/state/current-session.json 2>/dev/null
+   # Check feature status for last session ID
+   cat dev-pipeline/state/features/<FEATURE_ID>/status.json 2>/dev/null
    # Then tail that feature's session log
    tail -100 dev-pipeline/state/features/<FEATURE_ID>/sessions/<SESSION_ID>/logs/session.log
    ```
@@ -295,4 +295,4 @@ Notes:
 - **Single instance**: Only one pipeline can run at a time. The PID file prevents duplicates.
 - **Pipeline coexistence**: Feature and bugfix pipelines use separate state directories (`state/` vs `bugfix-state/`), so they can run simultaneously without conflict.
 - **State preservation**: Stopping and restarting the pipeline resumes from where it left off -- completed features are not re-run.
-- **HANDOFF**: After pipeline completes all features, suggest running `prizmkit-retrospective` for project memory update, or ask user what's next.
+- **HANDOFF**: After pipeline completes all features, suggest running `prizmkit-retrospective` for `.prizm-docs/` architecture sync, or ask user what's next.

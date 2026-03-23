@@ -29,9 +29,8 @@ Execute implementation by following the task breakdown in plan.md. Respects task
 2. Load project context — use the most efficient source available:
    - If `context-snapshot.md` exists in the feature directory → read it. Section 3 has Prizm docs + TRAPS. Section 4 has File Manifest (Tier-2/3) or full source (Tier-1). Read source files on-demand as directed by the manifest.
    - Otherwise → **self-service context fallback**:
-     1. Read **architecture index**: `.prizm-docs/root.prizm` and relevant L1/L2 for affected modules. Pay special attention to TRAPS.
-     2. Read **project memory**: platform memory file for past DECISIONS and interface conventions.
-     3. Scan needed source files
+     1. Read **architecture index**: `.prizm-docs/root.prizm` and relevant L1/L2 for affected modules. Pay special attention to TRAPS and DECISIONS.
+     2. Scan needed source files
 3. Check if checkpoint tasks are complete before proceeding to next phase
 4. For each unchecked task in order:
    a. If task has `[P]` marker, it can run in parallel with other `[P]` tasks in the same group

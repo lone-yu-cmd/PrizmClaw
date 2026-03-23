@@ -21,7 +21,6 @@ Project takeover and bootstrap skill. Scans any project (brownfield or greenfiel
 - If `.prizm-docs/` already exists: ask user if they want to reinitialize (overwrites) or update (preserves)
 - If no source files found in any directory: fall back to greenfield mode
 - If platform cannot be detected: ask user explicitly which platform(s) to configure
-- If `.claude/command-assets/prizmkit-init/../../../assets/project-memory-template.md` is missing: generate inline PrizmKit section instead of failing
 
 ## Execution Steps
 
@@ -73,13 +72,7 @@ Invoke prizmkit-prizm-docs (Init operation), passing the two-tier module structu
   - `.claude/rules/prizm-commit-workflow.md` (commit workflow enforcement)
 4d. Preserve any existing hooks and settings — never overwrite user's custom configuration
 
-**Step 5: Project Memory Update**
-
-5a. Read existing project memory file (`CODEBUDDY.md` or `CLAUDE.md`) or create if missing
-5b. Append PrizmKit section from `.claude/command-assets/prizmkit-init/../../../assets/project-memory-template.md`
-5c. Do not duplicate if PrizmKit section already present
-
-**Step 6: Report**
+**Step 5: Report**
 Output summary: platform detected, tech stack detected, modules discovered, L1 docs generated, platform-specific configuration applied, next recommended steps.
 
 Include platform-specific guidance:
@@ -89,8 +82,7 @@ Include platform-specific guidance:
 GREENFIELD WORKFLOW (new project):
 - Skip Step 1 (no code to scan)
 - Step 2: Create minimal `.prizm-docs/` with just `root.prizm` skeleton
-- Steps 3-5: Same as brownfield
-- Step 6: Recommend starting with specify for first feature (platform-appropriate command format)
+- Steps 3-5: Same as brownfield (Step 5 Report recommends starting with specify for first feature)
 
 ### Gradual Adoption Path
 After init, PrizmKit operates in phases:
@@ -105,7 +97,7 @@ User can change mode in `.prizmkit/config.json`: `"adoption_mode": "passive" | "
 | Concept | CodeBuddy | Claude Code |
 |---------|-----------|-------------|
 | Command invocation | `/prizmkit-xxx` | `/prizmkit-xxx` |
-| Project memory | `CODEBUDDY.md` + `memory/MEMORY.md` | `CLAUDE.md` |
+| Project knowledge | `.prizm-docs/` | `.prizm-docs/` |
 | Settings | `.codebuddy/settings.json` | `.claude/settings.json` |
 | Skills/Commands | `.codebuddy/skills/` | `.claude/commands/` |
 | Agents | `.codebuddy/agents/` | `.claude/agents/` |
@@ -130,7 +122,6 @@ Modules discovered:
 
 Generated: root.prizm + 4 L1 docs + changelog.prizm
 Configured: .claude/rules/ (2 files), hooks in settings.json
-Updated: CLAUDE.md with PrizmKit section
 
 Next: Use /prizmkit-specify to start your first feature
 ```

@@ -354,12 +354,11 @@ git log --oneline | grep "{{FEATURE_ID}}" | head -3
 - If a commit for `{{FEATURE_ID}}` already exists → **skip 6c** (do NOT run /prizmkit-committer, do NOT run git reset, do NOT stage or unstage anything). Proceed directly to Final Clean Check.
 - If no existing commit → proceed normally with 6a–6c.
 
-**6b.** Run `/prizmkit-retrospective` (**before commit**, maintains `.prizm-docs/` architecture index and platform memory files):
+**6b.** Run `/prizmkit-retrospective` (**before commit**, maintains `.prizm-docs/` architecture index):
 - **Structural sync**: update KEY_FILES/INTERFACES/DEPENDENCIES/file counts for changed modules
-- **Architecture knowledge** (feature sessions only): extract TRAPS, RULES from completed work into `.prizm-docs/`
-- **Memory sedimentation** (feature sessions only): sediment DECISIONS and interface conventions to platform memory file (`CLAUDE.md` for Claude Code, BOTH `CODEBUDDY.md` AND `memory/MEMORY.md` for CodeBuddy)
+- **Architecture knowledge** (feature sessions only): extract TRAPS, RULES, DECISIONS from completed work into `.prizm-docs/`
 - Stage all doc changes: `git add .prizm-docs/`
-- **For bug-fix sessions**: structural sync only, skip knowledge injection and memory sedimentation unless a genuinely new pitfall was discovered
+- **For bug-fix sessions**: structural sync only, skip knowledge injection unless a genuinely new pitfall was discovered
 
 **6c.** Run `/prizmkit-committer` → `feat({{FEATURE_ID}}): {{FEATURE_TITLE}}`, do NOT push
 

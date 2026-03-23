@@ -802,6 +802,28 @@ export async function createTelegramBot() {
     }
   });
 
+  // /clear — clear conversation history only, keep cwd/backend/session state
+  bot.command('clear', async (ctx) => {
+    try {
+      ensureAllowed(ctx);
+      const sessionKey = buildSessionKey(ctx);
+
+      // Interrupt any running AI CLI task
+      if (isAiCliRunning(sessionKey)) {
+        interruptAiCli(sessionKey);
+      }
+
+      // Clear only conversation messages, preserve session state (cwd, backend, etc.)
+      const messages = sessionStore.get(sessionKey);
+      messages.length = 0;
+
+      const cwd = sessionStore.getCwd(sessionKey);
+      await ctx.reply(`🔄 对话上下文已清除。${cwd ? `\n当前工作目录: ${cwd}` : ''}`);
+    } catch (error) {
+      await ctx.reply(error instanceof Error ? error.message : String(error));
+    }
+  });
+
   bot.command('screenshot', async (ctx) => {
     try {
       ensureAllowed(ctx);
@@ -1087,7 +1109,11 @@ export async function createTelegramBot() {
       // Extract file markers and send
       const { fileRefs, cleanedText } = extractFileMarkers(replyText);
       logger.info({ sessionId, fileRefsCount: fileRefs.length, fileRefs }, 'Parsed file markers from assistant reply');
-      const finalText = cleanedText || (fileRefs.length > 0 ? '已执行，正在发送文件。' : '已执行。');
+      const bodyText = cleanedText || (fileRefs.length > 0 ? '已执行，正在发送文件。' : '已执行。');
+
+      // Prepend current working directory to every reply
+      const cwd = sessionStore.getCwd(sessionKey) || process.cwd();
+      const finalText = `📂 ${cwd}\n${bodyText}`;
 
       streamPublisher.setFinalText(finalText);
       const streamed = await streamPublisher.finish();

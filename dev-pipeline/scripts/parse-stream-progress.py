@@ -58,7 +58,7 @@ PHASE_KEYWORDS = {
     },
     "retrospective": {
         "strong": ["prizmkit-retrospective"],
-        "weak": ["retrospective", "structural sync", "knowledge distillation", ".prizm-docs/ sync", "memory sedimentation"],
+        "weak": ["retrospective", "structural sync", "architecture knowledge", ".prizm-docs/ sync"],
     },
     "commit": {
         "strong": ["prizmkit-committer"],

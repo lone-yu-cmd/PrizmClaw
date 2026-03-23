@@ -180,11 +180,10 @@ If GATE:MISSING — send message to Reviewer (re-spawn if needed): "Write the '#
 
 ### Phase 5: Architecture Sync & Commit
 
-**5a.** Run `/prizmkit-retrospective` — maintains `.prizm-docs/` (architecture index) and platform memory files:
+**5a.** Run `/prizmkit-retrospective` — maintains `.prizm-docs/` (architecture index):
 1. **Structural sync**: Use `git diff --cached --name-status` to locate changed modules, update KEY_FILES/INTERFACES/DEPENDENCIES/file counts in affected `.prizm-docs/` files
-2. **Architecture knowledge** (feature sessions only): Extract TRAPS/RULES from completed work into `.prizm-docs/`
-3. **Memory sedimentation** (feature sessions only): Sediment DECISIONS and interface conventions to platform memory file (`CLAUDE.md` for Claude Code, BOTH `CODEBUDDY.md` AND `memory/MEMORY.md` for CodeBuddy)
-4. Stage all doc changes: `git add .prizm-docs/`
+2. **Architecture knowledge** (feature sessions only): Extract TRAPS/RULES/DECISIONS from completed work into `.prizm-docs/`
+3. Stage all doc changes: `git add .prizm-docs/`
 
 Doc maintenance pass condition (pipeline-enforced): `.prizm-docs/` changed in the final commit.
 

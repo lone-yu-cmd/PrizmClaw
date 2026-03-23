@@ -32,8 +32,7 @@ Project documentation is in `.prizm-docs/`. Before review, read `context-snapsho
 
 | Path | Purpose |
 |------|---------|
-| `.prizm-docs/` | Architecture index — module structure, interfaces, dependencies, known traps (TRAPS) |
-| `CLAUDE.md` / `CODEBUDDY.md` + `memory/MEMORY.md` | Project memory — development decisions (DECISIONS), interface conventions, project-level rules |
+| `.prizm-docs/` | Architecture index — module structure, interfaces, dependencies, known traps (TRAPS), design decisions (DECISIONS) |
 | `.prizmkit/specs/###-feature-name/` | Feature artifacts — spec.md / plan.md (with Tasks section) |
 
 ### Must Do (MUST)

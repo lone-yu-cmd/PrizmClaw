@@ -99,7 +99,7 @@
           },
           "model": {
             "type": "string",
-            "description": "AI model ID for this feature. Overrides $MODEL env var. See .prizmkit/available-models.json for valid IDs."
+            "description": "AI model ID for this feature. Overrides $MODEL env var."
           }
         }
       }

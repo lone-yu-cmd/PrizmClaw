@@ -1,7 +1,7 @@
 {
-  "version": "1.0.95",
+  "version": "1.0.97",
   "installedAt": "2026-03-21T17:22:37.068Z",
-  "updatedAt": "2026-03-23T08:21:39.356Z",
+  "updatedAt": "2026-03-23T12:55:21.680Z",
   "platform": "claude",
   "suite": "core",
   "options": {
@@ -54,7 +54,6 @@
       "lib/heartbeat.sh",
       "scripts/check-session-status.py",
       "scripts/cleanup-logs.py",
-      "scripts/detect-models.sh",
       "scripts/detect-stuck.py",
       "scripts/generate-bootstrap-prompt.py",
       "scripts/generate-bugfix-prompt.py",
@@ -65,7 +64,6 @@
       "scripts/update-bug-status.py",
       "scripts/update-feature-status.py",
       "scripts/utils.py",
-      "scripts/validate-feature-models.py",
       "templates/bootstrap-prompt.md",
       "templates/bootstrap-tier1.md",
       "templates/bootstrap-tier2.md",

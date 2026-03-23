@@ -170,9 +170,6 @@ python3 "$SCRIPTS_DIR/update-feature-status.py" \
     log_warn "Failed to clean feature artifacts (continuing with fresh session only)"
 }
 
-# Auto-detect available models (quiet, non-blocking)
-bash "$SCRIPT_DIR/scripts/detect-models.sh" --quiet 2>/dev/null || true
-
 # ============================================================
 # Generate bootstrap prompt
 # ============================================================

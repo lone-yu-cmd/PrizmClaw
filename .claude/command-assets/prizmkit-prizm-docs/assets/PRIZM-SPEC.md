@@ -179,6 +179,12 @@ TEMPLATE:
   - NEVER: <module-specific prohibition>
   - PREFER: <module-specific preference>
 
+  TRAPS:
+  - <what looks safe but is dangerous> | FIX: <correct approach>
+
+  DECISIONS:
+  - <what was decided> — <rationale>
+
   DATA_FLOW:
   - <numbered step describing how data moves through this module>
 
@@ -502,7 +508,7 @@ STEPS:
    Fill: PROJECT, LANG, FRAMEWORK, BUILD, TEST, ENTRY from step 1
    Build: MODULE_INDEX — list ONLY top-level modules from step 2a, one entry per module with pointer to .prizm-docs/<M>.prizm
    NEVER list sub-modules in MODULE_INDEX (sub-modules are navigated via L1 SUBDIRS pointers)
-   Extract: RULES from existing CODEBUDDY.md, CLAUDE.md, README, .editorconfig, linter configs
+   Extract: RULES from existing README, .editorconfig, linter configs
    Extract: PATTERNS from common code patterns observed in step 2
    Set: PRIZM_VERSION: 2, UPDATED: today's date
 
@@ -544,10 +550,7 @@ STEPS:
 9. CONFIGURE_HOOK:
    Add UserPromptSubmit hook to .codebuddy/settings.json (see Section 11)
 
-10. UPDATE_CODEBUDDY_MD:
-    Append Prizm protocol section to CODEBUDDY.md (see Section 12)
-
-11. REPORT:
+10. REPORT:
     Output summary: modules discovered, L1 docs generated, files excluded, warnings
 
 ## 9.2 Post-Init Behavior
@@ -713,7 +716,7 @@ JSON:
         "hooks": [
           {
             "type": "command",
-            "command": "echo 'PRIZMKIT_MAINTENANCE_REQUIRED: Before committing, you MUST run /prizmkit-retrospective. It maintains: (1) .prizm-docs/ architecture index — structural sync (KEY_FILES, INTERFACES, DEPENDENCIES) + TRAPS/RULES injection, (2) platform memory files — sediment DECISIONS and interface conventions to CLAUDE.md (Claude Code) or CODEBUDDY.md + memory/MEMORY.md (CodeBuddy). After retrospective completes, proceed with /prizmkit-committer for the actual git commit.'"
+            "command": "echo 'PRIZMKIT_MAINTENANCE_REQUIRED: Before committing, you MUST run /prizmkit-retrospective. It maintains .prizm-docs/ architecture index — structural sync (KEY_FILES, INTERFACES, DEPENDENCIES) + TRAPS/RULES/DECISIONS injection. After retrospective completes, proceed with /prizmkit-committer for the actual git commit.'"
           }
         ]
       }
@@ -745,54 +748,9 @@ The core requirement is: before any commit operation, AI must update affected .p
 
 ---
 
-# SECTION 12: CODEBUDDY.MD TEMPLATE
+# SECTION 12: LANGUAGE-SPECIFIC INITIALIZATION HINTS
 
-## 12.1 Template Section
-
-Append the following to any project's CODEBUDDY.md during Init operation:
-
-TEXT:
-
-  ## Prizm Documentation Framework
-
-  This project uses Prizm for AI-optimized, progressive context loading.
-  Full specification: ${SKILL_DIR}/assets/PRIZM-SPEC.md
-
-  ### Progressive Loading Protocol
-  - ON SESSION START: Always read .prizm-docs/root.prizm first
-  - ON TASK: Read L1 (.prizm-docs/<module>.prizm) for relevant modules referenced in MODULE_INDEX
-  - ON FILE EDIT: Read L2 (.prizm-docs/<module>/<submodule>.prizm) before modifying files. Pay attention to TRAPS.
-  - ON DEEP READ: If you need deep understanding of a module without modifying it, generate L2 if it does not exist.
-  - NEVER load all .prizm docs at once. Load only what is needed for the current task.
-
-  ### Auto-Update Protocol
-  - BEFORE EVERY COMMIT: Update affected .prizm-docs/ files per PRIZM-SPEC.md Section 7
-  - The UserPromptSubmit hook will remind you automatically
-  - If hook is not active, you MUST still follow the update protocol manually
-
-  ### Doc Format Rules
-  - All .prizm files use KEY: value format, not prose
-  - Size limits: L0 = 4KB, L1 = 3KB, L2 = 5KB
-  - Arrow notation (->) indicates load pointers to other .prizm docs
-  - DECISIONS and CHANGELOG are append-only (never delete entries)
-
-  ### RULES Hierarchy
-  - root.prizm RULES are authoritative and apply project-wide
-  - L1/L2 RULES only supplement with module-specific exceptions
-  - If L1/L2 contradict root.prizm, root.prizm takes precedence
-
-  ### Creating New L2 Docs
-  - When you first modify files in a sub-module that has no L2 doc:
-    1. Read the source files in that sub-module
-    2. Generate a new L2 .prizm file following PRIZM-SPEC.md Section 3.3
-    3. Add a pointer in the parent L1 doc's SUBDIRS section
-  - Also generate L2 when performing deep read analysis of undocumented sub-modules
-
----
-
-# SECTION 13: LANGUAGE-SPECIFIC INITIALIZATION HINTS
-
-## 13.1 Module Boundary Detection
+## 12.1 Module Boundary Detection
 
 LANGUAGE          MODULE_BOUNDARY                         ENTRY_POINT_DETECTION
 Go                Directories with .go files              main.go, cmd/**/main.go
@@ -802,7 +760,7 @@ Rust              Directories with mod.rs                 main.rs, lib.rs
 Java              src/main/java/* package directories     *Application.java, Main.java
 C#                Directories with *.cs files             Program.cs, Startup.cs
 
-## 13.2 Interface Detection
+## 12.2 Interface Detection
 
 LANGUAGE          EXPORTED_INTERFACE_PATTERN
 Go                Capitalized function/type names (func Foo, type Bar)
@@ -812,7 +770,7 @@ Rust              pub fn, pub struct, pub enum, pub trait
 Java              public class, public interface, public method
 C#                public class, public interface, public method
 
-## 13.3 Dependency Detection
+## 12.3 Dependency Detection
 
 LANGUAGE          IMPORT_PATTERN
 Go                import "path/to/package"
@@ -824,7 +782,7 @@ C#                using Namespace
 
 ---
 
-# SECTION 14: MINIMAL VIABLE PRIZM
+# SECTION 13: MINIMAL VIABLE PRIZM
 
 For any project, the minimum viable Prizm setup is:
 
@@ -842,7 +800,7 @@ Or manually create these two files following the templates in Section 3.
 
 ---
 
-# SECTION 15: VERSION HISTORY
+# SECTION 14: VERSION HISTORY
 
 V1 (2026-03-02): Initial specification
 - 3-level progressive loading (L0, L1, L2)
@@ -857,25 +815,25 @@ V2 (2026-03-02): Enhanced specification
 - Added Validate operation for format compliance and consistency checking
 - Added Migrate operation for converting existing docs to .prizm-docs/ format
 - Added RULES hierarchy: root.prizm RULES authoritative, L1/L2 supplement only with module-specific exceptions
-- Added Section 16: Conflict Resolution for multi-person collaboration merge strategies
-- Added Section 17: Version Migration for upgrading between spec versions
+- Added Section 15: Conflict Resolution for multi-person collaboration merge strategies
+- Added Section 16: Version Migration for upgrading between spec versions
 - Changed fixed skill path to ${SKILL_DIR} convention for cross-IDE compatibility
 - Enhanced Section 9.1 with ON_DEEP_READ trigger alongside ON_MODIFY
 - Updated PRIZM_SPEC_VERSION to 2
 
 ---
 
-# SECTION 16: CONFLICT RESOLUTION
+# SECTION 15: CONFLICT RESOLUTION
 
-## 16.1 Multi-Person Collaboration
+## 15.1 Multi-Person Collaboration
 
 CONTEXT: When multiple developers (human or AI) work on the same project, .prizm-docs/ files may have merge conflicts since they are committed to git.
 
-## 16.2 Merge Strategies by Section Type
+## 15.2 Merge Strategies by Section Type
 
 APPEND_ONLY_SECTIONS:
 - changelog.prizm: Append-only. Use standard git merge. Both sides' entries are kept. Sort by date descending after merge.
-- DECISIONS (in any .prizm file): Legacy — new DECISIONS go to platform memory files (CLAUDE.md / CODEBUDDY.md + memory/MEMORY.md). Existing DECISIONS in .prizm files are kept for backward compatibility. On merge conflicts, keep all entries from both sides.
+- DECISIONS (in any .prizm file): Append-only. Keep all entries from both sides on merge conflicts.
 - REJECTED (in any .prizm file): Append-only. Keep all entries from both sides.
 - CHANGELOG (in L2 docs): Append-only. Keep all entries from both sides.
 
@@ -889,7 +847,7 @@ LATEST_WINS_SECTIONS:
 - RULES: Take the version from the branch with more recent UPDATED timestamp
 - TRAPS: Union of both sides (traps are safety-critical, never discard)
 
-## 16.3 Conflict Resolution Algorithm
+## 15.3 Conflict Resolution Algorithm
 
 ALGORITHM: prizm_merge_conflict
 
@@ -914,7 +872,7 @@ ALGORITHM: prizm_merge_conflict
    FLAG: Sections where both versions modified the same KEY: value line with different values
    REPORT: List conflicted keys for human review
 
-## 16.4 Prevention
+## 15.4 Prevention
 
 BEST_PRACTICE: Run prizmkit-prizm-docs Update operation immediately before committing to minimize drift
 BEST_PRACTICE: Keep .prizm doc changes small and focused (section-level, not file-level rewrites)
@@ -922,15 +880,15 @@ BEST_PRACTICE: Coordinate on MODULE_INDEX changes (adding/removing modules) to a
 
 ---
 
-# SECTION 17: VERSION MIGRATION
+# SECTION 16: VERSION MIGRATION
 
-## 17.1 Migration Principles
+## 16.1 Migration Principles
 
 BACKWARD_COMPATIBLE: V2 can read V1 docs without modification
 FORWARD_COMPATIBLE: V1 tools will ignore V2-only fields they do not recognize
 MIGRATION_TRIGGER: AI detects PRIZM_VERSION in root.prizm and applies migration if needed
 
-## 17.2 V1 to V2 Migration
+## 16.2 V1 to V2 Migration
 
 TRIGGER: Automatic on first prizmkit-prizm-docs Update or Validate operation after spec upgrade
 
@@ -953,7 +911,7 @@ ALGORITHM: prizm_migrate_v1_to_v2
 4. UPDATE_CHANGELOG:
    APPEND: - YYYY-MM-DD | root | update: migrated from PRIZM_VERSION 1 to 2
 
-## 17.3 Future Version Migration Pattern
+## 16.3 Future Version Migration Pattern
 
 FOR any future version N to N+1:
 

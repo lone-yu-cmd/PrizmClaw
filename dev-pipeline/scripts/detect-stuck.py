@@ -188,8 +188,8 @@ def check_stuck_checkpoint(feature_dir):
 def check_stale_heartbeat(feature_id, feature_status, state_dir, stale_threshold):
     """Check 3: Is the heartbeat stale or missing for an in_progress feature?
 
-    Only applies to features whose status is 'in_progress' and whose session
-    matches the current session.
+    Only applies to features whose status is 'in_progress'.
+    Uses last_session_id from the feature's own status to find the active session.
 
     Returns a stuck-report dict or None.
     """
@@ -197,18 +197,8 @@ def check_stale_heartbeat(feature_id, feature_status, state_dir, stale_threshold
     if status != "in_progress":
         return None
 
-    # Read current-session.json to find the active session
-    current_session_path = os.path.join(state_dir, "current-session.json")
-    current_session = load_json(current_session_path)
-    if current_session is None:
-        return None
-
-    # Check if the current session is for this feature
-    session_feature = current_session.get("feature_id")
-    if session_feature != feature_id:
-        return None
-
-    session_id = current_session.get("session_id")
+    # Use last_session_id from the feature's own status
+    session_id = feature_status.get("last_session_id")
     if not session_id:
         return None
 

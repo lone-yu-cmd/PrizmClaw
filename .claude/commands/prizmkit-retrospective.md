@@ -1,25 +1,21 @@
 ---
-description: "Incremental .prizm-docs/ and project memory maintainer. Performs three jobs: (1) structural sync — update .prizm-docs/ KEY_FILES/INTERFACES/DEPENDENCIES, (2) architecture knowledge — inject TRAPS/RULES into .prizm-docs/, (3) memory sedimentation — sediment DECISIONS/interface conventions to platform memory files (CLAUDE.md or CODEBUDDY.md+memory/MEMORY.md). Run after code review passes and before committing. Trigger on: 'retrospective', 'retro', 'update docs', 'sync docs', 'wrap up', 'done with feature', 'feature complete'. (project)"
+description: "Incremental .prizm-docs/ maintainer. Performs two jobs: (1) structural sync — update .prizm-docs/ KEY_FILES/INTERFACES/DEPENDENCIES, (2) architecture knowledge — inject TRAPS/RULES/DECISIONS into .prizm-docs/. All project knowledge lives in .prizm-docs/ — no writes to CLAUDE.md/CODEBUDDY.md/memory/MEMORY.md. Run after code review passes and before committing. Trigger on: 'retrospective', 'retro', 'update docs', 'sync docs', 'wrap up', 'done with feature', 'feature complete'. (project)"
 ---
 
 # PrizmKit Retrospective
 
-Maintains two distinct knowledge stores with clear separation of concerns:
+All project knowledge is maintained in a single store:
 
 | Store | Location | Content | Purpose |
 |-------|----------|---------|---------|
-| **Architecture Index** | `.prizm-docs/` | MODULE, FILES, INTERFACES, DEPENDENCIES, TRAPS, RULES | AI quickly locates code structure, interfaces, and known pitfalls |
-| **Project Memory** | `CLAUDE.md` or `CODEBUDDY.md` + `memory/MEMORY.md` | DECISIONS, interface conventions, project-level rules | Decisions and conventions that influence future development direction |
+| **Architecture Index** | `.prizm-docs/` | MODULE, FILES, INTERFACES, DEPENDENCIES, TRAPS, RULES, DECISIONS | AI quickly locates code structure, interfaces, known pitfalls, and key design decisions |
 
-**Reading guide for other skills**:
-- Need to understand code structure/modules/interfaces? → Read `.prizm-docs/`
-- Need to understand past decisions/conventions/why? → Read platform memory file (`CLAUDE.md` for Claude Code, `CODEBUDDY.md` + `memory/MEMORY.md` for CodeBuddy)
-
-**This skill performs three jobs in one pass:**
+**This skill performs two jobs in one pass:**
 
 1. **Structural Sync** — reflect what changed in code → `.prizm-docs/` (KEY_FILES, INTERFACES, DEPENDENCIES, file counts)
-2. **Architecture Knowledge** — inject TRAPS and module-level RULES → `.prizm-docs/`
-3. **Memory Sedimentation** — sediment DECISIONS and interface conventions → platform memory files
+2. **Architecture Knowledge** — inject TRAPS, RULES, and DECISIONS → `.prizm-docs/`
+
+**Important**: This skill does NOT write to `CLAUDE.md`, `CODEBUDDY.md`, or `memory/MEMORY.md`. All knowledge is consolidated in `.prizm-docs/`.
 
 No other skill writes to `.prizm-docs/`. This is the sole writer during ongoing development. For initial doc setup, validation, or migration, use `/prizmkit-prizm-docs` instead.
 
@@ -82,9 +78,9 @@ git diff --name-status
 
 ## Job 2: Architecture Knowledge Injection → `.prizm-docs/`
 
-Extract TRAPS and module-level RULES from development work and inject into `.prizm-docs/`. **DECISIONS do NOT go here** — they are sedimented to platform memory files in Job 3.
+Extract TRAPS, RULES, and DECISIONS from development work and inject into `.prizm-docs/`. All project knowledge lives in `.prizm-docs/` — no external memory files.
 
-`.prizm-docs/` is the **architecture index**: it tells AI *what code exists, how it connects, and what pitfalls to avoid*. It does NOT store *why* a design choice was made — that belongs in project memory.
+`.prizm-docs/` is the **single source of project knowledge**: it tells AI *what code exists, how it connects, what pitfalls to avoid, and why key design choices were made*.
 
 ### When to run Job 2
 
@@ -113,94 +109,19 @@ Extract TRAPS and module-level RULES from development work and inject into `.pri
 - Format: `- MUST/NEVER/PREFER: <rule>`
 - Source: patterns that proved necessary during implementation
 
-**QUALITY GATE**: Every item must answer: "If a new AI session reads only `.prizm-docs/` and this entry, does it gain actionable understanding that prevents mistakes?" If not, discard. DECISIONS (why we chose A over B) belong in project memory, not here.
+**DECISIONS** — key design choices that affect future development:
+- Format: `- <what was decided> — <rationale>`
+- Source: non-obvious design choices, interface conventions, cross-module contracts
+- Only record decisions that a future AI session would benefit from knowing
+- Do NOT record obvious implementation details that can be derived by reading the code
+
+**QUALITY GATE**: Every item must answer: "If a new AI session reads only `.prizm-docs/` and this entry, does it gain actionable understanding?" If not, discard. Do not record trivially observable code patterns — the AI can read the code directly.
 
 **2c.** Inject into the correct `.prizm-docs/` file:
-- Module-level TRAPS/RULES → the affected L1 or L2 `.prizm` file
+- Module-level TRAPS/RULES/DECISIONS → the affected L1 or L2 `.prizm` file's corresponding section
 - Project-level RULES/PATTERNS → `root.prizm`
 
 **RULE**: Only add genuinely new information. Never duplicate existing entries. Never rewrite entire files.
-
----
-
-## Job 3: Memory Sedimentation → Platform Memory Files
-
-Sediment DECISIONS and interface conventions to platform memory files. This is where project-level knowledge lives — the "why" behind design choices, cross-module contracts, and conventions that affect future development.
-
-**Project Memory** is distinct from `.prizm-docs/`:
-- `.prizm-docs/` = architecture index (structure, interfaces, traps) — "what exists and what to watch out for"
-- Memory files = development decisions and conventions — "why we chose this approach and what contracts to honor"
-
-### When to run Job 3
-
-- Feature completion with notable DECISIONS or interface conventions discovered
-- **Skip for**: trivial fixes, config changes, bug fixes with no new conventions
-
-### Write Decision Gate (mandatory before any write)
-
-Before writing anything to memory files, apply this evaluation in order:
-
-**Gate 1 — Importance**: Is the content worth recording? Only record:
-- New feature implementations with non-obvious design choices
-- Critical logic changes with lasting impact
-- Interface conventions that future sessions must honor
-- **Skip**: simple queries, trivial fixes, one-off config changes, content with no future impact
-
-**Gate 2 — Dedup**: If Gate 1 passes, read the existing memory file(s) first. Compare against existing entries by core keywords, feature summary, or function signature. If a highly similar entry already exists, **skip or merge-update** it — never duplicate.
-
-**Gate 3 — Write only if both pass**: Write to memory files only when content is both important AND non-duplicate. Do NOT write by default after every feature. Skipping is the correct outcome for routine work.
-
-**File size monitor**: After each write, check the file's line count. If it exceeds 500 lines, trigger the compaction flow below.
-
-### Compaction Flow (triggered at >500 lines)
-
-Goal: reduce file size while preserving all valuable knowledge.
-
-Allowed operations (lossless):
-- **Merge similar entries**: combine multiple updates about the same feature/topic into one comprehensive record
-- **Remove stale content**: delete entries explicitly superseded, replaced, or marked as deprecated
-- **Distill verbose logs**: compress long narrative descriptions into concise bullet points, preserving key code snippets, config changes, and decision rationale
-- **Restructure**: reorganize headers and sections for clarity
-
-Principle: compaction must be lossless — no valuable operational history or decision rationale may be lost.
-
-### Sedimentation Rules
-
-1. **Max 3-5 entries per feature**: Only keep DECISIONS and interface conventions that genuinely affect future development
-2. **Dedup first**: Before appending, read the target memory file(s). If a similar entry already exists, skip or merge-update it
-3. **TRAPS → `.prizm-docs/` only** (handled by Job 2 above)
-4. **DECISIONS + key interface conventions → platform memory files**
-
-### Steps
-
-**2b-1.** Detect platform from `.prizmkit/config.json` `"platform"` field (or auto-detect from directory structure):
-- `claude` → target: `CLAUDE.md` in project root
-- `codebuddy` → targets: BOTH `CODEBUDDY.md` in project root AND `memory/MEMORY.md` (dual-write required)
-
-**2b-2.** Apply the Write Decision Gate (Importance → Dedup → Write). If gate fails at any step, skip Job 3 entirely.
-
-**2b-3.** Collect sedimentation candidates (only if gate passes):
-- From context-snapshot.md '## Implementation Log': DECISIONS and notable discoveries
-- From context-snapshot.md '## Review Notes': quality patterns, architectural observations
-- From git diff analysis: any project-level conventions established
-- Filter: only entries that answer "Would a new session benefit from knowing this decision/convention?"
-
-**2b-4.** Read existing memory file(s) content. Check for duplicates or near-duplicates.
-- For Claude Code: read `CLAUDE.md`
-- For CodeBuddy: read BOTH `CODEBUDDY.md` AND `memory/MEMORY.md`
-
-**2b-5.** Append to memory file(s) using this format:
-```markdown
-### F-XXX: <feature-title>
-- DECISION: <decision content> — <rationale>
-- INTERFACE: <module.function>: <convention>
-```
-
-**2b-6.** For CodeBuddy platform: write identical content to BOTH `CODEBUDDY.md` AND `memory/MEMORY.md` (dual-write, both must be updated).
-
-**2b-7.** After writing, check file line count. If >500 lines, run the Compaction Flow before proceeding.
-
-**2b-8.** If no Implementation Log or Review Notes sections exist in context-snapshot.md, still attempt to extract DECISIONS from git diff and plan.md. Skip only if no meaningful decisions were made.
 
 ---
 
@@ -226,7 +147,7 @@ git add .prizm-docs/
 In the dev-pipeline, this skill is the **single doc maintenance step** before commit:
 
 ```
-implement → code-review → retrospective (architecture sync + memory sedimentation) → committer (pure commit)
+implement → code-review → retrospective (architecture sync) → committer (pure commit)
 ```
 
 The pipeline enforces a **docs pass condition**: `.prizm-docs/` must show changes in the final commit. This skill is the sole satisfier of that requirement.
@@ -236,14 +157,11 @@ The pipeline enforces a **docs pass condition**: `.prizm-docs/` must show change
 | From | To | Condition |
 |------|----|-----------|
 | `prizmkit-code-review` | **this skill** | Review passes or work is complete |
-| **this skill** | `prizmkit-committer` | Architecture synced + memory sedimented, ready to commit |
+| **this skill** | `prizmkit-committer` | Architecture synced, ready to commit |
 | `prizmkit-committer` | — | Committed |
 
 ## Output
 
-- `.prizm-docs/*.prizm` — Structurally synced + TRAPS/RULES enriched (architecture index)
+- `.prizm-docs/*.prizm` — Structurally synced + TRAPS/RULES/DECISIONS enriched
 - `.prizm-docs/changelog.prizm` — Appended entries
-- Platform memory file(s) — DECISIONS + interface conventions sedimented (project memory)
-  - Claude Code: `CLAUDE.md`
-  - CodeBuddy: BOTH `CODEBUDDY.md` AND `memory/MEMORY.md`
 - All `.prizm-docs/` changes staged via `git add .prizm-docs/`

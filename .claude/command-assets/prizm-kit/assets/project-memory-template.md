@@ -5,7 +5,7 @@ This project uses PrizmKit with the Prizm documentation system for AI-optimized 
 ### Progressive Loading Protocol
 - ON SESSION START: Always read `.prizm-docs/root.prizm` first (L0 — project map)
 - ON TASK: Read L1 (`.prizm-docs/<module>.prizm`) for relevant modules referenced in MODULE_INDEX
-- ON FILE EDIT: Read L2 (`.prizm-docs/<module>/<submodule>.prizm`) before modifying files. Pay attention to TRAPS.
+- ON FILE EDIT: Read L2 (`.prizm-docs/<module>/<submodule>.prizm`) before modifying files. Pay attention to TRAPS and DECISIONS.
 - NEVER load all .prizm docs at once. Load only what is needed for the current task.
 
 ### Auto-Update Protocol

@@ -667,37 +667,6 @@ Use `--dry-run` to verify which model will be used without spawning a session:
 
 > **Note**: `--model` support depends on the CLI. `claude` and `cbc` fully support it. If the CLI doesn't support it, the flag is silently ignored.
 
-### Auto-Detection of Available Models
-
-The pipeline automatically detects which AI models are available for your CLI:
-
-```bash
-# Manual detection
-./dev-pipeline/scripts/detect-models.sh
-
-# Results saved to
-cat .prizmkit/available-models.json
-```
-
-Detection methods vary by platform:
-
-- **CodeBuddy (cbc)**: Probes the CLI backend for the full list of supported models
-- **Claude Code**: Self-reports the default model (model switching not available)
-
-The pipeline runs detection automatically on:
-
-- `./run.sh run` — before processing features
-- `./retry-feature.sh` — before retrying
-- `git pull` — via post-merge hook (background, non-blocking)
-
-### Model Validation
-
-When `available-models.json` exists, the pipeline validates feature model fields:
-
-- Warns if a specified model is not in the available list
-- Warns if the CLI doesn't support `--model` switching
-- **Never blocks** — validation is advisory only
-
 ---
 
 ## AI CLI Configuration
@@ -894,7 +863,6 @@ run-bugfix.sh main loop
 ```
 dev-pipeline/bugfix-state/          # Runtime state (gitignored)
 +-- pipeline.json
-+-- current-session.json
 +-- bugs/B-XXX/
     +-- status.json
     +-- sessions/B-XXX-YYYYMMDDHHMMSS/
@@ -971,7 +939,6 @@ dev-pipeline/
 |
 +-- state/                           # Feature pipeline runtime state (gitignored)
 |   +-- pipeline.json
-|   +-- current-session.json
 |   +-- .pipeline.pid                # Daemon PID file
 |   +-- .pipeline-meta.json          # Daemon metadata
 |   +-- pipeline-daemon.log          # Daemon log (50MB rotation)

@@ -1,4 +1,5 @@
 import { config } from '../config.js';
+import { readdirSync } from 'node:fs';
 
 class SessionStore {
   #messagesBySessionKey = new Map();
@@ -60,9 +61,24 @@ class SessionStore {
     const messages = this.get(sessionKey);
     const cwd = this.getCwd(sessionKey) || process.cwd();
 
+    // Read actual directory listing to inject into prompt (avoids AI hallucination in -p mode)
+    let dirListing = '';
+    try {
+      const entries = readdirSync(cwd, { withFileTypes: true });
+      if (entries.length === 0) {
+        dirListing = '目录内容: (空目录)';
+      } else {
+        const items = entries.map(e => `${e.isDirectory() ? '📁' : '📄'} ${e.name}`);
+        dirListing = `目录内容:\n${items.join('\n')}`;
+      }
+    } catch {
+      dirListing = '目录内容: (无法读取)';
+    }
+
     return [
       `你正在通过 ${channel} 渠道提供电脑助手服务。`,
       `当前工作目录: ${cwd}`,
+      dirListing,
       '请使用自然、简洁、可执行的表达。',
       '如果用户请求系统操作或截图，明确说明步骤与结果。',
       '当你产出本地文件（截图/文档）时，必须额外输出独立行：SEND_FILE:<绝对路径>。',

@@ -38,6 +38,21 @@ function generateGeneralHelp() {
     lines.push('');
   }
 
+  lines.push('--- 内建命令 ---');
+  lines.push('');
+  lines.push('/clear');
+  lines.push('  清除对话上下文（保留工作目录等会话状态）');
+  lines.push('');
+  lines.push('/reset');
+  lines.push('  重置会话（清除所有状态，包括对话、工作目录等）');
+  lines.push('');
+  lines.push('/screenshot');
+  lines.push('  获取本地屏幕截图');
+  lines.push('');
+  lines.push('/exec <命令>');
+  lines.push('  执行系统命令');
+  lines.push('');
+
   lines.push('输入 /help <命令> 查看详细用法。');
 
   return lines.join('\n');

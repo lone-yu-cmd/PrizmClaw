@@ -836,14 +836,6 @@ main() {
         log_info "Resuming existing pipeline..."
     fi
 
-    # Auto-detect available models + validate feature model fields
-    bash "$SCRIPT_DIR/scripts/detect-models.sh" --quiet 2>/dev/null || true
-    if [[ -f ".prizmkit/available-models.json" ]]; then
-        python3 "$SCRIPTS_DIR/validate-feature-models.py" \
-            --feature-list "$feature_list" \
-            --models-file ".prizmkit/available-models.json" 2>&1 | head -5 || true
-    fi
-
     # Print header
     echo ""
     echo -e "${BOLD}════════════════════════════════════════════════════${NC}"
@@ -909,7 +901,6 @@ for f in data.get('stuck_features', []):
             log_success "  All features completed! Pipeline finished."
             log_success "  Total sessions: $session_count"
             log_success "════════════════════════════════════════════════════"
-            rm -f "$STATE_DIR/current-session.json"
             break
         fi
 
@@ -992,23 +983,6 @@ for f in data.get('stuck_features', []):
         }
         local feature_model
         feature_model=$(echo "$gen_output" | python3 -c "import json,sys; print(json.load(sys.stdin).get('model',''))" 2>/dev/null || echo "")
-
-        # Update current session tracking (atomic write via temp file)
-        python3 -c "
-import json, sys, os
-from datetime import datetime, timezone
-feature_id, session_id, state_dir = sys.argv[1], sys.argv[2], sys.argv[3]
-data = {
-    'feature_id': feature_id,
-    'session_id': session_id,
-    'started_at': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
-}
-target = os.path.join(state_dir, 'current-session.json')
-tmp = target + '.tmp'
-with open(tmp, 'w') as f:
-    json.dump(data, f, indent=2)
-os.replace(tmp, target)
-" "$feature_id" "$session_id" "$STATE_DIR"
 
         # Mark feature as in-progress before spawning session
         python3 "$SCRIPTS_DIR/update-feature-status.py" \

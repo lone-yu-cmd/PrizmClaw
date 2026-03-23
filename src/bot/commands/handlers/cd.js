@@ -70,6 +70,10 @@ export async function handleCd(handlerCtx) {
   // Update session cwd
   sessionStore.setCwd(sessionId, resolvedPath);
 
+  // Clear conversation history so AI CLI starts fresh in the new directory context
+  const messages = sessionStore.get(sessionId);
+  messages.length = 0;
+
   // F-045: Auto-restart AI CLI if active process exists
   if (isAiCliRunning(sessionId)) {
     await reply(`✅ 工作目录已切换至: ${resolvedPath}\n🔄 检测到活跃的 AI CLI 进程，正在重启...`);
@@ -82,7 +86,7 @@ export async function handleCd(handlerCtx) {
     return;
   }
 
-  await reply(`✅ 工作目录已切换至: ${resolvedPath}`);
+  await reply(`✅ 工作目录已切换至: ${resolvedPath}\n🔄 会话上下文已重置。`);
 }
 
 export default {

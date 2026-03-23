@@ -365,13 +365,7 @@ def cleanup_bug_artifacts(state_dir, bug_id, project_root=None):
         shutil.rmtree(dev_team_dir)
         cleaned.append("Deleted {} ({} files)".format(dev_team_dir, file_count))
 
-    # 5) Clear current-session pointer if it points to this bug
-    current_session_path = os.path.join(state_dir, "current-session.json")
-    if os.path.isfile(current_session_path):
-        current_session, _ = load_json_file(current_session_path)
-        if current_session and current_session.get("bug_id") == bug_id:
-            os.remove(current_session_path)
-            cleaned.append("Deleted {}".format(current_session_path))
+    # 5) (removed: current-session.json no longer used)
 
     return cleaned
 
@@ -603,13 +597,7 @@ def action_clean(args, bug_list_path, state_dir):
         shutil.rmtree(dev_team_dir)
         cleaned.append("Deleted {} ({} files)".format(dev_team_dir, file_count))
 
-    # 4. Delete current-session pointer if it points to this bug
-    current_session_path = os.path.join(state_dir, "current-session.json")
-    if os.path.isfile(current_session_path):
-        current_session, _ = load_json_file(current_session_path)
-        if current_session and current_session.get("bug_id") == bug_id:
-            os.remove(current_session_path)
-            cleaned.append("Deleted {}".format(current_session_path))
+    # 4. (removed: current-session.json no longer used)
 
     # 5. Reset status
     bs = load_bug_status(state_dir, bug_id)

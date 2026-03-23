@@ -264,12 +264,7 @@ def cleanup_feature_artifacts(feature_list_path, state_dir, feature_id, project_
         cleaned.append("Deleted {} ({} files)".format(dev_team_dir, file_count))
 
     # 5) Clear current-session pointer if it points to this feature
-    current_session_path = os.path.join(state_dir, "current-session.json")
-    if os.path.isfile(current_session_path):
-        current_session, _ = load_json_file(current_session_path)
-        if current_session and current_session.get("feature_id") == feature_id:
-            os.remove(current_session_path)
-            cleaned.append("Deleted {}".format(current_session_path))
+    # (no-op: current-session.json has been removed from the pipeline)
 
     return cleaned
 
@@ -989,13 +984,7 @@ def action_clean(args, feature_list_path, state_dir):
         shutil.rmtree(dev_team_dir)
         cleaned.append("Deleted {} ({} files)".format(dev_team_dir, file_count))
 
-    # 4. Delete current-session pointer if it points to this feature
-    current_session_path = os.path.join(state_dir, "current-session.json")
-    if os.path.isfile(current_session_path):
-        current_session, _ = load_json_file(current_session_path)
-        if current_session and current_session.get("feature_id") == feature_id:
-            os.remove(current_session_path)
-            cleaned.append("Deleted {}".format(current_session_path))
+    # 4. (removed: current-session.json no longer used)
 
     # 5. Reset status (reuse reset logic)
     fs = load_feature_status(state_dir, feature_id)

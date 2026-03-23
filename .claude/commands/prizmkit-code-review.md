@@ -25,7 +25,7 @@ Perform a comprehensive code review against the feature spec, implementation pla
    - If `fix-plan.md` exists → **Bugfix mode**: read `fix-plan.md` as baseline. Review dimensions: bug is actually fixed, no regressions, reproduction test passes, minimal change scope.
    - If none found → prompt user: "No review baseline found. Which workflow are you in? (feature/refactor/bugfix)"
 2. Read **architecture index**: `.prizm-docs/root.prizm` RULES and PATTERNS for project conventions
-3. Read **project memory**: platform memory file (`CLAUDE.md` for Claude Code, `CODEBUDDY.md` + `memory/MEMORY.md` for CodeBuddy) for past DECISIONS — helps verify implementation respects established conventions
+3. Read **past decisions**: check DECISIONS sections in relevant `.prizm-docs/` L1/L2 files — helps verify implementation respects established conventions
 4. Read '## Implementation Log' section of context-snapshot.md in the feature directory (if exists) — understand Dev's implementation decisions, trade-offs, and notable discoveries. This context helps distinguish intentional design choices from accidental patterns during review.
 5. Scan all code files referenced in completed tasks
 4. Review across 6 dimensions:

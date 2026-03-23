@@ -188,8 +188,8 @@ Detect user intent from their message, then follow the corresponding workflow:
 
 4. **For per-bug session logs** (when user asks about a specific bug):
    ```bash
-   # Find current/recent session
-   cat dev-pipeline/bugfix-state/current-session.json 2>/dev/null
+   # Check bug status for last session ID
+   cat dev-pipeline/bugfix-state/bugs/<BUG_ID>/status.json 2>/dev/null
    # Then tail that bug's session log
    tail -100 dev-pipeline/bugfix-state/bugs/<BUG_ID>/sessions/<SESSION_ID>/logs/session.log
    ```

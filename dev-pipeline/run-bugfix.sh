@@ -534,9 +534,6 @@ main() {
         log_info "Resuming existing bugfix pipeline..."
     fi
 
-    # Auto-detect available models (must run before any git commit operations)
-    bash "$SCRIPT_DIR/scripts/detect-models.sh" --quiet 2>/dev/null || true
-
     # Print header
     echo ""
     echo -e "${BOLD}════════════════════════════════════════════════════${NC}"
@@ -590,7 +587,6 @@ main() {
             log_success "  All bugs processed! Bug fix pipeline finished."
             log_success "  Total sessions: $session_count"
             log_success "════════════════════════════════════════════════════"
-            rm -f "$STATE_DIR/current-session.json"
 
             # Merge dev branch back to original
             if [[ -n "$_DEV_BRANCH_NAME" ]]; then
@@ -647,23 +643,6 @@ main() {
             --resume-phase "$resume_phase" \
             --state-dir "$STATE_DIR" \
             --output "$bootstrap_prompt" >/dev/null 2>&1
-
-        # Track current session (atomic write via temp file)
-        python3 -c "
-import json, sys, os
-from datetime import datetime, timezone
-bug_id, session_id, state_dir = sys.argv[1], sys.argv[2], sys.argv[3]
-data = {
-    'bug_id': bug_id,
-    'session_id': session_id,
-    'started_at': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
-}
-target = os.path.join(state_dir, 'current-session.json')
-tmp = target + '.tmp'
-with open(tmp, 'w') as f:
-    json.dump(data, f, indent=2)
-os.replace(tmp, target)
-" "$bug_id" "$session_id" "$STATE_DIR"
 
         # Spawn session
         log_info "Spawning AI CLI session: $session_id"

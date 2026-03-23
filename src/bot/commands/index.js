@@ -70,8 +70,10 @@ export async function routeCommand(ctx) {
   }
 
   // ── Pure Natural Language path ────────────────────────────────────────────
+  // Pure NL (no "/" prefix) goes directly to AI CLI — no command routing.
+  // This avoids false-positive keyword matches (e.g. "skill" → "kill").
   if (isPureNL) {
-    return routePureNL(ctx, text, userId);
+    return false;
   }
 
   // ── Slash command path ────────────────────────────────────────────────────
