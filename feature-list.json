@@ -825,7 +825,7 @@
         "Given 复制按钮可见，When 用户点击，Then 框内文本写入剪贴板并显示「已复制」toast 提示",
         "Given 输出框为空，When 渲染，Then 复制按钮显示但点击时提示「内容为空」"
       ],
-      "status": "pending",
+      "status": "completed",
       "session_granularity": "feature",
       "sub_features": []
     },
