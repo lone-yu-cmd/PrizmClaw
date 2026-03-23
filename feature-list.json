@@ -843,7 +843,7 @@
         "Given SSE 连接建立，When 状态更新，Then 面板中连接状态实时刷新",
         "Given 已绑定 Telegram Chat ID，When 渲染面板，Then 显示绑定的 Chat ID 信息"
       ],
-      "status": "in_progress",
+      "status": "completed",
       "session_granularity": "feature",
       "sub_features": []
     },
