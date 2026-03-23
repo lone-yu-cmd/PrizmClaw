@@ -789,7 +789,7 @@
         "Given 命令输出区无内容，When 渲染页面，Then 显示空状态提示，引导用户执行命令",
         "Given 用户发送消息或执行命令后，When 内容出现，Then 空状态提示自动隐藏"
       ],
-      "status": "pending",
+      "status": "in_progress",
       "session_granularity": "feature",
       "sub_features": []
     },

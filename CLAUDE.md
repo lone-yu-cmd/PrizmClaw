@@ -137,3 +137,11 @@ Use the full workflow (/prizmkit-specify -> /prizmkit-plan -> /prizmkit-analyze 
 - DECISION: `border-bottom-width: 2px` on `.kbd` provides physical key depth illusion — this is the standard kbd key styling convention; do not flatten to uniform `1px` border.
 - DECISION: Wrapper divs `.chat-form-actions` and `.exec-form-actions` (flex, align-items: center, gap: 8px) hold button+kbd pairs inline — the `.exec-form` grid `1fr auto` column structure is preserved; the `auto` column now contains the flex wrapper instead of a bare button. Do not break the grid column counts when adding inline hints.
 - INTERFACE: `.kbd` in `public/styles.css` — monospace font, 3px/6px padding, 5px border-radius, border-bottom-width: 2px, var(--panel) bg, var(--muted) color; used inline next to buttons wrapped in `.chat-form-actions` / `.exec-form-actions` flex containers
+
+### F-036: Web Empty State Illustrations
+- DECISION: `updateChatEmptyState()` queries `.message.user, .message.assistant` only — system messages (welcome, clear-confirmation) do NOT trigger empty state hide, preserving the guide text until the user actually sends a message.
+- DECISION: `clearChatBtn` listener must re-append `els.chatEmptyState` DOM node after `chatMessages.innerHTML = ''` before calling `appendMessage()` — clearing innerHTML destroys all child elements including the empty state node; re-appending restores it so the next appendMessage call can find and evaluate it.
+- DECISION: `.empty-state` uses only CSS vars (`--muted`, `--text`) — no hardcoded palette values, so dark mode auto-switches without an explicit `@media (prefers-color-scheme: dark)` override block. Same pattern as `.kbd`.
+- DECISION: Exec output boxes wrapped in `#execOutput` div (hidden by default) with `#execEmptyState` as sibling — `updateExecEmptyState(hasResult)` toggles both elements as a unit, keeping the three output boxes (#exitCodeOutput, #stdoutOutput, #stderrOutput) logically grouped.
+- INTERFACE: `updateChatEmptyState()` in `public/js/main.js` — called inside `appendMessage()` after every DOM append; checks for `.message.user, .message.assistant` to decide visibility of `#chatEmptyState`
+- INTERFACE: `updateExecEmptyState(hasResult)` in `public/js/main.js` — called in execForm submit handler (both success and error paths); `hasResult=true` hides `#execEmptyState` and shows `#execOutput`

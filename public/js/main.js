@@ -16,6 +16,7 @@ const els = {
   baseUrlInput: document.getElementById('baseUrlInput'),
   sessionIdInput: document.getElementById('sessionIdInput'),
   chatMessages: document.getElementById('chatMessages'),
+  chatEmptyState: document.getElementById('chatEmptyState'),
   chatForm: document.getElementById('chatForm'),
   chatInput: document.getElementById('chatInput'),
   charCounter: document.getElementById('charCounter'),
@@ -29,6 +30,8 @@ const els = {
   execForm: document.getElementById('execForm'),
   execInput: document.getElementById('execInput'),
   runExecBtn: document.getElementById('runExecBtn'),
+  execEmptyState: document.getElementById('execEmptyState'),
+  execOutput: document.getElementById('execOutput'),
   exitCodeOutput: document.getElementById('exitCodeOutput'),
   stdoutOutput: document.getElementById('stdoutOutput'),
   stderrOutput: document.getElementById('stderrOutput'),
@@ -72,6 +75,18 @@ function setBusy(busy, text, activeBtn = null) {
 
 const TOAST_DURATION_MS = 3000;
 const TOAST_FADE_MS = 300;
+
+function updateChatEmptyState() {
+  // Only hide empty state when user or assistant messages are present
+  const hasMessages =
+    els.chatMessages.querySelector('.message.user, .message.assistant') !== null;
+  els.chatEmptyState.classList.toggle('hidden', hasMessages);
+}
+
+function updateExecEmptyState(hasResult) {
+  els.execEmptyState.classList.toggle('hidden', hasResult);
+  els.execOutput.classList.toggle('hidden', !hasResult);
+}
 
 function showToast(msg, type = 'info') {
   const toast = document.createElement('div');
@@ -138,6 +153,7 @@ function appendMessage(role, text, isError = false, isHtml = false) {
   const node = createMessageElement(role, text, isError, isHtml);
   els.chatMessages.appendChild(node.item);
   els.chatMessages.scrollTop = els.chatMessages.scrollHeight;
+  updateChatEmptyState();
   return node;
 }
 
@@ -350,6 +366,7 @@ els.sessionIdInput.addEventListener('change', () => {
 
 els.clearChatBtn.addEventListener('click', () => {
   els.chatMessages.innerHTML = '';
+  els.chatMessages.appendChild(els.chatEmptyState);
   appendMessage('system', '界面消息已清空。');
 });
 
@@ -481,6 +498,7 @@ els.execForm.addEventListener('submit', async (event) => {
       command
     });
 
+    updateExecEmptyState(true);
     els.exitCodeOutput.textContent = String(data.exitCode);
     els.exitCodeOutput.classList.toggle('exit-error', data.exitCode !== 0);
     els.stdoutOutput.textContent = data.stdout || '(empty)';
@@ -493,6 +511,7 @@ els.execForm.addEventListener('submit', async (event) => {
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    updateExecEmptyState(true);
     els.exitCodeOutput.textContent = 'error';
     els.exitCodeOutput.classList.add('exit-error');
     els.stdoutOutput.textContent = '';

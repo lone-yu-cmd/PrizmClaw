@@ -37,7 +37,13 @@
             <button id="clearChatBtn" type="button" class="btn ghost">清空界面消息</button>
           </div>
 
-          <div id="chatMessages" class="chat-messages" aria-live="polite"></div>
+          <div id="chatMessages" class="chat-messages" aria-live="polite">
+            <div id="chatEmptyState" class="empty-state">
+              <span class="empty-state-icon">💬</span>
+              <span class="empty-state-title">还没有消息</span>
+              <span class="empty-state-hint">在下方输入内容，开始与助手对话</span>
+            </div>
+          </div>
 
           <form id="chatForm" class="chat-form">
             <label class="sr-only" for="chatInput">输入消息</label>
@@ -71,17 +77,24 @@
               </div>
             </form>
             <div class="exec-result">
-              <div>
-                <h3>Exit Code</h3>
-                <pre id="exitCodeOutput" class="output-box">-</pre>
+              <div id="execEmptyState" class="empty-state">
+                <span class="empty-state-icon">⚡</span>
+                <span class="empty-state-title">尚未执行命令</span>
+                <span class="empty-state-hint">在上方输入命令并点击执行</span>
               </div>
-              <div>
-                <h3>Stdout</h3>
-                <pre id="stdoutOutput" class="output-box"></pre>
-              </div>
-              <div>
-                <h3>Stderr</h3>
-                <pre id="stderrOutput" class="output-box"></pre>
+              <div id="execOutput" class="hidden">
+                <div>
+                  <h3>Exit Code</h3>
+                  <pre id="exitCodeOutput" class="output-box">-</pre>
+                </div>
+                <div>
+                  <h3>Stdout</h3>
+                  <pre id="stdoutOutput" class="output-box"></pre>
+                </div>
+                <div>
+                  <h3>Stderr</h3>
+                  <pre id="stderrOutput" class="output-box"></pre>
+                </div>
               </div>
             </div>
           </section>
