@@ -19,4 +19,7 @@ CHANGELOG:
 - 2026-03-23 | CLAUDE.md | update: sediment F-043 DECISIONS
 - 2026-03-23 | public/ | add: F-044 resize handle (--chat-col/--side-col CSS vars on #dashboardGrid, .resize-handle CSS, drag logic + localStorage in JS)
 - 2026-03-23 | CLAUDE.md | update: sediment F-044 DECISIONS
+- 2026-03-23 | src/services.prizm | update: restartAiCli/isAiCliRunning interfaces + restart TRAP (F-045)
+- 2026-03-23 | src/bot.prizm | update: cd handler imports isAiCliRunning/restartAiCli (F-045)
+- 2026-03-23 | CLAUDE.md | update: sediment F-045 DECISIONS
 UPDATED: 2026-03-23

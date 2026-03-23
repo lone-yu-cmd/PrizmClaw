@@ -1,0 +1,50 @@
+{
+  "updated_at": "2026-03-23T10:24:12Z",
+  "message_count": 137,
+  "current_tool": "TodoWrite",
+  "current_tool_input_summary": "Verify clean tree",
+  "current_phase": "commit",
+  "detected_phases": [
+    "implement",
+    "retrospective",
+    "commit"
+  ],
+  "tool_calls": [
+    {
+      "name": "Bash",
+      "count": 40
+    },
+    {
+      "name": "Edit",
+      "count": 14
+    },
+    {
+      "name": "Read",
+      "count": 13
+    },
+    {
+      "name": "TodoWrite",
+      "count": 7
+    },
+    {
+      "name": "Write",
+      "count": 3
+    },
+    {
+      "name": "TaskOutput",
+      "count": 3
+    },
+    {
+      "name": "Glob",
+      "count": 2
+    },
+    {
+      "name": "Skill",
+      "count": 2
+    }
+  ],
+  "total_tool_calls": 84,
+  "last_text_snippet": "Also from the baseline recording \u2014 already used. F-045 is fully committed at `ed60dc1`.",
+  "is_active": true,
+  "errors": []
+}

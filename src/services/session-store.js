@@ -58,9 +58,11 @@ class SessionStore {
 
   toPrompt(sessionKey, channel = 'unknown') {
     const messages = this.get(sessionKey);
+    const cwd = this.getCwd(sessionKey) || process.cwd();
 
     return [
       `你正在通过 ${channel} 渠道提供电脑助手服务。`,
+      `当前工作目录: ${cwd}`,
       '请使用自然、简洁、可执行的表达。',
       '如果用户请求系统操作或截图，明确说明步骤与结果。',
       '当你产出本地文件（截图/文档）时，必须额外输出独立行：SEND_FILE:<绝对路径>。',

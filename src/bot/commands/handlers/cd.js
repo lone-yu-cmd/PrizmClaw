@@ -8,6 +8,7 @@
 import { access } from 'node:fs/promises';
 import path from 'node:path';
 import { sessionStore } from '../../../services/session-store.js';
+import { isAiCliRunning, restartAiCli } from '../../../services/ai-cli-service.js';
 
 /**
  * CD command metadata.
@@ -68,6 +69,18 @@ export async function handleCd(handlerCtx) {
 
   // Update session cwd
   sessionStore.setCwd(sessionId, resolvedPath);
+
+  // F-045: Auto-restart AI CLI if active process exists
+  if (isAiCliRunning(sessionId)) {
+    await reply(`✅ 工作目录已切换至: ${resolvedPath}\n🔄 检测到活跃的 AI CLI 进程，正在重启...`);
+    const result = await restartAiCli(sessionId);
+    if (result.ok) {
+      await reply(`✅ AI CLI 已在新目录重新启动: ${resolvedPath}`);
+    } else {
+      await reply(`⚠️ AI CLI 重启失败: ${result.error}`);
+    }
+    return;
+  }
 
   await reply(`✅ 工作目录已切换至: ${resolvedPath}`);
 }

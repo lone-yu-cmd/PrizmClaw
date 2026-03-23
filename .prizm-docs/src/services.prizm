@@ -4,6 +4,8 @@ RESPONSIBILITY: Core service layer — AI CLI execution, session management, mes
 INTERFACES:
 - executeAiCli(options): Promise<AiCliExecutionResult> — unified AI CLI executor with process tracking
 - interruptAiCli(sessionId): {ok, pid?, error?} — interrupt running AI task
+- restartAiCli(sessionId, hooks?): Promise<{ok, oldPid?, error?}> — F-045 kill active process + restart in current cwd
+- isAiCliRunning(sessionId): boolean — check if AI CLI process active
 - createMessageRouter({aiCliExecutor, sessionStore, realtimeHub}): MessageRouter — F-018 unified message processor
 - processMessage({channel, sessionId, message, telegramChatId?, userId?, hooks?}): Promise<{reply}> — route message through AI CLI
 - createSessionBindService({bindingsPath}): SessionBindingService — F-018 factory with deferred init
@@ -30,7 +32,7 @@ DEPENDENCIES:
 - imports: src/config.js: runtime configuration
 - imports: src/security/guard.js: sanitizeInput
 KEY_FILES:
-- ai-cli-service.js: AI CLI executor with heartbeat, timeout, metrics (564 lines)
+- ai-cli-service.js: AI CLI executor with heartbeat, timeout, metrics, restart (612 lines)
 - message-router.js: F-018 unified message processor (128 lines)
 - session-bind.js: F-018 session binding with persistence (~220 lines)
 - session-store.js: in-memory session state (427 lines)
@@ -47,9 +49,10 @@ TRAPS:
 - SessionBindingService persistence is fire-and-forget — tests must call flush() to verify file writes
 - messageRouter does not expose heartbeat hooks — Telegram heartbeat progress disabled after F-018 migration
 - Runtime bindings created via POST /api/bind do NOT auto-subscribe realtimeHub for cross-channel push (F-018 gap)
-- config-service originalEnvValues captured at module init; if env vars set after import, use setConfig first (which lazy-captures original) before reset | FIX: ensure env vars are set before module import in tests, or setConfig will lazy-capture the pre-modification value
-- output-history-service singleton lives in output.js — tests must inject mock via handlerCtx.outputHistoryService to avoid mutating shared singleton state
+- config-service originalEnvValues lazy-captured at first setConfig call | FIX: set env vars before import or call setConfig before reset
+- output-history-service singleton in output.js — tests inject mock via handlerCtx to avoid shared state mutation
 - profileStore singleton must be init()d at startup with {persistencePath} — tests must create isolated ProfileStore instances, not the singleton
 - backendRegistry.registerBackend() throws if name already registered — wrap in try/catch at startup when re-registering profiles after restart | FIX: check getBackend() before registerBackend() or catch the throw
 - ai-cli-service reads sessionBackend.permissionFlag and sessionBackend.timeoutMs at execution time — these fields must be set at registerBackend() time or via updateBackend() for profile switching to fully apply
+- restartAiCli polls isAiCliRunning (100ms intervals, 10s max) before spawning new process — the old process close handler must call clearActiveProcess for polling to succeed | FIX: tests must register a child.on('close') handler that calls clearActiveProcess
 UPDATED: 2026-03-23

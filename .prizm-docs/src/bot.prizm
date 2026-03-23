@@ -12,7 +12,7 @@ KEY_FILES:
 - commands/handlers/cli.js: F-021 /cli command — backend switcher + profile manager
 DEPENDENCIES:
 - uses: telegraf: Telegram bot framework
-- imports: src/services/ai-cli-service.js: executeAiCli, interruptAiCli
+- imports: src/services/ai-cli-service.js: executeAiCli, interruptAiCli, isAiCliRunning, restartAiCli
 - imports: src/services/message-router.js: F-018 unified message routing
 - imports: src/services/session-bind.js: F-018 session binding for cross-channel
 - imports: src/services/realtime-hub.js: F-018 event subscription for cross-channel push

@@ -201,3 +201,8 @@ Use the full workflow (/prizmkit-specify -> /prizmkit-plan -> /prizmkit-analyze 
 - INTERFACE: `applyColumnWidths(chatFr, sideFr)` in `public/js/main.js` — sets `--chat-col`/`--side-col` CSS vars on `els.dashboardGrid`; called by loadColumnWidths, mousemove handler
 - INTERFACE: `loadColumnWidths()` in `public/js/main.js` — reads `prizmclaw-column-widths` from localStorage, validates `{chat, side}` are positive numbers, calls `applyColumnWidths()`; falls back to `applyColumnWidths(2, 1)`; called in `init()` after `loadFontSize()`
 - INTERFACE: `initResizeHandle()` in `public/js/main.js` — attaches mousedown on `#resizeHandle`, mousemove/mouseup on `document`; adds/removes `.dragging` class and body cursor/userSelect during drag; called in `init()` after `loadColumnWidths()`
+
+### F-045: AI CLI Auto-Restart on Directory Change
+- DECISION: `restartAiCli(sessionId, hooks?)` in `ai-cli-service.js` — kills active process via `interruptAiCli()`, polls `isAiCliRunning()` at 100ms intervals (10s max) for process exit, then fires `executeAiCli()` with a lightweight "session resumed" prompt. Restart is fire-and-forget (`.catch()` logs error) — cd handler does not block on the new process completing.
+- DECISION: cd handler checks `isAiCliRunning(sessionId)` after `setCwd()` — if active process exists, sends restart-in-progress message, calls `restartAiCli()`, then sends restart-complete or restart-failed message. If no active process, sends only the normal cwd-changed message (preserving existing behavior).
+- INTERFACE: `restartAiCli(sessionId, hooks?)` from `src/services/ai-cli-service.js` — returns `Promise<{ok: boolean, oldPid?: number, error?: string}>`

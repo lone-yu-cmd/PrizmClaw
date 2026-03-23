@@ -259,8 +259,10 @@ export async function executeAiCli(options) {
     // Spawn process
     let child;
     try {
+      const spawnCwd = sessionStore.getCwd(sessionId) || process.cwd();
       child = spawn(effectiveBin, args, {
-        stdio: ['ignore', 'pipe', 'pipe']
+        stdio: ['ignore', 'pipe', 'pipe'],
+        cwd: spawnCwd
       });
     } catch (err) {
       resolve({
@@ -528,6 +530,53 @@ export function getActiveProcessInfo(sessionId) {
     stdoutBytes: info.stdoutBytes ?? 0,
     userId: info.userId
   };
+}
+
+/**
+ * Kill active AI CLI process and restart in the current session cwd.
+ * Used by /cd handler when directory changes while AI CLI is running.
+ * @param {string} sessionId - Session identifier
+ * @param {Object} [hooks] - Optional hooks to forward to executeAiCli
+ * @returns {Promise<{ ok: boolean, oldPid?: number, error?: string }>}
+ */
+export async function restartAiCli(sessionId, hooks = {}) {
+  const processInfo = sessionStore.getActiveProcess(sessionId);
+  if (!processInfo) {
+    return { ok: false, error: '没有正在执行的任务。' };
+  }
+
+  const oldPid = processInfo.pid;
+
+  // Kill the active process
+  const killResult = interruptAiCli(sessionId);
+  if (!killResult.ok) {
+    return { ok: false, error: killResult.error };
+  }
+
+  // Wait for process to exit (poll up to 10s)
+  const maxWait = 10000;
+  const pollInterval = 100;
+  let waited = 0;
+  while (isAiCliRunning(sessionId) && waited < maxWait) {
+    await new Promise((r) => setTimeout(r, pollInterval));
+    waited += pollInterval;
+  }
+
+  if (isAiCliRunning(sessionId)) {
+    return { ok: false, oldPid, error: 'AI CLI 进程未能在超时时间内退出。' };
+  }
+
+  // Restart AI CLI in the new cwd with a lightweight system prompt
+  const newCwd = sessionStore.getCwd(sessionId) || process.cwd();
+  executeAiCli({
+    sessionId,
+    prompt: `工作目录已切换至 ${newCwd}，会话已恢复。`,
+    hooks
+  }).catch((err) => {
+    logger.error({ err, sessionId }, 'AI CLI restart failed');
+  });
+
+  return { ok: true, oldPid };
 }
 
 /**

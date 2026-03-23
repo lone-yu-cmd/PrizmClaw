@@ -936,6 +936,25 @@
       "status": "completed",
       "session_granularity": "feature",
       "sub_features": []
+    },
+    {
+      "id": "F-045",
+      "title": "AI CLI Auto-Restart on Directory Change",
+      "description": "当用户通过 /cd 命令切换工作目录时，若当前会话存在活跃的 AI CLI 进程，自动终止该进程并在新目录重新启动 AI CLI。确保 AI CLI 的运行上下文与用户指定的工作目录保持一致。无活跃进程时保持现有行为（仅更新 session cwd）。\n\n实现方式：在 cd handler 中 setCwd 后检查 sessionStore 是否有活跃 AI CLI 进程，若有则调用 ai-cli-service 的终止接口 kill 当前进程，随后自动触发 restart。需要在 ai-cli-service 中暴露进程状态查询和重启能力。",
+      "priority": 45,
+      "estimated_complexity": "low",
+      "dependencies": [
+        "F-009",
+        "F-011"
+      ],
+      "acceptance_criteria": [
+        "Given 会话有活跃 AI CLI 进程，When 用户执行 /cd <路径>，Then 当前 AI CLI 进程被终止并在新目录重新启动",
+        "Given 会话无活跃 AI CLI 进程，When 用户执行 /cd <路径>，Then 仅更新 cwd，下次 AI CLI 调用使用新路径",
+        "Given AI CLI 重启完成，When 用户查看状态，Then 收到包含新工作目录的确认消息"
+      ],
+      "status": "in_progress",
+      "session_granularity": "feature",
+      "sub_features": []
     }
   ],
   "global_context": {
