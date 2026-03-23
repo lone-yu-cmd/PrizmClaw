@@ -18,3 +18,5 @@ CHANGELOG:
 UPDATED: 2026-03-23
 - 2026-03-23 | public/ | add: F-033 toast notification system (showToast, CSS, HTML container)
 - 2026-03-23 | root.prizm | update: add toast z-index/palette/interface RULE
+- 2026-03-23 | public/ | add: F-034 loading spinner (.btn.loading CSS + setBusy activeBtn param)
+- 2026-03-23 | root.prizm | update: add spinner setBusy interface RULE (F-034)

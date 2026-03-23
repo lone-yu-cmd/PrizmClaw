@@ -55,11 +55,18 @@ function updateCharCounter() {
   els.charCounter.parentElement.classList.toggle('warning', len >= CHAR_WARN_THRESHOLD);
 }
 
-function setBusy(busy, text) {
+function setBusy(busy, text, activeBtn = null) {
   state.busy = busy;
   els.sendChatBtn.disabled = busy;
   els.takeScreenshotBtn.disabled = busy;
   els.runExecBtn.disabled = busy;
+  if (busy && activeBtn) {
+    activeBtn.classList.add('loading');
+  } else if (!busy) {
+    els.sendChatBtn.classList.remove('loading');
+    els.takeScreenshotBtn.classList.remove('loading');
+    els.runExecBtn.classList.remove('loading');
+  }
   setStatus(text);
 }
 
@@ -361,7 +368,7 @@ els.chatForm.addEventListener('submit', async (event) => {
   state.streamedText = '';
 
   try {
-    setBusy(true, '聊天处理中...');
+    setBusy(true, '聊天处理中...', els.sendChatBtn);
     const data = await callJson('/api/chat', {
       channel: 'web',
       sessionId: state.sessionId,
@@ -438,7 +445,7 @@ els.takeScreenshotBtn.addEventListener('click', async () => {
   if (state.busy) return;
 
   try {
-    setBusy(true, '正在获取截图...');
+    setBusy(true, '正在获取截图...', els.takeScreenshotBtn);
     const data = await callJson('/api/screenshot', {
       channel: 'web',
       sessionId: state.sessionId
@@ -467,7 +474,7 @@ els.execForm.addEventListener('submit', async (event) => {
   els.stderrOutput.classList.remove('error');
 
   try {
-    setBusy(true, '正在执行命令...');
+    setBusy(true, '正在执行命令...', els.runExecBtn);
     const data = await callJson('/api/system/exec', {
       channel: 'web',
       sessionId: state.sessionId,

@@ -753,7 +753,7 @@
         "Given 请求完成或失败，When 响应返回，Then spinner 消失，按钮恢复可点击状态",
         "Given spinner 动画，When 渲染，Then 动画流畅无抖动，不影响布局"
       ],
-      "status": "pending",
+      "status": "in_progress",
       "session_granularity": "feature",
       "sub_features": []
     },

@@ -28,5 +28,6 @@ RULES:
 - CSS breakpoints: 900px collapses grids; 600px mobile layout (flex-wrap header, full-width buttons, reduced padding)
 - Toast: showToast(msg, type) in public/js/main.js; type='success'|'error'|'info'; auto-dismisses 3s + 300ms fade-out animation
 - Lightbox: openLightbox(src)/closeLightbox() in public/js/main.js; close on backdrop click (event.target !== img) or Esc keydown
+- Spinner: setBusy(busy, text, activeBtn?) in public/js/main.js; adds .loading to activeBtn when busy; removes from all buttons when idle; .btn.loading uses ::before pseudo-element with color: transparent on button text
 
 UPDATED: 2026-03-23
