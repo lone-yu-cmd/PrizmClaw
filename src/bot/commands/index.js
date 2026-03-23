@@ -30,6 +30,15 @@ function buildSessionId(ctx) {
 }
 
 /**
+ * Build prefixed session key for session store operations.
+ * @param {Object} ctx - Telegraf context
+ * @returns {string} Prefixed session key
+ */
+function buildSessionKey(ctx) {
+  return `telegram:${ctx.chat.id}`;
+}
+
+/**
  * Route and dispatch a command from Telegram context.
  *
  * Supports three input modes:
@@ -66,7 +75,7 @@ export async function routeCommand(ctx) {
   }
 
   // ── Slash command path ────────────────────────────────────────────────────
-  const sessionId = buildSessionId(ctx);
+  const sessionId = buildSessionKey(ctx);
   const userIdStr = String(userId);
 
   // F-013: Touch session on each command
@@ -229,7 +238,7 @@ async function routePureNL(ctx, text, userId) {
     return false;
   }
 
-  const sessionId = buildSessionId(ctx);
+  const sessionId = buildSessionKey(ctx);
 
   if (!nlResult.needsConfirmation && nlResult.primary) {
     // High confidence: dispatch directly

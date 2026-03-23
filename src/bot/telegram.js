@@ -466,6 +466,16 @@ function buildSessionId(ctx) {
   return String(ctx.chat.id);
 }
 
+/**
+ * Build prefixed session key for session store operations.
+ * Session store tracks AI CLI processes, cwd, and backend under "telegram:{chatId}".
+ * @param {Object} ctx - Telegraf context
+ * @returns {string} Prefixed session key
+ */
+function buildSessionKey(ctx) {
+  return `telegram:${ctx.chat.id}`;
+}
+
 function ensureAllowed(ctx) {
   const userId = ctx.from?.id;
   if (!isAllowedUser(userId)) {
@@ -778,10 +788,11 @@ export async function createTelegramBot() {
     try {
       ensureAllowed(ctx);
       const sessionId = buildSessionId(ctx);
+      const sessionKey = buildSessionKey(ctx);
 
       // F-011: Interrupt any running AI CLI task
-      if (isAiCliRunning(sessionId)) {
-        interruptAiCli(sessionId);
+      if (isAiCliRunning(sessionKey)) {
+        interruptAiCli(sessionKey);
       }
 
       resetSession({ channel: 'telegram', sessionId });
@@ -813,7 +824,7 @@ export async function createTelegramBot() {
         return;
       }
 
-      const sessionId = buildSessionId(ctx);
+      const sessionId = buildSessionKey(ctx);
       const userId = ctx.from?.id;
 
       await ctx.reply('正在执行命令...');
@@ -848,7 +859,7 @@ export async function createTelegramBot() {
     try {
       ensureAllowed(ctx);
       const payload = ctx.message.text.replace('/cd', '').trim();
-      const sessionId = buildSessionId(ctx);
+      const sessionId = buildSessionKey(ctx);
 
       await handleCd({
         ctx,
@@ -869,7 +880,7 @@ export async function createTelegramBot() {
   bot.command('more', async (ctx) => {
     try {
       ensureAllowed(ctx);
-      const sessionId = buildSessionId(ctx);
+      const sessionId = buildSessionKey(ctx);
 
       await handleMore({
         ctx,
@@ -980,6 +991,7 @@ export async function createTelegramBot() {
     }
 
     const sessionId = buildSessionId(ctx);
+    const sessionKey = buildSessionKey(ctx);
     const userId = ctx.from?.id;
 
     // F-009: Direct exec mode - treat plain text as command when enabled
@@ -995,7 +1007,7 @@ export async function createTelegramBot() {
           await ctx.reply('正在执行命令...');
           const result = await executeCommand({
             command,
-            sessionId,
+            sessionId: sessionKey,
             userId
           });
 
@@ -1019,7 +1031,7 @@ export async function createTelegramBot() {
     }
 
     // F-011: Check if AI CLI is already running
-    if (isAiCliRunning(sessionId)) {
+    if (isAiCliRunning(sessionKey)) {
       await ctx.reply('⏳ 有任务正在执行，请等待完成或使用 /stop 中断。');
       return;
     }
@@ -1036,7 +1048,7 @@ export async function createTelegramBot() {
       }, TYPING_INTERVAL_MS);
 
       // F-018: Use message-router for unified processing
-      const sessionKey = `telegram:${sessionId}`;
+      // sessionKey already constructed via buildSessionKey(ctx) above
 
       // Track last heartbeat message for updates
       /** @type {{ message_id: number } | null} */

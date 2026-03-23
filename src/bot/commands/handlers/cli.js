@@ -371,7 +371,7 @@ export class CliCommandHandler {
    * @returns {string} Session key
    */
   #getSessionKey(ctx) {
-    return ctx.from?.id ? `user-${ctx.from.id}` : 'anonymous';
+    return ctx.chat?.id ? `telegram:${ctx.chat.id}` : 'anonymous';
   }
 }
 
