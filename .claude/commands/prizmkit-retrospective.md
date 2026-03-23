@@ -136,6 +136,34 @@ Sediment DECISIONS and interface conventions to platform memory files. This is w
 - Feature completion with notable DECISIONS or interface conventions discovered
 - **Skip for**: trivial fixes, config changes, bug fixes with no new conventions
 
+### Write Decision Gate (mandatory before any write)
+
+Before writing anything to memory files, apply this evaluation in order:
+
+**Gate 1 — Importance**: Is the content worth recording? Only record:
+- New feature implementations with non-obvious design choices
+- Critical logic changes with lasting impact
+- Interface conventions that future sessions must honor
+- **Skip**: simple queries, trivial fixes, one-off config changes, content with no future impact
+
+**Gate 2 — Dedup**: If Gate 1 passes, read the existing memory file(s) first. Compare against existing entries by core keywords, feature summary, or function signature. If a highly similar entry already exists, **skip or merge-update** it — never duplicate.
+
+**Gate 3 — Write only if both pass**: Write to memory files only when content is both important AND non-duplicate. Do NOT write by default after every feature. Skipping is the correct outcome for routine work.
+
+**File size monitor**: After each write, check the file's line count. If it exceeds 500 lines, trigger the compaction flow below.
+
+### Compaction Flow (triggered at >500 lines)
+
+Goal: reduce file size while preserving all valuable knowledge.
+
+Allowed operations (lossless):
+- **Merge similar entries**: combine multiple updates about the same feature/topic into one comprehensive record
+- **Remove stale content**: delete entries explicitly superseded, replaced, or marked as deprecated
+- **Distill verbose logs**: compress long narrative descriptions into concise bullet points, preserving key code snippets, config changes, and decision rationale
+- **Restructure**: reorganize headers and sections for clarity
+
+Principle: compaction must be lossless — no valuable operational history or decision rationale may be lost.
+
 ### Sedimentation Rules
 
 1. **Max 3-5 entries per feature**: Only keep DECISIONS and interface conventions that genuinely affect future development
@@ -149,26 +177,30 @@ Sediment DECISIONS and interface conventions to platform memory files. This is w
 - `claude` → target: `CLAUDE.md` in project root
 - `codebuddy` → targets: BOTH `CODEBUDDY.md` in project root AND `memory/MEMORY.md` (dual-write required)
 
-**2b-2.** Collect sedimentation candidates:
+**2b-2.** Apply the Write Decision Gate (Importance → Dedup → Write). If gate fails at any step, skip Job 3 entirely.
+
+**2b-3.** Collect sedimentation candidates (only if gate passes):
 - From context-snapshot.md '## Implementation Log': DECISIONS and notable discoveries
 - From context-snapshot.md '## Review Notes': quality patterns, architectural observations
 - From git diff analysis: any project-level conventions established
 - Filter: only entries that answer "Would a new session benefit from knowing this decision/convention?"
 
-**2b-3.** Read existing memory file(s) content. Check for duplicates or near-duplicates.
+**2b-4.** Read existing memory file(s) content. Check for duplicates or near-duplicates.
 - For Claude Code: read `CLAUDE.md`
 - For CodeBuddy: read BOTH `CODEBUDDY.md` AND `memory/MEMORY.md`
 
-**2b-4.** Append to memory file(s) using this format:
+**2b-5.** Append to memory file(s) using this format:
 ```markdown
 ### F-XXX: <feature-title>
 - DECISION: <decision content> — <rationale>
 - INTERFACE: <module.function>: <convention>
 ```
 
-**2b-5.** For CodeBuddy platform: write identical content to BOTH `CODEBUDDY.md` AND `memory/MEMORY.md` (dual-write, both must be updated).
+**2b-6.** For CodeBuddy platform: write identical content to BOTH `CODEBUDDY.md` AND `memory/MEMORY.md` (dual-write, both must be updated).
 
-**2b-6.** If no Implementation Log or Review Notes sections exist in context-snapshot.md, still attempt to extract DECISIONS from git diff and plan.md. Skip only if no meaningful decisions were made.
+**2b-7.** After writing, check file line count. If >500 lines, run the Compaction Flow before proceeding.
+
+**2b-8.** If no Implementation Log or Review Notes sections exist in context-snapshot.md, still attempt to extract DECISIONS from git diff and plan.md. Skip only if no meaningful decisions were made.
 
 ---
 
