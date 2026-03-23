@@ -663,7 +663,7 @@
         "Given stderr 有输出，When stderrOutput 框有内容，Then 框体以红色调边框或背景区分",
         "Given exit code 非零，When exitCodeOutput 显示值，Then 以警告或危险色高亮显示"
       ],
-      "status": "in_progress",
+      "status": "completed",
       "session_granularity": "feature",
       "sub_features": []
     },
