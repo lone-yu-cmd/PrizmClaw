@@ -4,5 +4,3 @@ node_modules
 
 *.png
 
-# Pipeline runtime artifacts
-.prizmkit/available-models.json

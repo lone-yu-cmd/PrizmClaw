@@ -582,10 +582,10 @@ export async function createTelegramBot() {
         '',
         `任务ID: \`${task.id.substring(0, 8)}...\``,
         `命令: \`${escapeMarkdownV2(task.command)}\``,
-        `执行时间: ${new Date(result.executedAt || Date.now()).toLocaleString()}`,
+        `执行时间: ${escapeMarkdownV2(new Date(result.executedAt || Date.now()).toLocaleString())}`,
         '',
         `exitCode: ${result.exitCode}`,
-        result.stdout ? `stdout:\n${truncate(result.stdout, 500)}` : 'stdout: (empty)',
+        result.stdout ? `stdout:\n${escapeMarkdownV2(truncate(result.stdout, 500))}` : 'stdout: (empty)',
         result.stderr ? `stderr:\n${escapeMarkdownV2(truncate(result.stderr, 500))}` : 'stderr: (empty)'
       ];
       await bot.telegram.sendMessage(chatId, lines.join('\n'), { parse_mode: 'MarkdownV2' });
@@ -1084,8 +1084,7 @@ export async function createTelegramBot() {
       }
 
       // F-020: Record full output in history (pre-split, pre-file-marker extraction)
-      // Use sessionKey format consistent with message router
-      const sessionKey = `telegram:${sessionId}`;
+      // Use sessionKey format consistent with message router (reuses sessionKey declared above)
       outputHistoryService.addOutput(sessionKey, ctx.message.text, replyText);
 
       if (fileRefs.length > 0) {

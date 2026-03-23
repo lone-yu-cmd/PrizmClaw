@@ -27,7 +27,7 @@ const schema = z.object({
   // F-006: Safety and Permission Guard
   USER_PERMISSIONS: z.string().optional().default(''),
   ALLOW_ADMIN_SKIP_CONFIRM: z.string().optional().default('true'),
-  AUDIT_LOG_DIR: z.string().optional().default('logs'),
+  AUDIT_LOG_DIR: z.string().optional().default('dev-pipeline/logs'),
   AUDIT_LOG_MAX_SIZE_MB: z.coerce.number().int().positive().default(10),
   AUDIT_LOG_MAX_FILES: z.coerce.number().int().positive().default(5),
   // F-009: General Command Executor
