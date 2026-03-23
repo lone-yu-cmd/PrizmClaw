@@ -861,7 +861,7 @@
         "Given 面板展开状态，When 用户点击面板标题，Then 面板内容折叠收起，标题仍可见",
         "Given 面板折叠状态，When 用户再次点击标题，Then 面板内容重新展开"
       ],
-      "status": "pending",
+      "status": "in_progress",
       "session_granularity": "feature",
       "sub_features": []
     },

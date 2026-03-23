@@ -16,8 +16,8 @@
         <div id="status" class="status" role="status" aria-live="polite">就绪</div>
       </header>
 
-      <section class="panel config-panel">
-        <h2>连接设置</h2>
+      <details class="panel config-panel" open>
+        <summary>连接设置</summary>
         <div class="form-grid">
           <label>
             API Base URL（可选）
@@ -28,7 +28,7 @@
             <input id="sessionIdInput" type="text" placeholder="默认自动生成，可手动修改" />
           </label>
         </div>
-      </section>
+      </details>
 
       <section class="panel session-info-panel" aria-label="会话信息">
         <h2>会话信息</h2>

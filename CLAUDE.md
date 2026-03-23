@@ -166,3 +166,9 @@ Use the full workflow (/prizmkit-specify -> /prizmkit-plan -> /prizmkit-analyze 
 - DECISION: `state.telegramChatId` is null by default in `state` object — panel shows "未绑定" with `.info-value.muted` (italic, var(--muted) color) when null; set to a string value when bind event arrives; no backend changes needed for display.
 - DECISION: `updateSessionInfoPanel(connState?)` accepts optional connState arg — called from `init()` (no arg → neutral "就绪" state), SSE 'connected' event (arg='connected'), SSE onerror (arg='error'), and `sessionIdInput` change handler (no arg → keep current visual state after reconnect).
 - INTERFACE: `updateSessionInfoPanel(connState?)` in `public/js/main.js` — connState is `'connected' | 'error' | undefined`; updates `#infoSessionId`, `#infoConnState`, `#infoTelegramChatId` DOM elements; reads `state.sessionId` and `state.telegramChatId`
+
+### F-040: Web Collapsible Config Panel
+- DECISION: `.config-panel` uses native `<details open>`/`<summary>` elements (not JS toggle) — zero JS dependency; `open` attribute provides default-expanded state; browser handles toggle natively; no ARIA or JS state management needed.
+- DECISION: `<section class="panel config-panel">` replaced by `<details class="panel config-panel" open>` — the `.panel` class stays on `<details>` so box-shadow/border/padding styles apply unchanged; `<h2>` title replaced by `<summary>` element.
+- DECISION: `summary::before` ▶ arrow uses `transition: transform 0.2s ease` + rotates 90° on `details[open]` — provides animated visual cue for open/closed state; uses only CSS vars (`--muted`) so dark mode auto-switches without explicit override block.
+- DECISION: Default browser disclosure marker hidden via `list-style: none` on summary + `summary::-webkit-details-marker: display: none` — cross-browser normalization; custom `::before` arrow replaces it consistently.

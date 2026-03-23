@@ -33,5 +33,6 @@ RULES:
 - Empty state: .empty-state component (flex column, centered, CSS vars only) inside #chatMessages and .exec-result; updateChatEmptyState() checks .message.user/.message.assistant only (system msgs don't count); updateExecEmptyState(hasResult) toggles #execEmptyState and #execOutput wrapper; clearChatBtn must re-append #chatEmptyState after innerHTML='' before next appendMessage call
 - Scroll button: #scrollToBottomBtn inside .chat-messages-wrapper (position:relative); .scroll-to-bottom uses opacity:0+pointer-events:none (hidden) vs .visible (shown); z-index:50; updateScrollToBottomBtn() on chatMessages scroll event; threshold 100px from bottom; uses only CSS vars (dark mode auto-switches)
 - Copy button: each .output-box wrapped in .output-box-wrapper (position:relative); .copy-btn uses position:absolute top:6px right:6px; data-target attr holds output box ID; delegated document.click listener in main.js; copyToClipboard(el) checks trimmed text (empty or '-' → '内容为空' toast, else clipboard write → '已复制' toast); uses only CSS vars (dark mode auto-switches)
+- Collapsible config panel: <details class="panel config-panel" open>/<summary> native HTML collapse — no JS; open attr = default expanded; summary ::before ▶ rotates 90deg when [open]; uses only CSS vars (dark mode auto-switches without explicit override)
 
 UPDATED: 2026-03-23

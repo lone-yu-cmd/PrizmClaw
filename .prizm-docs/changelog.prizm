@@ -2,31 +2,14 @@ MODULE: changelog
 RESPONSIBILITY: Append-only record of prizm-docs structural changes
 
 CHANGELOG:
-- 2026-03-23 | root.prizm | add: initial L0 doc generated during F-024 bootstrap
-- 2026-03-23 | root.prizm | update: add mobile breakpoint CSS rules (F-030)
-- 2026-03-23 | root.prizm | update: add panel/sub-panel shadow rule (F-024)
-- 2026-03-23 | root.prizm | update: add .app-header sticky rule (F-025)
-- 2026-03-23 | src/services.prizm | update: add profile-store.js and backendRegistry.updateBackend() interfaces (F-021)
-- 2026-03-23 | src/services.prizm | update: add TRAPS for profileStore startup pattern and backendRegistry duplicate registration (F-021)
-- 2026-03-23 | root.prizm | update: add dark mode @media rule and dark palette vars (F-031)
-- 2026-03-23 | src/bot.prizm | update: add cli.js handler to KEY_FILES, profile-store/backend-registry to DEPENDENCIES (F-021)
-- 2026-03-23 | root.prizm | update: add .output-box modifier class pattern rule (F-029)
-- 2026-03-23 | root.prizm | update: add .status color state rule (.connected/.error modifier classes) (F-026)
-- 2026-03-23 | root.prizm | update: add .message fade-in animation rule (F-027)
-- 2026-03-23 | root.prizm | update: add .char-counter warning class pattern rule (F-028)
-- 2026-03-23 | root.prizm | update: add lightbox z-index/backdrop/Esc rule (F-032)
+- 2026-03-23 | root.prizm | add: initial L0 doc; rules for F-024/F-025/F-026/F-027/F-028/F-029/F-030/F-031/F-032
+- 2026-03-23 | src/services.prizm | update: profile-store.js, backendRegistry.updateBackend() interfaces + TRAPS (F-021)
+- 2026-03-23 | src/bot.prizm | update: cli.js KEY_FILES, profile-store/backend-registry DEPENDENCIES (F-021)
+- 2026-03-23 | public/ | add: F-033 toast, F-034 spinner, F-035 kbd hints, F-036 empty state, F-037 scroll btn, F-038 copy btn
+- 2026-03-23 | root.prizm | update: RULES for toast/spinner/kbd/empty-state/scroll-btn/copy-btn (F-033–F-038)
+- 2026-03-23 | public/ | add: F-039 session info panel (.info-grid/.info-row + updateSessionInfoPanel JS)
+- 2026-03-23 | CLAUDE.md | update: sediment F-039 DECISIONS
+- 2026-03-23 | public/ | update: F-040 collapsible config panel (<details>/<summary> + arrow CSS)
+- 2026-03-23 | root.prizm | update: add collapsible config panel RULE (F-040)
+- 2026-03-23 | CLAUDE.md | update: sediment F-040 DECISIONS
 UPDATED: 2026-03-23
-- 2026-03-23 | public/ | add: F-033 toast notification system (showToast, CSS, HTML container)
-- 2026-03-23 | root.prizm | update: add toast z-index/palette/interface RULE
-- 2026-03-23 | public/ | add: F-034 loading spinner (.btn.loading CSS + setBusy activeBtn param)
-- 2026-03-23 | root.prizm | update: add spinner setBusy interface RULE (F-034)
-- 2026-03-23 | public/ | add: F-035 keyboard shortcut hints (.kbd CSS + Ctrl+Enter/Enter hints in chat/exec forms)
-- 2026-03-23 | root.prizm | update: add .kbd component and wrapper div pattern RULE (F-035)
-- 2026-03-23 | public/ | add: F-036 empty state illustrations (.empty-state CSS + #chatEmptyState + #execEmptyState + updateChatEmptyState/updateExecEmptyState JS)
-- 2026-03-23 | root.prizm | update: add empty state component RULE including TRAP for clearChatBtn innerHTML reset (F-036)
-- 2026-03-23 | public/ | add: F-037 scroll-to-bottom button (#scrollToBottomBtn + .chat-messages-wrapper + .scroll-to-bottom CSS + updateScrollToBottomBtn JS)
-- 2026-03-23 | root.prizm | update: add scroll-to-bottom button pattern RULE (F-037)
-- 2026-03-23 | public/ | add: F-038 copy-to-clipboard buttons (.output-box-wrapper + .copy-btn CSS + copyToClipboard JS + data-target HTML binding)
-- 2026-03-23 | root.prizm | update: add copy button pattern RULE including delegated listener and empty-check convention (F-038)
-- 2026-03-23 | public/ | add: F-039 session info display panel (.session-info-panel + .info-grid/.info-row/.info-label/.info-value CSS + updateSessionInfoPanel JS + state.telegramChatId)
-- 2026-03-23 | CLAUDE.md | update: sediment F-039 DECISIONS — session info panel layout, color pattern, telegramChatId null default, updateSessionInfoPanel interface
