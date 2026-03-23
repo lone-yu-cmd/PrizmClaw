@@ -645,7 +645,7 @@
         "Given 字符数超过上限的 80%，When 渲染计数器，Then 计数器以警告色（--warning）高亮显示",
         "Given 输入框为空，When 渲染计数器，Then 计数器显示 0 且为默认样式"
       ],
-      "status": "in_progress",
+      "status": "completed",
       "session_granularity": "feature",
       "sub_features": []
     },
