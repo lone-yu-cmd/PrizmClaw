@@ -1,4 +1,5 @@
 const STORAGE_KEY = 'prizmclaw-web-session';
+const FONT_SIZE_KEY = 'prizmclaw-font-size';
 
 const state = {
   baseUrl: '',
@@ -40,7 +41,8 @@ const els = {
   scrollToBottomBtn: document.getElementById('scrollToBottomBtn'),
   infoSessionId: document.getElementById('infoSessionId'),
   infoConnState: document.getElementById('infoConnState'),
-  infoTelegramChatId: document.getElementById('infoTelegramChatId')
+  infoTelegramChatId: document.getElementById('infoTelegramChatId'),
+  fontToggleBtns: document.querySelectorAll('.font-toggle-btn')
 };
 
 function randomSessionId() {
@@ -165,6 +167,38 @@ function loadSessionConfig() {
   } catch {
     // ignore
   }
+}
+
+function applyFontSize(scale) {
+  document.documentElement.style.setProperty('--font-scale', String(scale));
+  els.fontToggleBtns.forEach((btn) => {
+    btn.classList.toggle('active', Number(btn.dataset.scale) === scale);
+  });
+}
+
+function loadFontSize() {
+  try {
+    const raw = localStorage.getItem(FONT_SIZE_KEY);
+    if (raw) {
+      const scale = parseFloat(raw);
+      if ([0.875, 1, 1.2].includes(scale)) {
+        applyFontSize(scale);
+        return;
+      }
+    }
+  } catch {
+    // ignore
+  }
+  applyFontSize(1); // default: medium
+}
+
+function setFontSize(scale) {
+  try {
+    localStorage.setItem(FONT_SIZE_KEY, String(scale));
+  } catch {
+    // ignore
+  }
+  applyFontSize(scale);
 }
 
 function formatTimestamp() {
@@ -388,6 +422,7 @@ function init() {
   }
 
   loadSessionConfig();
+  loadFontSize();
 
   if (!state.sessionId) {
     state.sessionId = randomSessionId();
@@ -612,6 +647,12 @@ document.addEventListener('click', (event) => {
   const targetId = btn.dataset.target;
   const targetEl = targetId ? document.getElementById(targetId) : null;
   if (targetEl) copyToClipboard(targetEl);
+});
+
+els.fontToggleBtns.forEach((btn) => {
+  btn.addEventListener('click', () => {
+    setFontSize(Number(btn.dataset.scale));
+  });
 });
 
 init();

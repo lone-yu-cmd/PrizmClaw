@@ -179,3 +179,14 @@ Use the full workflow (/prizmkit-specify -> /prizmkit-plan -> /prizmkit-analyze 
 - DECISION: `.message-timestamp` uses only CSS vars (`--muted`) — dark mode auto-switches without explicit `@media (prefers-color-scheme: dark)` override block; same pattern as `.kbd`, `.empty-state`, `.scroll-to-bottom`, `.copy-btn`.
 - INTERFACE: `formatTimestamp()` in `public/js/main.js` — returns `HH:MM` string in local time; called by `createMessageElement()` to stamp each message at render time
 - INTERFACE: `.message-timestamp` in `public/styles.css` — `display: block; font-size: 11px; color: var(--muted); text-align: right; margin-top: 4px; user-select: none`; sibling of `.body` inside `.message` flex container
+
+### F-043: Web Font Size Accessibility Toggle
+- DECISION: `--font-scale` CSS var on `:root`, applied via `body { font-size: calc(1rem * var(--font-scale)) }` — `rem`-based sizes scale with body; fixed `px` sizes (component-level) remain stable. Three valid scales: 0.875 (小), 1.0 (中), 1.2 (大).
+- DECISION: Separate localStorage key `prizmclaw-font-size` (not merged into `STORAGE_KEY` `prizmclaw-web-session`) — clean separation of concerns; font preference is an accessibility setting independent of session config.
+- DECISION: `loadFontSize()` validates against whitelist `[0.875, 1, 1.2]` before applying — prevents corrupted localStorage values; falls back to scale=1 (中) if invalid or absent.
+- DECISION: `applyFontSize(scale)` sets `--font-scale` on `document.documentElement` (not `document.body`) — CSS var on `:root`/`html` propagates to all descendants; also syncs `.active` class on `.font-toggle-btn` elements.
+- DECISION: `.font-toggle` uses only CSS vars (`--primary`, `--panel`, `--bg`, `--muted`, `--line`, `--text`, `--primary-contrast`) — dark mode auto-switches without explicit `@media (prefers-color-scheme: dark)` override block; consistent with `.kbd`, `.empty-state`, `.scroll-to-bottom`, `.copy-btn` pattern.
+- INTERFACE: `applyFontSize(scale)` in `public/js/main.js` — sets `--font-scale` CSS var on `<html>`, syncs `.active` class on all `.font-toggle-btn` elements
+- INTERFACE: `setFontSize(scale)` in `public/js/main.js` — persists scale to localStorage key `prizmclaw-font-size`, then calls `applyFontSize(scale)`
+- INTERFACE: `loadFontSize()` in `public/js/main.js` — reads localStorage, validates whitelist, calls `applyFontSize()`; called in `init()` before DOM interaction
+- INTERFACE: `.font-toggle-btn` in `public/styles.css` — `.active` class applied by `applyFontSize()`; `data-scale` attribute holds numeric scale value as string

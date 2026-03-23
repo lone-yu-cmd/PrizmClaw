@@ -907,13 +907,15 @@
       "description": "为 Web 管理台添加字体大小切换控件，支持小/中/大三档，满足不同视力用户的可读性需求。在 public/styles.css 中通过 CSS 变量 --font-scale 控制全局字体倍率，在 public/index.html 中添加切换按钮，选择结果持久化至 localStorage。无后端变更。",
       "priority": 43,
       "estimated_complexity": "low",
-      "dependencies": ["F-031"],
+      "dependencies": [
+        "F-031"
+      ],
       "acceptance_criteria": [
         "Given 页面加载完成，When 渲染字体切换控件，Then 显示小/中/大三个选项，默认选中中档",
         "Given 用户选择大字体档，When 切换生效，Then 页面所有文字按比例放大，布局不破损",
         "Given 用户刷新页面，When 页面重新加载，Then 上次选择的字体档位从 localStorage 恢复"
       ],
-      "status": "pending",
+      "status": "in_progress",
       "session_granularity": "feature",
       "sub_features": []
     },
@@ -923,7 +925,9 @@
       "description": "为 Web 管理台聊天区与右侧面板之间添加可拖拽分隔条，允许用户自由调整两列宽度比例。在 public/styles.css 和 public/index.html 中实现拖拽 resize handle，宽度比例持久化至 localStorage。无后端变更。",
       "priority": 44,
       "estimated_complexity": "low",
-      "dependencies": ["F-030"],
+      "dependencies": [
+        "F-030"
+      ],
       "acceptance_criteria": [
         "Given 桌面端（>900px），When 渲染仪表板，Then 聊天区与右侧面板之间显示可拖拽分隔条",
         "Given 用户拖拽分隔条，When 拖拽进行中，Then 两列宽度实时跟随鼠标位置变化",
