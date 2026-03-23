@@ -717,7 +717,7 @@
         "Given lightbox 已打开，When 用户点击模态框背景或按 Esc 键，Then 模态框关闭返回正常页面",
         "Given 截图尚未加载（.hidden 状态），When 渲染页面，Then 不显示 lightbox 触发元素"
       ],
-      "status": "in_progress",
+      "status": "completed",
       "session_granularity": "feature",
       "sub_features": []
     },
