@@ -96,6 +96,66 @@ p {
   box-shadow: 0 1px 4px rgba(31, 38, 51, 0.06);
 }
 
+/* ── Session Info Panel ─────────────────────────────────────────────────────── */
+
+.session-info-panel h2 {
+  margin-bottom: 10px;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.info-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.info-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+
+.info-value {
+  font-size: 13px;
+  color: var(--text);
+  word-break: break-all;
+  margin: 0;
+  font-family: ui-monospace, 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+}
+
+.info-value.muted {
+  color: var(--muted);
+  font-style: italic;
+  font-family: inherit;
+}
+
+.info-value.connected {
+  color: #027a48;
+}
+
+.info-value.error {
+  color: var(--danger);
+}
+
+@media (prefers-color-scheme: dark) {
+  .info-value.connected {
+    color: #4ade80;
+  }
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

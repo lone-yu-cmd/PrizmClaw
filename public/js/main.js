@@ -3,6 +3,7 @@ const STORAGE_KEY = 'prizmclaw-web-session';
 const state = {
   baseUrl: '',
   sessionId: '',
+  telegramChatId: null,
   busy: false,
   eventSource: null,
   streamingMessageBody: null,
@@ -36,7 +37,10 @@ const els = {
   stdoutOutput: document.getElementById('stdoutOutput'),
   stderrOutput: document.getElementById('stderrOutput'),
   toastContainer: document.getElementById('toast-container'),
-  scrollToBottomBtn: document.getElementById('scrollToBottomBtn')
+  scrollToBottomBtn: document.getElementById('scrollToBottomBtn'),
+  infoSessionId: document.getElementById('infoSessionId'),
+  infoConnState: document.getElementById('infoConnState'),
+  infoTelegramChatId: document.getElementById('infoTelegramChatId')
 };
 
 function randomSessionId() {
@@ -48,6 +52,33 @@ function setStatus(text, state) {
   els.status.textContent = text;
   els.status.classList.remove('connected', 'error');
   if (state) els.status.classList.add(state);
+}
+
+function updateSessionInfoPanel(connState) {
+  // Session ID
+  els.infoSessionId.textContent = state.sessionId || '—';
+
+  // Connection state row
+  const resolvedState = connState !== undefined ? connState : null;
+  if (resolvedState === 'connected') {
+    els.infoConnState.textContent = '已连接';
+    els.infoConnState.className = 'info-value connected';
+  } else if (resolvedState === 'error') {
+    els.infoConnState.textContent = '连接错误';
+    els.infoConnState.className = 'info-value error';
+  } else {
+    els.infoConnState.textContent = '就绪';
+    els.infoConnState.className = 'info-value';
+  }
+
+  // Telegram Chat ID
+  if (state.telegramChatId) {
+    els.infoTelegramChatId.textContent = String(state.telegramChatId);
+    els.infoTelegramChatId.className = 'info-value';
+  } else {
+    els.infoTelegramChatId.textContent = '未绑定';
+    els.infoTelegramChatId.className = 'info-value muted';
+  }
 }
 
 const CHAR_LIMIT = 8000;
@@ -266,6 +297,7 @@ function connectRealtime() {
 
   es.addEventListener('connected', () => {
     setStatus('实时通道已连接', 'connected');
+    updateSessionInfoPanel('connected');
   });
 
   es.addEventListener('status', (event) => {
@@ -310,6 +342,7 @@ function connectRealtime() {
 
   es.onerror = () => {
     setStatus('实时通道重连中...', 'error');
+    updateSessionInfoPanel('error');
   };
 }
 
@@ -352,6 +385,7 @@ function init() {
   els.baseUrlInput.value = state.baseUrl;
   els.sessionIdInput.value = state.sessionId;
 
+  updateSessionInfoPanel();
   appendMessage('system', '欢迎使用 PrizmClaw。你可以聊天、抓取截图、执行受控系统命令。输入 / 查看可用命令。');
   connectRealtime();
   loadAvailableCommands();
@@ -368,6 +402,7 @@ els.sessionIdInput.addEventListener('change', () => {
   state.sessionId = value || randomSessionId();
   els.sessionIdInput.value = state.sessionId;
   saveSessionConfig();
+  updateSessionInfoPanel();
   connectRealtime();
 });
 
