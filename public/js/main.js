@@ -31,7 +31,8 @@ const els = {
   runExecBtn: document.getElementById('runExecBtn'),
   exitCodeOutput: document.getElementById('exitCodeOutput'),
   stdoutOutput: document.getElementById('stdoutOutput'),
-  stderrOutput: document.getElementById('stderrOutput')
+  stderrOutput: document.getElementById('stderrOutput'),
+  toastContainer: document.getElementById('toast-container')
 };
 
 function randomSessionId() {
@@ -60,6 +61,21 @@ function setBusy(busy, text) {
   els.takeScreenshotBtn.disabled = busy;
   els.runExecBtn.disabled = busy;
   setStatus(text);
+}
+
+const TOAST_DURATION_MS = 3000;
+const TOAST_FADE_MS = 300;
+
+function showToast(msg, type = 'info') {
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = msg;
+  els.toastContainer.appendChild(toast);
+
+  setTimeout(() => {
+    toast.classList.add('toast-fade-out');
+    setTimeout(() => toast.remove(), TOAST_FADE_MS);
+  }, TOAST_DURATION_MS);
 }
 
 function saveSessionConfig() {
@@ -356,8 +372,10 @@ els.chatForm.addEventListener('submit', async (event) => {
       const isHtml = data.isCommand === true;
       appendMessage('assistant', data.reply || '(空响应)', false, isHtml);
     }
+    showToast('消息发送成功', 'success');
   } catch (error) {
     appendMessage('system', error instanceof Error ? error.message : String(error), true);
+    showToast(error instanceof Error ? error.message : String(error), 'error');
   } finally {
     state.streamingMessageBody = null;
     setBusy(false, '就绪');
@@ -429,8 +447,10 @@ els.takeScreenshotBtn.addEventListener('click', async () => {
     els.screenshotImage.src = `data:${data.mimeType};base64,${data.imageBase64}`;
     els.screenshotImage.classList.remove('hidden');
     els.screenshotMeta.textContent = `mimeType: ${data.mimeType}\nsize(base64): ${data.imageBase64.length}`;
+    showToast('截图获取成功', 'success');
   } catch (error) {
     els.screenshotMeta.textContent = error instanceof Error ? error.message : String(error);
+    showToast(error instanceof Error ? error.message : String(error), 'error');
   } finally {
     setBusy(false, '就绪');
   }
@@ -459,6 +479,11 @@ els.execForm.addEventListener('submit', async (event) => {
     els.stdoutOutput.textContent = data.stdout || '(empty)';
     els.stderrOutput.textContent = data.stderr || '(empty)';
     els.stderrOutput.classList.toggle('error', Boolean(data.stderr));
+    if (data.exitCode === 0) {
+      showToast('命令执行成功', 'success');
+    } else {
+      showToast(`命令退出码: ${data.exitCode}`, 'error');
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     els.exitCodeOutput.textContent = 'error';
@@ -466,6 +491,7 @@ els.execForm.addEventListener('submit', async (event) => {
     els.stdoutOutput.textContent = '';
     els.stderrOutput.textContent = message;
     els.stderrOutput.classList.add('error');
+    showToast(message, 'error');
   } finally {
     setBusy(false, '就绪');
   }

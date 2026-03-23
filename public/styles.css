@@ -470,3 +470,88 @@ textarea:focus {
     color: var(--warning);
   }
 }
+
+/* ── Toast Notification System ─────────────────────────────────────────────── */
+
+.toast-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+@keyframes toast-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes toast-fade-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+.toast {
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.4;
+  max-width: 320px;
+  box-shadow: 0 4px 12px rgba(31, 38, 51, 0.12);
+  animation: toast-slide-in 0.2s ease-out both;
+  pointer-events: auto;
+}
+
+.toast.success {
+  border-color: #a6f4c5;
+  background: #ecfdf3;
+  color: #027a48;
+}
+
+.toast.error {
+  border-color: #f9d3d0;
+  background: #fef3f2;
+  color: var(--danger);
+}
+
+.toast.info {
+  border-color: var(--line);
+  background: var(--panel);
+  color: var(--text);
+}
+
+.toast.toast-fade-out {
+  animation: toast-fade-out 0.3s ease-in both;
+}
+
+@media (prefers-color-scheme: dark) {
+  .toast.success {
+    border-color: #166534;
+    background: #14532d;
+    color: #4ade80;
+  }
+
+  .toast.error {
+    border-color: #7f1d1d;
+    background: #450a0a;
+    color: var(--danger);
+  }
+}

@@ -22,15 +22,11 @@ RULES:
 - Session keys: bound sessions use telegram:{chatId}, unbound web sessions use web:{sessionId}
 - Safe-to-modify config keys: LOG_LEVEL, REQUEST_TIMEOUT_MS, AI_CLI_HEARTBEAT_MS, MAX_PROMPT_CHARS, MAX_HISTORY_TURNS, SYSTEM_MONITOR_INTERVAL_MS, SESSION_TIMEOUT_MS, TASK_DEBOUNCE_MS
 - ANSI stripping happens in onAssistantChunk hook via ansiProcessChunk() — never strip in final reply path
-- .btn:disabled uses pointer-events: none to prevent hover CSS from firing on disabled buttons
-- .panel and .sub-panel are separate CSS rules (not grouped) to allow different box-shadow depths; shadow colors use rgba derived from --text (#1f2633) for cool-tone palette coordination
-- .app-header uses position: sticky + background: var(--bg) + z-index: 10 — always pair sticky with background to prevent content bleed-through; padding-bottom + negative margin-bottom offsets border-bottom from grid gap
-- .status uses modifier classes .connected (green: #ecfdf3/#a6f4c5/#027a48) and .error (red: #fef3f2/#f9d3d0/--danger) — setStatus(text, state) manages class swap; error palette reuses .message.error values for system consistency
-- .message uses animation: fade-in 0.25s ease-out both — @keyframes fade-in defined in styles.css; fill-mode `both` ensures opacity:0 pre-start and opacity:1 post-end; translateY(4px)→0 adds subtle depth
-- .char-counter uses classList.toggle('warning', len >= threshold) on wrapper div — warning class at 80% of CHAR_LIMIT (6400/8000); updateCharCounter() called on input event and after submit clears chatInput
-- .output-box uses modifier classes .error (red: #fef3f2/#f9d3d0/--danger) and .exit-error (amber: #fffbf0/#fde8bb/--warning) — always classList.remove() both classes before each exec run to reset state; toggle .error on stderrOutput when stderr non-empty; toggle .exit-error on exitCodeOutput when exitCode !== 0
-- CSS breakpoints: 900px collapses .dashboard-grid + .form-grid to 1fr; 600px mobile breakpoint adds flex-wrap on .app-header, collapses .exec-form to 1fr, reduces .panel/.sub-panel padding (14px→10px), .app-shell padding (20px→12px), .chat-messages max-height (62vh→50vh); .status gets max-width+text-overflow:ellipsis at 600px to prevent header overflow
-- Dark mode via @media (prefers-color-scheme: dark) in styles.css — overrides :root CSS vars (--bg/#111827, --panel/#1f2937, --line/#374151, --text/#f9fafb, --muted/#9ca3af, --primary/#5b8df8, --danger/#f87171, --warning/#f59e0b, --chat-user/#1e3a5f, --chat-assistant/#263144); hardcoded #fff backgrounds (input/textarea/.chat-messages/.output-box/.screenshot-image) overridden to var(--panel); modifier classes (.status.connected/.status.error/.message.error/.output-box.error/.output-box.exit-error) get dedicated dark-palette overrides; :root color-scheme is `light dark`
-- Lightbox (#lightbox) uses position:fixed + z-index:200 (above header z-index:10) + rgba(0,0,0,0.8) backdrop — no dark mode override needed (black backdrop works in both modes); cursor:zoom-out on backdrop, cursor:default on #lightboxImg; close on backdrop click (event.target !== img) or document keydown Esc; .screenshot-image:not(.hidden) adds cursor:pointer — Esc handler on document (not chatInput) so it works regardless of focus
+- Web panel CSS z-index hierarchy: .app-header=10, command-dropdown=100, lightbox=200, toast=300; details in CLAUDE.md
+- Web panel CSS modifier pattern: .status/.message/.output-box/.toast use modifier classes for state (connected/error/exit-error/success/info); dark mode overrides hardcoded light-palette values; details in CLAUDE.md
+- Dark mode via @media (prefers-color-scheme: dark) in styles.css; :root color-scheme is `light dark`; hardcoded #fff backgrounds overridden to var(--panel)
+- CSS breakpoints: 900px collapses grids; 600px mobile layout (flex-wrap header, full-width buttons, reduced padding)
+- Toast: showToast(msg, type) in public/js/main.js; type='success'|'error'|'info'; auto-dismisses 3s + 300ms fade-out animation
+- Lightbox: openLightbox(src)/closeLightbox() in public/js/main.js; close on backdrop click (event.target !== img) or Esc keydown
 
 UPDATED: 2026-03-23
