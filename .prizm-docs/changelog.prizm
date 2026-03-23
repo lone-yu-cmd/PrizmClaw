@@ -20,3 +20,5 @@ UPDATED: 2026-03-23
 - 2026-03-23 | root.prizm | update: add toast z-index/palette/interface RULE
 - 2026-03-23 | public/ | add: F-034 loading spinner (.btn.loading CSS + setBusy activeBtn param)
 - 2026-03-23 | root.prizm | update: add spinner setBusy interface RULE (F-034)
+- 2026-03-23 | public/ | add: F-035 keyboard shortcut hints (.kbd CSS + Ctrl+Enter/Enter hints in chat/exec forms)
+- 2026-03-23 | root.prizm | update: add .kbd component and wrapper div pattern RULE (F-035)

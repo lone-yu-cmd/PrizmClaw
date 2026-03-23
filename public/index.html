@@ -43,7 +43,10 @@
             <label class="sr-only" for="chatInput">输入消息</label>
             <textarea id="chatInput" rows="3" placeholder="请输入对话"></textarea>
             <div class="char-counter"><span id="charCounter">0</span> / 8000</div>
-            <button id="sendChatBtn" type="submit" class="btn primary">发送</button>
+            <div class="chat-form-actions">
+              <button id="sendChatBtn" type="submit" class="btn primary">发送</button>
+              <kbd class="kbd">Ctrl+Enter</kbd>
+            </div>
           </form>
         </section>
 
@@ -62,7 +65,10 @@
             <form id="execForm" class="exec-form">
               <label class="sr-only" for="execInput">输入系统命令</label>
               <input id="execInput" type="text" placeholder="例如：pwd" />
-              <button id="runExecBtn" type="submit" class="btn warning">执行</button>
+              <div class="exec-form-actions">
+                <button id="runExecBtn" type="submit" class="btn warning">执行</button>
+                <kbd class="kbd">Enter</kbd>
+              </div>
             </form>
             <div class="exec-result">
               <div>
