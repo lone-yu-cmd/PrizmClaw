@@ -112,3 +112,9 @@ Use the full workflow (/prizmkit-specify -> /prizmkit-plan -> /prizmkit-analyze 
 - DECISION: Hardcoded `background: #fff` on `input`, `textarea`, `.chat-messages`, `.output-box`, `.screenshot-image` are overridden to `var(--panel)` inside the dark media query — these elements do not use CSS vars in light mode so cannot auto-switch without explicit overrides.
 - DECISION: `.status.connected`, `.status.error`, `.message.error`, `.output-box.error`, `.output-box.exit-error` use hardcoded light-mode palette values; dark mode overrides use deep red (`#450a0a` bg, `#7f1d1d` border) and deep amber (`#431407` bg, `#78350f` border) for readable dark-appropriate contrast — same semantic color system, adapted for dark surfaces.
 - DECISION: `:root { color-scheme: light dark }` — signals browser to render system UI (scrollbars, form controls) in the matching scheme; was `light` only before F-031.
+
+### F-032: Web Screenshot Preview Lightbox
+- DECISION: Lightbox overlay uses `position: fixed; inset: 0; z-index: 200` (above `.app-header` z-index: 10 and command dropdown z-index: 100) — always use fixed + inset:0 for true full-screen overlays that scroll independently of page content.
+- DECISION: Esc to close lightbox is handled via `document.addEventListener('keydown')` (not on a specific element) — ensures Esc works regardless of which element has focus; check `!els.lightbox.classList.contains('hidden')` before closing to avoid interfering with other Esc handlers.
+- DECISION: Lightbox backdrop click detection uses `event.target !== els.lightboxImg` — clicking the image itself does not close; clicking any part of the dark overlay does. No dark mode override needed for `rgba(0,0,0,0.8)` backdrop — black works in both light and dark themes.
+- INTERFACE: `openLightbox(src)` / `closeLightbox()` in `public/js/main.js` — open sets `#lightboxImg.src` and removes `.hidden` from `#lightbox`; close adds `.hidden` back and clears src to free memory.

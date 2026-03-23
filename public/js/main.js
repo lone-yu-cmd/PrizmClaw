@@ -24,6 +24,8 @@ const els = {
   takeScreenshotBtn: document.getElementById('takeScreenshotBtn'),
   screenshotImage: document.getElementById('screenshotImage'),
   screenshotMeta: document.getElementById('screenshotMeta'),
+  lightbox: document.getElementById('lightbox'),
+  lightboxImg: document.getElementById('lightboxImg'),
   execForm: document.getElementById('execForm'),
   execInput: document.getElementById('execInput'),
   runExecBtn: document.getElementById('runExecBtn'),
@@ -392,6 +394,28 @@ els.chatInput.addEventListener('blur', () => {
   setTimeout(hideCommandDropdown, 150);
 });
 
+function openLightbox(src) {
+  els.lightboxImg.src = src;
+  els.lightbox.classList.remove('hidden');
+}
+
+function closeLightbox() {
+  els.lightbox.classList.add('hidden');
+  els.lightboxImg.src = '';
+}
+
+els.screenshotImage.addEventListener('click', () => {
+  if (!els.screenshotImage.classList.contains('hidden')) {
+    openLightbox(els.screenshotImage.src);
+  }
+});
+
+els.lightbox.addEventListener('click', (event) => {
+  if (event.target !== els.lightboxImg) {
+    closeLightbox();
+  }
+});
+
 els.takeScreenshotBtn.addEventListener('click', async () => {
   if (state.busy) return;
 
@@ -449,6 +473,12 @@ els.execForm.addEventListener('submit', async (event) => {
 
 window.addEventListener('beforeunload', () => {
   closeRealtime();
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && !els.lightbox.classList.contains('hidden')) {
+    closeLightbox();
+  }
 });
 
 init();

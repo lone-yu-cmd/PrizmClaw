@@ -1,3 +1,34 @@
+# Context Snapshot — F-032: Web Screenshot Preview Lightbox
+
+## Section 1 — Feature Brief
+
+**Description**: 为 Web 管理台截图预览图片（#screenshotImage）添加点击放大的 lightbox 效果。在 public/styles.css 和 public/index.html 中实现纯 CSS 或轻量 JS 的模态预览，用户点击截图后可查看原始尺寸图片。无后端变更。
+
+**Acceptance Criteria**:
+- Given 截图加载完成，When 用户点击截图预览图，Then 以 lightbox 模态框展示原始尺寸截图
+- Given lightbox 已打开，When 用户点击模态框背景或按 Esc 键，Then 模态框关闭返回正常页面
+- Given 截图尚未加载（.hidden 状态），When 渲染页面，Then 不显示 lightbox 触发元素
+
+## Section 2 — Project Structure
+
+Files to modify:
+- public/index.html (88 lines) — add lightbox modal HTML, make screenshot image clickable
+- public/styles.css (444 lines) — add lightbox overlay/modal CSS
+- public/js/main.js (455 lines) — add lightbox open/close JS logic
+
+## Section 3 — Prizm Context
+
+From root.prizm:
+- LANG: JavaScript (ESM), Node.js 22
+- public module: static web panel assets — no L1 doc
+- TEST_CMD: node --test tests/**/*.test.js
+- Dark mode via @media (prefers-color-scheme: dark) — any new hardcoded colors need dark overrides
+- .hidden uses display: none
+
+## Section 4 — Existing Source Files
+
+### public/index.html (88 lines)
+```html
 <!doctype html>
 <html lang="zh-CN">
   <head>
@@ -83,10 +114,35 @@
       </main>
     </div>
 
-    <div id="lightbox" class="lightbox hidden" role="dialog" aria-modal="true" aria-label="截图放大预览">
-      <img id="lightboxImg" class="lightbox-img" alt="截图放大预览" />
-    </div>
-
     <script type="module" src="./js/main.js"></script>
   </body>
 </html>
+```
+
+### public/styles.css (444 lines)
+Key styles relevant to lightbox implementation:
+- `.hidden { display: none }` — screenshot img starts hidden
+- `.screenshot-image` — width: 100%, border-radius: 10px, border, margin-top: 10px
+- `z-index: 10` used by `.app-header` — lightbox overlay needs higher z-index
+- Dark mode via `@media (prefers-color-scheme: dark)` — needs dark overlay override
+
+### public/js/main.js (455 lines)
+Key handlers:
+- `els.screenshotImage` — element reference (line 25)
+- Screenshot loaded handler (lines 395-413): sets `src`, removes `.hidden` class
+- Esc key already handled (line 366) for command dropdown — lightbox Esc must not conflict
+
+## Implementation Log
+Files changed/created:
+- public/index.html — added `<div id="lightbox">` with `<img id="lightboxImg">` before closing script tag
+- public/styles.css — added `.screenshot-image:not(.hidden)`, `.lightbox`, `.lightbox.hidden`, `.lightbox-img` rules
+- public/js/main.js — added `els.lightbox`, `els.lightboxImg` refs; `openLightbox()`, `closeLightbox()` functions; click handlers on screenshotImage and lightbox; global Esc keydown handler
+
+Key decisions:
+- Lightbox overlay `z-index: 200` (above header z-index: 10)
+- `cursor: zoom-out` on backdrop, `cursor: default` on image to prevent closing when clicking image
+- Esc handled via `document.addEventListener('keydown')` — separate from chatInput keydown so it works regardless of focus
+- No dark mode CSS overrides needed — black backdrop (`rgba(0,0,0,0.8)`) works in both modes
+
+
+No frontend tests exist. Backend tests use `node --test tests/**/*.test.js`. No test changes needed for pure frontend feature.

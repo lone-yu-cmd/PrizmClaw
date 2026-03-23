@@ -1,0 +1,42 @@
+{
+  "updated_at": "2026-03-23T00:41:40Z",
+  "message_count": 63,
+  "current_tool": "Read",
+  "current_tool_input_summary": "/private/tmp/claude-501/-Users-loneyu-SelfProjects-PrizmClaw/85c34a08-b147-4c48-a390-21615341a959/ta",
+  "current_phase": "commit",
+  "detected_phases": [
+    "implement",
+    "retrospective",
+    "commit"
+  ],
+  "tool_calls": [
+    {
+      "name": "Bash",
+      "count": 16
+    },
+    {
+      "name": "Edit",
+      "count": 12
+    },
+    {
+      "name": "Read",
+      "count": 8
+    },
+    {
+      "name": "Write",
+      "count": 2
+    },
+    {
+      "name": "Skill",
+      "count": 2
+    },
+    {
+      "name": "TaskOutput",
+      "count": 1
+    }
+  ],
+  "total_tool_calls": 41,
+  "last_text_snippet": "The background test run shows 152 total test lines matched (\u2716 + \u2713), with 152 of those being `\u2716` \u2014 but that's the count o",
+  "is_active": true,
+  "errors": []
+}

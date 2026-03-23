@@ -14,4 +14,5 @@ CHANGELOG:
 - 2026-03-23 | root.prizm | update: add .status color state rule (.connected/.error modifier classes) (F-026)
 - 2026-03-23 | root.prizm | update: add .message fade-in animation rule (F-027)
 - 2026-03-23 | root.prizm | update: add .char-counter warning class pattern rule (F-028)
+- 2026-03-23 | root.prizm | update: add lightbox z-index/backdrop/Esc rule (F-032)
 UPDATED: 2026-03-23
