@@ -167,6 +167,13 @@ function loadSessionConfig() {
   }
 }
 
+function formatTimestamp() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2, '0');
+  const m = String(now.getMinutes()).padStart(2, '0');
+  return `${h}:${m}`;
+}
+
 function createMessageElement(role, text, isError = false, isHtml = false) {
   const item = document.createElement('div');
   item.className = `message ${role} ${isError ? 'error' : ''}`.trim();
@@ -183,7 +190,11 @@ function createMessageElement(role, text, isError = false, isHtml = false) {
     body.textContent = text;
   }
 
-  item.append(roleEl, body);
+  const timestamp = document.createElement('span');
+  timestamp.className = 'message-timestamp';
+  timestamp.textContent = formatTimestamp();
+
+  item.append(roleEl, body, timestamp);
   return { item, body };
 }
 

@@ -172,3 +172,10 @@ Use the full workflow (/prizmkit-specify -> /prizmkit-plan -> /prizmkit-analyze 
 - DECISION: `<section class="panel config-panel">` replaced by `<details class="panel config-panel" open>` — the `.panel` class stays on `<details>` so box-shadow/border/padding styles apply unchanged; `<h2>` title replaced by `<summary>` element.
 - DECISION: `summary::before` ▶ arrow uses `transition: transform 0.2s ease` + rotates 90° on `details[open]` — provides animated visual cue for open/closed state; uses only CSS vars (`--muted`) so dark mode auto-switches without explicit override block.
 - DECISION: Default browser disclosure marker hidden via `list-style: none` on summary + `summary::-webkit-details-marker: display: none` — cross-browser normalization; custom `::before` arrow replaces it consistently.
+
+### F-041: Web Message Timestamp Display
+- DECISION: `.message` changed from `display: block` to `display: flex; flex-direction: column` — allows timestamp span to sit at bottom with `text-align: right` without absolute positioning; `.message .body` class extracts `white-space: pre-wrap; word-break: break-word` (was on `.message`) since flex parent doesn't need it.
+- DECISION: `formatTimestamp()` uses `new Date()` at call time (moment of render) — captures accurate send time for user messages and receive time for assistant messages; called inside `createMessageElement()`.
+- DECISION: `.message-timestamp` uses only CSS vars (`--muted`) — dark mode auto-switches without explicit `@media (prefers-color-scheme: dark)` override block; same pattern as `.kbd`, `.empty-state`, `.scroll-to-bottom`, `.copy-btn`.
+- INTERFACE: `formatTimestamp()` in `public/js/main.js` — returns `HH:MM` string in local time; called by `createMessageElement()` to stamp each message at render time
+- INTERFACE: `.message-timestamp` in `public/styles.css` — `display: block; font-size: 11px; color: var(--muted); text-align: right; margin-top: 4px; user-select: none`; sibling of `.body` inside `.message` flex container

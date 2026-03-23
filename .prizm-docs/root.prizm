@@ -22,17 +22,6 @@ RULES:
 - Session keys: bound sessions use telegram:{chatId}, unbound web sessions use web:{sessionId}
 - Safe-to-modify config keys: LOG_LEVEL, REQUEST_TIMEOUT_MS, AI_CLI_HEARTBEAT_MS, MAX_PROMPT_CHARS, MAX_HISTORY_TURNS, SYSTEM_MONITOR_INTERVAL_MS, SESSION_TIMEOUT_MS, TASK_DEBOUNCE_MS
 - ANSI stripping happens in onAssistantChunk hook via ansiProcessChunk() — never strip in final reply path
-- Web panel CSS z-index hierarchy: .app-header=10, command-dropdown=100, lightbox=200, toast=300; details in CLAUDE.md
-- Web panel CSS modifier pattern: .status/.message/.output-box/.toast use modifier classes for state (connected/error/exit-error/success/info); dark mode overrides hardcoded light-palette values; details in CLAUDE.md
-- Dark mode via @media (prefers-color-scheme: dark) in styles.css; :root color-scheme is `light dark`; hardcoded #fff backgrounds overridden to var(--panel)
-- CSS breakpoints: 900px collapses grids; 600px mobile layout (flex-wrap header, full-width buttons, reduced padding)
-- Toast: showToast(msg, type) in public/js/main.js; type='success'|'error'|'info'; auto-dismisses 3s + 300ms fade-out animation
-- Lightbox: openLightbox(src)/closeLightbox() in public/js/main.js; close on backdrop click (event.target !== img) or Esc keydown
-- Spinner: setBusy(busy, text, activeBtn?) in public/js/main.js; adds .loading to activeBtn when busy; removes from all buttons when idle; .btn.loading uses ::before pseudo-element with color: transparent on button text
-- Kbd hints: .kbd class (monospace, border-bottom-width:2px, rounded, --panel bg, --muted color) used inline next to buttons; wrapper divs .chat-form-actions/.exec-form-actions (flex, align-items:center) hold button+kbd pairs; .kbd uses only CSS vars so dark mode auto-switches without explicit override
-- Empty state: .empty-state component (flex column, centered, CSS vars only) inside #chatMessages and .exec-result; updateChatEmptyState() checks .message.user/.message.assistant only (system msgs don't count); updateExecEmptyState(hasResult) toggles #execEmptyState and #execOutput wrapper; clearChatBtn must re-append #chatEmptyState after innerHTML='' before next appendMessage call
-- Scroll button: #scrollToBottomBtn inside .chat-messages-wrapper (position:relative); .scroll-to-bottom uses opacity:0+pointer-events:none (hidden) vs .visible (shown); z-index:50; updateScrollToBottomBtn() on chatMessages scroll event; threshold 100px from bottom; uses only CSS vars (dark mode auto-switches)
-- Copy button: each .output-box wrapped in .output-box-wrapper (position:relative); .copy-btn uses position:absolute top:6px right:6px; data-target attr holds output box ID; delegated document.click listener in main.js; copyToClipboard(el) checks trimmed text (empty or '-' → '内容为空' toast, else clipboard write → '已复制' toast); uses only CSS vars (dark mode auto-switches)
-- Collapsible config panel: <details class="panel config-panel" open>/<summary> native HTML collapse — no JS; open attr = default expanded; summary ::before ▶ rotates 90deg when [open]; uses only CSS vars (dark mode auto-switches without explicit override)
+- Web panel CSS/JS conventions (z-index hierarchy, modifier classes, dark mode, components): see CLAUDE.md
 
 UPDATED: 2026-03-23

@@ -12,4 +12,7 @@ CHANGELOG:
 - 2026-03-23 | public/ | update: F-040 collapsible config panel (<details>/<summary> + arrow CSS)
 - 2026-03-23 | root.prizm | update: add collapsible config panel RULE (F-040)
 - 2026-03-23 | CLAUDE.md | update: sediment F-040 DECISIONS
+- 2026-03-23 | public/ | add: F-041 message timestamp (formatTimestamp, .message-timestamp, .message flex layout)
+- 2026-03-23 | root.prizm | update: add message timestamp RULE (F-041)
+- 2026-03-23 | CLAUDE.md | update: sediment F-041 DECISIONS
 UPDATED: 2026-03-23

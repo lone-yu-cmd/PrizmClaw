@@ -336,9 +336,24 @@ textarea:focus {
   padding: 10px;
   border-radius: 10px;
   line-height: 1.5;
+  animation: fade-in 0.25s ease-out both;
+  display: flex;
+  flex-direction: column;
+}
+
+.message .body {
   white-space: pre-wrap;
   word-break: break-word;
-  animation: fade-in 0.25s ease-out both;
+  flex: 1;
+}
+
+.message-timestamp {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  text-align: right;
+  margin-top: 4px;
+  user-select: none;
 }
 
 .message.user {
