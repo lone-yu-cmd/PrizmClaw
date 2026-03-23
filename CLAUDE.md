@@ -190,3 +190,14 @@ Use the full workflow (/prizmkit-specify -> /prizmkit-plan -> /prizmkit-analyze 
 - INTERFACE: `setFontSize(scale)` in `public/js/main.js` — persists scale to localStorage key `prizmclaw-font-size`, then calls `applyFontSize(scale)`
 - INTERFACE: `loadFontSize()` in `public/js/main.js` — reads localStorage, validates whitelist, calls `applyFontSize()`; called in `init()` before DOM interaction
 - INTERFACE: `.font-toggle-btn` in `public/styles.css` — `.active` class applied by `applyFontSize()`; `data-scale` attribute holds numeric scale value as string
+
+### F-044: Web Panel Resize Handle
+- DECISION: CSS vars `--chat-col`/`--side-col` are set on `#dashboardGrid` element (not `:root`) via `style.setProperty()` — scoped to the grid element only, avoiding global CSS var pollution; CSS fallback values `2fr`/`1fr` in `grid-template-columns: var(--chat-col, 2fr) 8px var(--side-col, 1fr)` ensure default layout when no JS or no localStorage value.
+- DECISION: FR values persisted as ratios normalized to sum=3 (original 2fr+1fr) — during drag, pixel widths from `getComputedStyle().gridTemplateColumns` are converted to fr by `(px/total)*3`; this ensures the ratio is stable across viewport size changes after restore.
+- DECISION: Resize handle uses 3-column grid `var(--chat-col) 8px var(--side-col)` with `column-gap: 8px` — the middle column holds the `.resize-handle` element (8px wide); gap is set to `0` to avoid double-spacing between columns (gap + column width would add up).
+- DECISION: `getComputedStyle(grid).gridTemplateColumns.split(' ')` on mousedown captures live pixel widths — cols[0]=chatPx, cols[1]=handlePx, cols[2]=sidePx; use `parseFloat(cols[0])` and `parseFloat(cols[2])` only; never read from stored fr values during drag.
+- DECISION: Min column width enforced at 20% of `startChatWidth + startSideWidth` total (not viewport) — prevents full collapse; both columns maintain at least 20% of the combined panel area regardless of absolute pixel values.
+- DECISION: Separate localStorage key `prizmclaw-column-widths` (not merged into `STORAGE_KEY`) — same separation-of-concerns pattern as `prizmclaw-font-size`; stores `{ chat: number, side: number }` JSON with validation (both must be positive numbers).
+- INTERFACE: `applyColumnWidths(chatFr, sideFr)` in `public/js/main.js` — sets `--chat-col`/`--side-col` CSS vars on `els.dashboardGrid`; called by loadColumnWidths, mousemove handler
+- INTERFACE: `loadColumnWidths()` in `public/js/main.js` — reads `prizmclaw-column-widths` from localStorage, validates `{chat, side}` are positive numbers, calls `applyColumnWidths()`; falls back to `applyColumnWidths(2, 1)`; called in `init()` after `loadFontSize()`
+- INTERFACE: `initResizeHandle()` in `public/js/main.js` — attaches mousedown on `#resizeHandle`, mousemove/mouseup on `document`; adds/removes `.dragging` class and body cursor/userSelect during drag; called in `init()` after `loadColumnWidths()`

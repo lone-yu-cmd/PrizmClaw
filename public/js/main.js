@@ -1,5 +1,6 @@
 const STORAGE_KEY = 'prizmclaw-web-session';
 const FONT_SIZE_KEY = 'prizmclaw-font-size';
+const COLUMN_WIDTHS_KEY = 'prizmclaw-column-widths';
 
 const state = {
   baseUrl: '',
@@ -42,7 +43,9 @@ const els = {
   infoSessionId: document.getElementById('infoSessionId'),
   infoConnState: document.getElementById('infoConnState'),
   infoTelegramChatId: document.getElementById('infoTelegramChatId'),
-  fontToggleBtns: document.querySelectorAll('.font-toggle-btn')
+  fontToggleBtns: document.querySelectorAll('.font-toggle-btn'),
+  resizeHandle: document.getElementById('resizeHandle'),
+  dashboardGrid: document.getElementById('dashboardGrid')
 };
 
 function randomSessionId() {
@@ -416,6 +419,96 @@ function normalizeZeroHost() {
   return true;
 }
 
+// ── Panel Resize Handle ───────────────────────────────────────────────────────
+
+function applyColumnWidths(chatFr, sideFr) {
+  els.dashboardGrid.style.setProperty('--chat-col', `${chatFr}fr`);
+  els.dashboardGrid.style.setProperty('--side-col', `${sideFr}fr`);
+}
+
+function loadColumnWidths() {
+  try {
+    const raw = localStorage.getItem(COLUMN_WIDTHS_KEY);
+    if (raw) {
+      const { chat, side } = JSON.parse(raw);
+      if (typeof chat === 'number' && typeof side === 'number' && chat > 0 && side > 0) {
+        applyColumnWidths(chat, side);
+        return;
+      }
+    }
+  } catch {
+    // ignore
+  }
+  applyColumnWidths(2, 1); // default: 2fr 1fr
+}
+
+function saveColumnWidths(chatFr, sideFr) {
+  try {
+    localStorage.setItem(COLUMN_WIDTHS_KEY, JSON.stringify({ chat: chatFr, side: sideFr }));
+  } catch {
+    // ignore
+  }
+}
+
+function initResizeHandle() {
+  const handle = els.resizeHandle;
+  if (!handle) return;
+
+  let isDragging = false;
+  let startX = 0;
+  let startChatWidth = 0;
+  let startSideWidth = 0;
+
+  handle.addEventListener('mousedown', (event) => {
+    event.preventDefault();
+    isDragging = true;
+    startX = event.clientX;
+
+    const grid = els.dashboardGrid;
+    const cols = getComputedStyle(grid).gridTemplateColumns.split(' ');
+    // cols: [chatWidth, handleWidth, sideWidth]
+    startChatWidth = parseFloat(cols[0]);
+    startSideWidth = parseFloat(cols[2]);
+
+    handle.classList.add('dragging');
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  });
+
+  document.addEventListener('mousemove', (event) => {
+    if (!isDragging) return;
+
+    const delta = event.clientX - startX;
+    const totalWidth = startChatWidth + startSideWidth;
+    const minWidth = totalWidth * 0.2; // 20% minimum for each column
+
+    const newChatWidth = Math.min(Math.max(startChatWidth + delta, minWidth), totalWidth - minWidth);
+    const newSideWidth = totalWidth - newChatWidth;
+
+    // Convert pixel widths back to fr units (ratio-based, normalize to total of 3fr)
+    const chatFr = (newChatWidth / totalWidth) * 3;
+    const sideFr = (newSideWidth / totalWidth) * 3;
+
+    applyColumnWidths(chatFr, sideFr);
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (!isDragging) return;
+    isDragging = false;
+    handle.classList.remove('dragging');
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+
+    // Persist the fr ratios
+    const grid = els.dashboardGrid;
+    const cols = getComputedStyle(grid).gridTemplateColumns.split(' ');
+    const chatPx = parseFloat(cols[0]);
+    const sidePx = parseFloat(cols[2]);
+    const total = chatPx + sidePx;
+    saveColumnWidths((chatPx / total) * 3, (sidePx / total) * 3);
+  });
+}
+
 function init() {
   if (normalizeZeroHost()) {
     return;
@@ -423,6 +516,8 @@ function init() {
 
   loadSessionConfig();
   loadFontSize();
+  loadColumnWidths();
+  initResizeHandle();
 
   if (!state.sessionId) {
     state.sessionId = randomSessionId();

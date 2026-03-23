@@ -17,4 +17,6 @@ CHANGELOG:
 - 2026-03-23 | CLAUDE.md | update: sediment F-041 DECISIONS
 - 2026-03-23 | public/ | add: F-043 font size toggle (--font-scale CSS var, .font-toggle CSS, applyFontSize/loadFontSize/setFontSize JS, 小/中/大 buttons in header)
 - 2026-03-23 | CLAUDE.md | update: sediment F-043 DECISIONS
+- 2026-03-23 | public/ | add: F-044 resize handle (--chat-col/--side-col CSS vars on #dashboardGrid, .resize-handle CSS, drag logic + localStorage in JS)
+- 2026-03-23 | CLAUDE.md | update: sediment F-044 DECISIONS
 UPDATED: 2026-03-23

@@ -330,8 +330,39 @@ textarea:focus {
 
 .dashboard-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 16px;
+  grid-template-columns: var(--chat-col, 2fr) 8px var(--side-col, 1fr);
+  gap: 0;
+  column-gap: 8px;
+}
+
+/* ── Panel Resize Handle ────────────────────────────────────────────────────── */
+
+.resize-handle {
+  width: 8px;
+  cursor: col-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  position: relative;
+  z-index: 5;
+  user-select: none;
+  touch-action: none;
+}
+
+.resize-handle::before {
+  content: '';
+  width: 3px;
+  height: 40px;
+  border-radius: 3px;
+  background: var(--line);
+  transition: background 0.15s ease, height 0.15s ease;
+}
+
+.resize-handle:hover::before,
+.resize-handle.dragging::before {
+  background: var(--primary);
+  height: 60px;
 }
 
 .chat-panel {
@@ -550,6 +581,10 @@ textarea:focus {
 @media (max-width: 900px) {
   .dashboard-grid {
     grid-template-columns: 1fr;
+  }
+
+  .resize-handle {
+    display: none;
   }
 
   .form-grid {
