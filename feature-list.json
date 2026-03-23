@@ -933,7 +933,7 @@
         "Given 用户拖拽分隔条，When 拖拽进行中，Then 两列宽度实时跟随鼠标位置变化",
         "Given 用户调整完宽度比例，When 刷新页面，Then 从 localStorage 恢复上次的列宽设置"
       ],
-      "status": "pending",
+      "status": "completed",
       "session_granularity": "feature",
       "sub_features": []
     }
