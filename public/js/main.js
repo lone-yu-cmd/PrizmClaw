@@ -18,6 +18,7 @@ const els = {
   chatMessages: document.getElementById('chatMessages'),
   chatForm: document.getElementById('chatForm'),
   chatInput: document.getElementById('chatInput'),
+  charCounter: document.getElementById('charCounter'),
   sendChatBtn: document.getElementById('sendChatBtn'),
   clearChatBtn: document.getElementById('clearChatBtn'),
   takeScreenshotBtn: document.getElementById('takeScreenshotBtn'),
@@ -40,6 +41,15 @@ function setStatus(text, state) {
   els.status.textContent = text;
   els.status.classList.remove('connected', 'error');
   if (state) els.status.classList.add(state);
+}
+
+const CHAR_LIMIT = 8000;
+const CHAR_WARN_THRESHOLD = CHAR_LIMIT * 0.8;
+
+function updateCharCounter() {
+  const len = els.chatInput.value.length;
+  els.charCounter.textContent = len;
+  els.charCounter.parentElement.classList.toggle('warning', len >= CHAR_WARN_THRESHOLD);
 }
 
 function setBusy(busy, text) {
@@ -327,6 +337,7 @@ els.chatForm.addEventListener('submit', async (event) => {
 
   appendMessage('user', message);
   els.chatInput.value = '';
+  updateCharCounter();
 
   state.streamingMessageBody = null;
   state.streamedText = '';
@@ -364,6 +375,7 @@ els.chatInput.addEventListener('keydown', (event) => {
 });
 
 els.chatInput.addEventListener('input', () => {
+  updateCharCounter();
   const value = els.chatInput.value;
   const firstWord = value.split(/\s/)[0];
   if (firstWord.startsWith('/') && value === firstWord) {

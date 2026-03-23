@@ -87,3 +87,9 @@ Use the full workflow (/prizmkit-specify -> /prizmkit-plan -> /prizmkit-analyze 
 ### F-027: Web Chat Message Fade-In Animation
 - DECISION: `.message` uses `animation: fade-in 0.25s ease-out both` — `both` fill-mode is critical: ensures opacity:0 before animation starts and opacity:1 after ends, preventing flash-of-transparent or flash-of-animated-end states. Do not use `forwards` alone (pre-start flash) or omit fill-mode (post-end reset).
 - DECISION: `@keyframes fade-in` combines opacity 0→1 with `translateY(4px)→0` for subtle depth — pure opacity-only fade looks flat; small Y offset adds natural rise-in feel without distracting movement. 0.25s ease-out is the project standard for message appear animations.
+
+### F-028: Web Input Character Counter
+- DECISION: Character limit is hardcoded to 8000 in frontend (CHAR_LIMIT = 8000) matching MAX_PROMPT_CHARS backend default — avoids API call on page load while keeping parity with backend limit.
+- DECISION: Warning threshold is 80% of limit (6400) — `classList.toggle('warning', len >= CHAR_WARN_THRESHOLD)` on the `.char-counter` wrapper div (parent of `#charCounter` span). Toggle on wrapper, not span, so CSS `.char-counter.warning` selector works cleanly.
+- DECISION: `updateCharCounter()` is called in both the `input` event handler and after `els.chatInput.value = ''` on submit — ensures counter resets to 0 after send without a separate reset path.
+- INTERFACE: `updateCharCounter()` in `public/js/main.js` — reads `els.chatInput.value.length`, updates `els.charCounter.textContent`, toggles `.warning` class on `els.charCounter.parentElement`
