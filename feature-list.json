@@ -681,7 +681,7 @@
         "Given 移动端，When 渲染聊天输入区域，Then 发送按钮与输入框垂直排列不溢出屏幕",
         "Given 移动端，When 渲染页面头部，Then 标题与状态指示器不发生文字截断或重叠"
       ],
-      "status": "in_progress",
+      "status": "completed",
       "session_granularity": "feature",
       "sub_features": []
     },
