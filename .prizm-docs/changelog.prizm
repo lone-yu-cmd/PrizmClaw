@@ -24,3 +24,5 @@ UPDATED: 2026-03-23
 - 2026-03-23 | root.prizm | update: add .kbd component and wrapper div pattern RULE (F-035)
 - 2026-03-23 | public/ | add: F-036 empty state illustrations (.empty-state CSS + #chatEmptyState + #execEmptyState + updateChatEmptyState/updateExecEmptyState JS)
 - 2026-03-23 | root.prizm | update: add empty state component RULE including TRAP for clearChatBtn innerHTML reset (F-036)
+- 2026-03-23 | public/ | add: F-037 scroll-to-bottom button (#scrollToBottomBtn + .chat-messages-wrapper + .scroll-to-bottom CSS + updateScrollToBottomBtn JS)
+- 2026-03-23 | root.prizm | update: add scroll-to-bottom button pattern RULE (F-037)

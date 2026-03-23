@@ -145,3 +145,10 @@ Use the full workflow (/prizmkit-specify -> /prizmkit-plan -> /prizmkit-analyze 
 - DECISION: Exec output boxes wrapped in `#execOutput` div (hidden by default) with `#execEmptyState` as sibling — `updateExecEmptyState(hasResult)` toggles both elements as a unit, keeping the three output boxes (#exitCodeOutput, #stdoutOutput, #stderrOutput) logically grouped.
 - INTERFACE: `updateChatEmptyState()` in `public/js/main.js` — called inside `appendMessage()` after every DOM append; checks for `.message.user, .message.assistant` to decide visibility of `#chatEmptyState`
 - INTERFACE: `updateExecEmptyState(hasResult)` in `public/js/main.js` — called in execForm submit handler (both success and error paths); `hasResult=true` hides `#execEmptyState` and shows `#execOutput`
+
+### F-037: Web Scroll To Bottom Button
+- DECISION: `#scrollToBottomBtn` wrapped in `.chat-messages-wrapper` (position: relative) alongside `#chatMessages` — button uses `position: absolute; bottom: 12px; right: 12px` to anchor inside the messages area without affecting page flow or conflicting with sticky header or fixed overlays.
+- DECISION: Button hidden via `opacity: 0; pointer-events: none` (not `display: none`) + `.visible` class adds `opacity: 1; pointer-events: auto` — allows CSS transition for smooth fade without layout reflow; z-index: 50 places it above normal content but below command dropdown (100).
+- DECISION: `.scroll-to-bottom` uses only CSS vars (`--panel`, `--line`, `--muted`, `--primary`, `--primary-contrast`) — dark mode auto-switches without an explicit `@media (prefers-color-scheme: dark)` override block. Same pattern as `.kbd` and `.empty-state`.
+- DECISION: `updateScrollToBottomBtn()` threshold is 100px from bottom (`scrollHeight - scrollTop - clientHeight > 100`) — `appendMessage()` already sets `scrollTop = scrollHeight`, so button hides automatically when new messages arrive; no explicit hide call needed in appendMessage.
+- INTERFACE: `updateScrollToBottomBtn()` in `public/js/main.js` — called on `chatMessages` scroll event; toggles `.visible` class on `#scrollToBottomBtn`; threshold 100px from bottom

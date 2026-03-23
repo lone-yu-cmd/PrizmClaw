@@ -35,7 +35,8 @@ const els = {
   exitCodeOutput: document.getElementById('exitCodeOutput'),
   stdoutOutput: document.getElementById('stdoutOutput'),
   stderrOutput: document.getElementById('stderrOutput'),
-  toastContainer: document.getElementById('toast-container')
+  toastContainer: document.getElementById('toast-container'),
+  scrollToBottomBtn: document.getElementById('scrollToBottomBtn')
 };
 
 function randomSessionId() {
@@ -75,6 +76,12 @@ function setBusy(busy, text, activeBtn = null) {
 
 const TOAST_DURATION_MS = 3000;
 const TOAST_FADE_MS = 300;
+
+function updateScrollToBottomBtn() {
+  const el = els.chatMessages;
+  const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+  els.scrollToBottomBtn.classList.toggle('visible', distFromBottom > 100);
+}
 
 function updateChatEmptyState() {
   // Only hide empty state when user or assistant messages are present
@@ -525,6 +532,12 @@ els.execForm.addEventListener('submit', async (event) => {
 
 window.addEventListener('beforeunload', () => {
   closeRealtime();
+});
+
+els.chatMessages.addEventListener('scroll', updateScrollToBottomBtn);
+
+els.scrollToBottomBtn.addEventListener('click', () => {
+  els.chatMessages.scrollTo({ top: els.chatMessages.scrollHeight, behavior: 'smooth' });
 });
 
 document.addEventListener('keydown', (event) => {

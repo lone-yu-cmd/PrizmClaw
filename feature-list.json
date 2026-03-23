@@ -807,7 +807,7 @@
         "Given 浮动按钮显示，When 用户点击，Then 消息区平滑滚动至最新消息",
         "Given 消息区已在底部，When 渲染，Then 浮动按钮不显示"
       ],
-      "status": "pending",
+      "status": "in_progress",
       "session_granularity": "feature",
       "sub_features": []
     },

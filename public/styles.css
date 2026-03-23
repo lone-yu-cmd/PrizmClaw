@@ -513,6 +513,47 @@ textarea:focus {
   }
 }
 
+/* ── Scroll To Bottom Button ────────────────────────────────────────────────── */
+
+.chat-messages-wrapper {
+  position: relative;
+}
+
+.scroll-to-bottom {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  z-index: 50;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(31, 38, 51, 0.12);
+  transition: opacity 0.2s ease, transform 0.2s ease, background 0.15s ease;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.scroll-to-bottom.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.scroll-to-bottom:hover {
+  background: var(--primary);
+  color: var(--primary-contrast);
+  border-color: var(--primary);
+  transform: translateY(-1px);
+}
+
 /* ── Empty State Illustrations ──────────────────────────────────────────────── */
 
 .empty-state {

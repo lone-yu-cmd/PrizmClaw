@@ -37,12 +37,15 @@
             <button id="clearChatBtn" type="button" class="btn ghost">清空界面消息</button>
           </div>
 
-          <div id="chatMessages" class="chat-messages" aria-live="polite">
-            <div id="chatEmptyState" class="empty-state">
-              <span class="empty-state-icon">💬</span>
-              <span class="empty-state-title">还没有消息</span>
-              <span class="empty-state-hint">在下方输入内容，开始与助手对话</span>
+          <div class="chat-messages-wrapper">
+            <div id="chatMessages" class="chat-messages" aria-live="polite">
+              <div id="chatEmptyState" class="empty-state">
+                <span class="empty-state-icon">💬</span>
+                <span class="empty-state-title">还没有消息</span>
+                <span class="empty-state-hint">在下方输入内容，开始与助手对话</span>
+              </div>
             </div>
+            <button id="scrollToBottomBtn" type="button" class="scroll-to-bottom" aria-label="滚动到底部" title="滚动到底部">↓</button>
           </div>
 
           <form id="chatForm" class="chat-form">
