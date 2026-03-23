@@ -699,7 +699,7 @@
         "Given 深色模式，When 渲染所有 panel、input、button，Then 各组件颜色对比度符合可读性要求",
         "Given 操作系统切换回浅色模式，When 加载或刷新页面，Then 界面恢复浅色配色方案"
       ],
-      "status": "in_progress",
+      "status": "completed",
       "session_granularity": "feature",
       "sub_features": []
     },
