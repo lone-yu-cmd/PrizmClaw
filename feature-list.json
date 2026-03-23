@@ -771,7 +771,7 @@
         "Given 渲染命令执行区域，When 页面加载，Then 执行按钮旁显示 Enter 快捷键提示标签",
         "Given .kbd 标签，When 渲染，Then 以等宽字体、圆角边框样式展示，视觉上类似物理键盘按键"
       ],
-      "status": "in_progress",
+      "status": "completed",
       "session_granularity": "feature",
       "sub_features": []
     },
