@@ -735,7 +735,7 @@
         "Given 操作失败，When JS 调用 showToast(msg, 'error')，Then 出现红色 toast 提示",
         "Given toast 显示后 3 秒，When 计时结束，Then toast 以淡出动画消失"
       ],
-      "status": "in_progress",
+      "status": "completed",
       "session_granularity": "feature",
       "sub_features": []
     },
