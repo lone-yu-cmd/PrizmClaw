@@ -879,7 +879,7 @@
         "Given AI 回复消息，When 消息渲染到聊天区，Then 消息右下角显示接收时间",
         "Given 时间戳文字，When 渲染，Then 以小号字体和 --muted 颜色显示，不干扰消息主体阅读"
       ],
-      "status": "in_progress",
+      "status": "completed",
       "session_granularity": "feature",
       "sub_features": []
     },
