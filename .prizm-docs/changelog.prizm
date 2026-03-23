@@ -8,6 +8,7 @@ CHANGELOG:
 - 2026-03-23 | root.prizm | update: add .app-header sticky rule (F-025)
 - 2026-03-23 | src/services.prizm | update: add profile-store.js and backendRegistry.updateBackend() interfaces (F-021)
 - 2026-03-23 | src/services.prizm | update: add TRAPS for profileStore startup pattern and backendRegistry duplicate registration (F-021)
+- 2026-03-23 | root.prizm | update: add dark mode @media rule and dark palette vars (F-031)
 - 2026-03-23 | src/bot.prizm | update: add cli.js handler to KEY_FILES, profile-store/backend-registry to DEPENDENCIES (F-021)
 - 2026-03-23 | root.prizm | update: add .output-box modifier class pattern rule (F-029)
 - 2026-03-23 | root.prizm | update: add .status color state rule (.connected/.error modifier classes) (F-026)

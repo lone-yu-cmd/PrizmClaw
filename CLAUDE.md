@@ -105,3 +105,10 @@ Use the full workflow (/prizmkit-specify -> /prizmkit-plan -> /prizmkit-analyze 
 - DECISION: `.app-header` uses `flex-wrap: wrap` at 600px (not column layout) — allows natural wrap when title+status won't fit, preserving flex alignment without forcing full column stack on slightly-larger phones.
 - DECISION: `.status` gets `max-width: 140px` + `text-overflow: ellipsis` at 600px — prevents status indicator from overlapping title div; ellipsis chosen over hiding to preserve status visibility.
 - DECISION: `.exec-form` collapses from `1fr auto` to `1fr` at 600px — exec button becomes full-width row below input, consistent with chat-form send button behavior on mobile.
+
+### F-031: Web Dark Mode Support
+- DECISION: Dark mode implemented via `@media (prefers-color-scheme: dark)` in `public/styles.css` — no JS toggle, no backend changes; automatically follows OS theme and reverts when OS switches back to light.
+- DECISION: Dark palette anchors: `--bg: #111827`, `--panel: #1f2937`, `--line: #374151`, `--text: #f9fafb`, `--muted: #9ca3af`, `--primary: #5b8df8` (lightened for dark bg contrast), `--danger: #f87171` (lightened red), `--warning: #f59e0b`, `--chat-user: #1e3a5f`, `--chat-assistant: #263144`.
+- DECISION: Hardcoded `background: #fff` on `input`, `textarea`, `.chat-messages`, `.output-box`, `.screenshot-image` are overridden to `var(--panel)` inside the dark media query — these elements do not use CSS vars in light mode so cannot auto-switch without explicit overrides.
+- DECISION: `.status.connected`, `.status.error`, `.message.error`, `.output-box.error`, `.output-box.exit-error` use hardcoded light-mode palette values; dark mode overrides use deep red (`#450a0a` bg, `#7f1d1d` border) and deep amber (`#431407` bg, `#78350f` border) for readable dark-appropriate contrast — same semantic color system, adapted for dark surfaces.
+- DECISION: `:root { color-scheme: light dark }` — signals browser to render system UI (scrollbars, form controls) in the matching scheme; was `light` only before F-031.
