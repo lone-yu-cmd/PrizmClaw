@@ -897,7 +897,7 @@
         "Given 命令输入框有焦点，When 用户按向上方向键，Then 依次填入历史命令",
         "Given 命令历史存在，When 用户点击输入框旁的历史图标，Then 显示历史命令下拉列表可选择"
       ],
-      "status": "pending",
+      "status": "failed",
       "session_granularity": "feature",
       "sub_features": []
     }

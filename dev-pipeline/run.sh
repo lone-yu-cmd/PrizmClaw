@@ -1036,11 +1036,36 @@ os.replace(tmp, target)
             else
                 log_warn "Auto-merge failed — dev branch preserved: $_DEV_BRANCH_NAME"
                 log_warn "Merge manually: git checkout $_ORIGINAL_BRANCH && git rebase $_DEV_BRANCH_NAME"
+                # branch_merge failed and left us on dev branch — checkout original and commit pipeline artifacts
+                if git -C "$_proj_root" checkout "$_ORIGINAL_BRANCH" 2>/dev/null; then
+                    local _merge_failed_current _merge_failed_dirty
+                    _merge_failed_current=$(git -C "$_proj_root" rev-parse --abbrev-ref HEAD 2>/dev/null || true)
+                    if [[ "$_merge_failed_current" == "$_ORIGINAL_BRANCH" ]]; then
+                        _merge_failed_dirty=$(git -C "$_proj_root" status --porcelain 2>/dev/null || true)
+                        if [[ -n "$_merge_failed_dirty" ]]; then
+                            git -C "$_proj_root" add -A 2>/dev/null || true
+                            git -C "$_proj_root" commit --no-verify -m "chore: include pipeline state artifacts" 2>/dev/null || true
+                        fi
+                    fi
+                fi
                 _DEV_BRANCH_NAME=""
             fi
         elif [[ -n "$_DEV_BRANCH_NAME" ]]; then
             # Session failed — return to original branch, preserve dev branch for inspection
-            git -C "$_proj_root" checkout "$_ORIGINAL_BRANCH" 2>/dev/null || true
+            if git -C "$_proj_root" checkout "$_ORIGINAL_BRANCH" 2>/dev/null; then
+                # Commit any dirty pipeline state files left on the original branch
+                local _failed_current _failed_dirty
+                _failed_current=$(git -C "$_proj_root" rev-parse --abbrev-ref HEAD 2>/dev/null || true)
+                if [[ "$_failed_current" == "$_ORIGINAL_BRANCH" ]]; then
+                    _failed_dirty=$(git -C "$_proj_root" status --porcelain 2>/dev/null || true)
+                    if [[ -n "$_failed_dirty" ]]; then
+                        git -C "$_proj_root" add -A 2>/dev/null || true
+                        git -C "$_proj_root" commit --no-verify -m "chore: include pipeline state artifacts" 2>/dev/null || true
+                    fi
+                fi
+            else
+                log_warn "Failed to checkout $_ORIGINAL_BRANCH after session failure — pipeline state may be uncommitted"
+            fi
             log_warn "Session failed — dev branch preserved for inspection: $_DEV_BRANCH_NAME"
             _DEV_BRANCH_NAME=""
         fi
