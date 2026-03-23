@@ -3,6 +3,7 @@ RESPONSIBILITY: Append-only record of prizm-docs structural changes
 
 CHANGELOG:
 - 2026-03-23 | root.prizm | add: initial L0 doc generated during F-024 bootstrap
+- 2026-03-23 | root.prizm | update: add mobile breakpoint CSS rules (F-030)
 - 2026-03-23 | root.prizm | update: add panel/sub-panel shadow rule (F-024)
 - 2026-03-23 | root.prizm | update: add .app-header sticky rule (F-025)
 - 2026-03-23 | src/services.prizm | update: add profile-store.js and backendRegistry.updateBackend() interfaces (F-021)

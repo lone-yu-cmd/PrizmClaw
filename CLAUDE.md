@@ -99,3 +99,9 @@ Use the full workflow (/prizmkit-specify -> /prizmkit-plan -> /prizmkit-analyze 
 - DECISION: `.output-box.exit-error` uses amber warning palette (#fffbf0 bg, #fde8bb border, var(--warning) color) for non-zero exit codes — distinct from error (red) to signal warning vs failure.
 - DECISION: `classList.remove('exit-error', 'error')` called before each exec run in `els.execForm submit` handler — ensures clean visual state on repeated runs; toggle/add in try/catch paths apply state.
 - INTERFACE: `.output-box.error` in `public/styles.css` — applied to `#stderrOutput` when `data.stderr` is non-empty; `.output-box.exit-error` applied to `#exitCodeOutput` when `data.exitCode !== 0`
+
+### F-030: Web Responsive Mobile Layout
+- DECISION: Mobile breakpoint is @media (max-width: 600px) — below existing 900px breakpoint which only collapses grids; 600px targets phone-specific layout issues (header overflow, exec-form button stacking, reduced padding).
+- DECISION: `.app-header` uses `flex-wrap: wrap` at 600px (not column layout) — allows natural wrap when title+status won't fit, preserving flex alignment without forcing full column stack on slightly-larger phones.
+- DECISION: `.status` gets `max-width: 140px` + `text-overflow: ellipsis` at 600px — prevents status indicator from overlapping title div; ellipsis chosen over hiding to preserve status visibility.
+- DECISION: `.exec-form` collapses from `1fr auto` to `1fr` at 600px — exec button becomes full-width row below input, consistent with chat-form send button behavior on mobile.
