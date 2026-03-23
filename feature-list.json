@@ -915,7 +915,7 @@
         "Given 用户选择大字体档，When 切换生效，Then 页面所有文字按比例放大，布局不破损",
         "Given 用户刷新页面，When 页面重新加载，Then 上次选择的字体档位从 localStorage 恢复"
       ],
-      "status": "in_progress",
+      "status": "completed",
       "session_granularity": "feature",
       "sub_features": []
     },
