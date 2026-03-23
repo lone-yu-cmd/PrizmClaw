@@ -65,7 +65,10 @@
             <p class="hint">调用 <code>POST /api/screenshot</code> 并展示图片结果。</p>
             <button id="takeScreenshotBtn" type="button" class="btn primary">获取截图</button>
             <img id="screenshotImage" class="screenshot-image hidden" alt="截图预览" />
-            <pre id="screenshotMeta" class="output-box"></pre>
+            <div class="output-box-wrapper">
+              <pre id="screenshotMeta" class="output-box"></pre>
+              <button type="button" class="copy-btn" aria-label="复制内容" title="复制内容" data-target="screenshotMeta">⧉</button>
+            </div>
           </section>
 
           <section class="sub-panel">
@@ -88,15 +91,24 @@
               <div id="execOutput" class="hidden">
                 <div>
                   <h3>Exit Code</h3>
-                  <pre id="exitCodeOutput" class="output-box">-</pre>
+                  <div class="output-box-wrapper">
+                    <pre id="exitCodeOutput" class="output-box">-</pre>
+                    <button type="button" class="copy-btn" aria-label="复制内容" title="复制内容" data-target="exitCodeOutput">⧉</button>
+                  </div>
                 </div>
                 <div>
                   <h3>Stdout</h3>
-                  <pre id="stdoutOutput" class="output-box"></pre>
+                  <div class="output-box-wrapper">
+                    <pre id="stdoutOutput" class="output-box"></pre>
+                    <button type="button" class="copy-btn" aria-label="复制内容" title="复制内容" data-target="stdoutOutput">⧉</button>
+                  </div>
                 </div>
                 <div>
                   <h3>Stderr</h3>
-                  <pre id="stderrOutput" class="output-box"></pre>
+                  <div class="output-box-wrapper">
+                    <pre id="stderrOutput" class="output-box"></pre>
+                    <button type="button" class="copy-btn" aria-label="复制内容" title="复制内容" data-target="stderrOutput">⧉</button>
+                  </div>
                 </div>
               </div>
             </div>

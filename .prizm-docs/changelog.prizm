@@ -26,3 +26,5 @@ UPDATED: 2026-03-23
 - 2026-03-23 | root.prizm | update: add empty state component RULE including TRAP for clearChatBtn innerHTML reset (F-036)
 - 2026-03-23 | public/ | add: F-037 scroll-to-bottom button (#scrollToBottomBtn + .chat-messages-wrapper + .scroll-to-bottom CSS + updateScrollToBottomBtn JS)
 - 2026-03-23 | root.prizm | update: add scroll-to-bottom button pattern RULE (F-037)
+- 2026-03-23 | public/ | add: F-038 copy-to-clipboard buttons (.output-box-wrapper + .copy-btn CSS + copyToClipboard JS + data-target HTML binding)
+- 2026-03-23 | root.prizm | update: add copy button pattern RULE including delegated listener and empty-check convention (F-038)

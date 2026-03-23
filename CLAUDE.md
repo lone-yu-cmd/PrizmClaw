@@ -152,3 +152,10 @@ Use the full workflow (/prizmkit-specify -> /prizmkit-plan -> /prizmkit-analyze 
 - DECISION: `.scroll-to-bottom` uses only CSS vars (`--panel`, `--line`, `--muted`, `--primary`, `--primary-contrast`) — dark mode auto-switches without an explicit `@media (prefers-color-scheme: dark)` override block. Same pattern as `.kbd` and `.empty-state`.
 - DECISION: `updateScrollToBottomBtn()` threshold is 100px from bottom (`scrollHeight - scrollTop - clientHeight > 100`) — `appendMessage()` already sets `scrollTop = scrollHeight`, so button hides automatically when new messages arrive; no explicit hide call needed in appendMessage.
 - INTERFACE: `updateScrollToBottomBtn()` in `public/js/main.js` — called on `chatMessages` scroll event; toggles `.visible` class on `#scrollToBottomBtn`; threshold 100px from bottom
+
+### F-038: Web Copy To Clipboard Button
+- DECISION: Each `.output-box` wrapped in `.output-box-wrapper` (position: relative) — copy button uses `position: absolute; top: 6px; right: 6px` to anchor at top-right corner of each output box without affecting document flow.
+- DECISION: `.copy-btn` uses only CSS vars (`--panel`, `--line`, `--muted`, `--primary`, `--primary-contrast`) — dark mode auto-switches without an explicit `@media (prefers-color-scheme: dark)` override block. Same pattern as `.kbd`, `.empty-state`, `.scroll-to-bottom`.
+- DECISION: `data-target` attribute on `.copy-btn` holds the ID of the corresponding output box — decouples HTML binding from JS; delegated `document.click` listener finds `.copy-btn` via `event.target.closest('.copy-btn')` and reads `btn.dataset.target` to get the element. No per-button event listeners needed.
+- DECISION: Empty check in `copyToClipboard(el)` trims text and also treats `'-'` (exitCodeOutput initial value) as empty — both cases show `'内容为空'` info toast; non-empty content writes to clipboard via `navigator.clipboard.writeText()` and shows `'已复制'` success toast.
+- INTERFACE: `copyToClipboard(el)` in `public/js/main.js` — async; reads `el.textContent.trim()`; shows info toast on empty/'-', writes clipboard and shows success toast on content, shows error toast on clipboard API failure

@@ -513,7 +513,45 @@ textarea:focus {
   }
 }
 
-/* ── Scroll To Bottom Button ────────────────────────────────────────────────── */
+/* ── Copy To Clipboard Button ───────────────────────────────────────────────── */
+
+.output-box-wrapper {
+  position: relative;
+}
+
+.copy-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.6;
+  transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
+  padding: 0;
+}
+
+.copy-btn:hover {
+  opacity: 1;
+  background: var(--primary);
+  color: var(--primary-contrast);
+  border-color: var(--primary);
+}
+
+.output-box-wrapper:hover .copy-btn {
+  opacity: 1;
+}
+
+
 
 .chat-messages-wrapper {
   position: relative;

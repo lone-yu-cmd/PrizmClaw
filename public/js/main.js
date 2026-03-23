@@ -546,4 +546,26 @@ document.addEventListener('keydown', (event) => {
   }
 });
 
+async function copyToClipboard(el) {
+  const text = el.textContent.trim();
+  if (!text || text === '-') {
+    showToast('内容为空', 'info');
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('已复制', 'success');
+  } catch {
+    showToast('复制失败', 'error');
+  }
+}
+
+document.addEventListener('click', (event) => {
+  const btn = event.target.closest('.copy-btn');
+  if (!btn) return;
+  const targetId = btn.dataset.target;
+  const targetEl = targetId ? document.getElementById(targetId) : null;
+  if (targetEl) copyToClipboard(targetEl);
+});
+
 init();
