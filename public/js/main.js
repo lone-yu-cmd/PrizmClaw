@@ -419,6 +419,9 @@ els.execForm.addEventListener('submit', async (event) => {
   const command = els.execInput.value.trim();
   if (!command) return;
 
+  els.exitCodeOutput.classList.remove('exit-error');
+  els.stderrOutput.classList.remove('error');
+
   try {
     setBusy(true, '正在执行命令...');
     const data = await callJson('/api/system/exec', {
@@ -428,13 +431,17 @@ els.execForm.addEventListener('submit', async (event) => {
     });
 
     els.exitCodeOutput.textContent = String(data.exitCode);
+    els.exitCodeOutput.classList.toggle('exit-error', data.exitCode !== 0);
     els.stdoutOutput.textContent = data.stdout || '(empty)';
     els.stderrOutput.textContent = data.stderr || '(empty)';
+    els.stderrOutput.classList.toggle('error', Boolean(data.stderr));
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     els.exitCodeOutput.textContent = 'error';
+    els.exitCodeOutput.classList.add('exit-error');
     els.stdoutOutput.textContent = '';
     els.stderrOutput.textContent = message;
+    els.stderrOutput.classList.add('error');
   } finally {
     setBusy(false, '就绪');
   }

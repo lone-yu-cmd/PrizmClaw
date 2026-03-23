@@ -281,6 +281,18 @@ textarea:focus {
   overflow-x: auto;
 }
 
+.output-box.error {
+  border-color: #f9d3d0;
+  background: #fef3f2;
+  color: var(--danger);
+}
+
+.output-box.exit-error {
+  border-color: #fde8bb;
+  background: #fffbf0;
+  color: var(--warning);
+}
+
 .screenshot-image {
   width: 100%;
   border-radius: 10px;

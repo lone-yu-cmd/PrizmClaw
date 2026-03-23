@@ -28,5 +28,6 @@ RULES:
 - .status uses modifier classes .connected (green: #ecfdf3/#a6f4c5/#027a48) and .error (red: #fef3f2/#f9d3d0/--danger) — setStatus(text, state) manages class swap; error palette reuses .message.error values for system consistency
 - .message uses animation: fade-in 0.25s ease-out both — @keyframes fade-in defined in styles.css; fill-mode `both` ensures opacity:0 pre-start and opacity:1 post-end; translateY(4px)→0 adds subtle depth
 - .char-counter uses classList.toggle('warning', len >= threshold) on wrapper div — warning class at 80% of CHAR_LIMIT (6400/8000); updateCharCounter() called on input event and after submit clears chatInput
+- .output-box uses modifier classes .error (red: #fef3f2/#f9d3d0/--danger) and .exit-error (amber: #fffbf0/#fde8bb/--warning) — always classList.remove() both classes before each exec run to reset state; toggle .error on stderrOutput when stderr non-empty; toggle .exit-error on exitCodeOutput when exitCode !== 0
 
 UPDATED: 2026-03-23

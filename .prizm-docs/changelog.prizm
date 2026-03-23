@@ -8,6 +8,7 @@ CHANGELOG:
 - 2026-03-23 | src/services.prizm | update: add profile-store.js and backendRegistry.updateBackend() interfaces (F-021)
 - 2026-03-23 | src/services.prizm | update: add TRAPS for profileStore startup pattern and backendRegistry duplicate registration (F-021)
 - 2026-03-23 | src/bot.prizm | update: add cli.js handler to KEY_FILES, profile-store/backend-registry to DEPENDENCIES (F-021)
+- 2026-03-23 | root.prizm | update: add .output-box modifier class pattern rule (F-029)
 - 2026-03-23 | root.prizm | update: add .status color state rule (.connected/.error modifier classes) (F-026)
 - 2026-03-23 | root.prizm | update: add .message fade-in animation rule (F-027)
 - 2026-03-23 | root.prizm | update: add .char-counter warning class pattern rule (F-028)

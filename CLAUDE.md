@@ -93,3 +93,9 @@ Use the full workflow (/prizmkit-specify -> /prizmkit-plan -> /prizmkit-analyze 
 - DECISION: Warning threshold is 80% of limit (6400) — `classList.toggle('warning', len >= CHAR_WARN_THRESHOLD)` on the `.char-counter` wrapper div (parent of `#charCounter` span). Toggle on wrapper, not span, so CSS `.char-counter.warning` selector works cleanly.
 - DECISION: `updateCharCounter()` is called in both the `input` event handler and after `els.chatInput.value = ''` on submit — ensures counter resets to 0 after send without a separate reset path.
 - INTERFACE: `updateCharCounter()` in `public/js/main.js` — reads `els.chatInput.value.length`, updates `els.charCounter.textContent`, toggles `.warning` class on `els.charCounter.parentElement`
+
+### F-029: Web Output Box Syntax Highlight
+- DECISION: `.output-box.error` reuses existing error palette (#fef3f2 bg, #f9d3d0 border, var(--danger) color) consistent with `.message.error` and `.status.error` — palette system consistency, no new color variables introduced.
+- DECISION: `.output-box.exit-error` uses amber warning palette (#fffbf0 bg, #fde8bb border, var(--warning) color) for non-zero exit codes — distinct from error (red) to signal warning vs failure.
+- DECISION: `classList.remove('exit-error', 'error')` called before each exec run in `els.execForm submit` handler — ensures clean visual state on repeated runs; toggle/add in try/catch paths apply state.
+- INTERFACE: `.output-box.error` in `public/styles.css` — applied to `#stderrOutput` when `data.stderr` is non-empty; `.output-box.exit-error` applied to `#exitCodeOutput` when `data.exitCode !== 0`
